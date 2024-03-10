@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".LoginActivity"
+    android:orientation="vertical">
+    <ImageView
+        android:id="@+id/login_logo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:src="@drawable/interface_icons_grey"
+        android:scaleX=".3"
+        android:scaleY=".3"
+        android:layout_marginTop="20dp"/>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/login_in_logo"
+        android:textAlignment="center"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        android:textStyle="normal"
+        android:layout_marginTop="-50dp"/>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center"
+        android:text="@string/login_title"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#000" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="40dp"
+        android:text="@string/phone_number_title" />
+
+    <EditText
+        android:id="@+id/phone_number"
+        android:layout_width="360dp"
+        android:layout_height="50dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="2dp"
+        android:digits="0123456789"
+        android:hint="@string/phone_number"
+        android:textSize="18sp"
+        android:drawablePadding="20dp"
+        android:paddingStart="10dp"
+        android:background="@drawable/input_field"/>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="28dp"
+        android:text="@string/password_title" />
+
+    <EditText
+        android:id="@+id/password"
+        android:layout_width="360dp"
+        android:layout_height="50dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="2dp"
+        android:inputType="textPassword"
+        android:drawableRight="@drawable/baseline_visibility_black_24dp"
+        android:hint="@string/password"
+        android:textSize="18sp"
+        android:drawablePadding="20dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="20dp"
+        android:background="@drawable/input_field" />
+    <TextView
+        android:id="@+id/forgot_password"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="21dp"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center"
+        android:text="@string/forgot_password"
+        android:textSize="14sp"
+        android:textStyle="normal"
+        android:textColor="@color/forgetPassword" />
+    <Button
+        android:id="@+id/login_button"
+        android:layout_width="360dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:backgroundTint="@color/accept_button"
+        android:text="@string/login"
+        android:textSize="16sp"
+        android:textColor="#FFF"
+        android:layout_marginTop="20dp" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center"
+        android:text="@string/or"
+        android:textSize="14sp"
+        android:textStyle="normal"
+        android:textColor="@color/gray" />
+    <TextView
+        android:id="@+id/register"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center"
+        android:text="@string/register"
+        android:textSize="14sp"
+        android:textStyle="normal"
+        android:textColor="@color/register" />
+
+</LinearLayout>

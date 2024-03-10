@@ -13,6 +13,9 @@
         android:theme="@style/Theme.NanoScan"
         tools:targetApi="31">
         <activity
+            android:name=".LoginActivity"
+            android:exported="false" />
+        <activity
             android:name=".RegisterActivity"
             android:exported="false"
             android:theme="@style/Theme.NanoScan" />
@@ -31,10 +34,6 @@
         <activity
             android:name=".MainActivity"
             android:exported="false" />
-
-        <meta-data
-            android:name="preloaded_fonts"
-            android:resource="@array/preloaded_fonts" />
     </application>
 
 </manifest>

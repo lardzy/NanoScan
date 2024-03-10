@@ -62,8 +62,8 @@ public class UserAgreementActivity extends AppCompatActivity {
         prefs.edit().putBoolean(getString(R.string.pref_first_run), false).apply();
         prefs.edit().putBoolean(getString(R.string.pref_user_agreed), true).apply();
 
-        // 用户接受协议后跳转到注册界面
-        Intent intent = new Intent(this, RegisterActivity.class);
+        // 用户接受协议后跳转到登录界面
+        Intent intent = new Intent(this, LoginActivity.class);
         startActivity(intent);
         finish(); // 关闭当前活动，防止用户返回到用户协议界面
     }

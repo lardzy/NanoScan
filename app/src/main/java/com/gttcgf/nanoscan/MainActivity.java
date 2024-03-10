@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -35,16 +34,15 @@ public class MainActivity extends AppCompatActivity {
         boolean isFirstRun = prefs.getBoolean(getString(R.string.pref_first_run), true);
         boolean userAgreed = prefs.getBoolean(getString(R.string.pref_user_agreed), false);
 
+        Intent intent;// 同样关闭当前活动
         if (isFirstRun || !userAgreed) {
             // UserAgreementActivity 是用户协议界面的Activity
-            Intent intent = new Intent(this, UserAgreementActivity.class);
-            startActivity(intent);
-            finish(); // 关闭当前活动，以防用户返回到这个界面
+            intent = new Intent(this, UserAgreementActivity.class);
         } else {
-            // RegisterActivity 是注册界面的Activity
-            Intent intent = new Intent(this, RegisterActivity.class);
-            startActivity(intent);
-            finish(); // 同样关闭当前活动
+            // LoginActivity 是登录界面的Activity
+            intent = new Intent(this, LoginActivity.class);
         }
+        startActivity(intent);
+        finish(); // 关闭当前活动，以防用户返回到这个界面
     }
 }
