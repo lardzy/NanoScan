@@ -7,9 +7,11 @@ import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import android.util.Log;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -17,6 +19,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         setContentView(R.layout.activity_main);
 
         // 应用窗口边缘到边缘的设置
@@ -30,6 +33,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkFirstRunOrUserAgreement() {
+        Log.d("MainActivity", "checkFirstRunOrUserAgreement called");
+
         SharedPreferences prefs = this.getSharedPreferences("default", Context.MODE_PRIVATE);
         boolean isFirstRun = prefs.getBoolean(getString(R.string.pref_first_run), true);
         boolean userAgreed = prefs.getBoolean(getString(R.string.pref_user_agreed), false);

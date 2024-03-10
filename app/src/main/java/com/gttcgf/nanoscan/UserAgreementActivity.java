@@ -67,4 +67,5 @@ public class UserAgreementActivity extends AppCompatActivity {
         startActivity(intent);
         finish(); // 关闭当前活动，防止用户返回到用户协议界面
     }
+
 }
