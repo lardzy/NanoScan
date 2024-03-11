@@ -19,7 +19,13 @@
     <string name="password">请输入密码</string>
     <string name="password_title">密码</string>
     <string name="forgot_password">忘记密码了？</string>
+    <string name="phone_number_register">手机号一键注册</string>
     <string name="or">或</string>
+    <string name="sms_verification_code">请输入短信验证码</string>
+    <string name="check_code">请输入机身授权码</string>
+
+
+    <string name="register_slogan">欢迎使用纺织品近红外光谱分析仪</string>
     <string name="user_agreement_content">
 <![CDATA[
 <h1>用户协议</h1>
