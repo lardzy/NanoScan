@@ -18,16 +18,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-
-import com.google.android.material.internal.TextWatcherAdapter;
-
-import org.w3c.dom.Text;
-
 import java.util.regex.Pattern;
+
+import com.gttcgf.nanoscan.tools.CustomTextWatcher;
+import com.gttcgf.nanoscan.tools.InputDataVerification;
 
 public class LoginActivity extends AppCompatActivity {
     private EditText phone_number, password;
     private TextView forgot_password, register;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,71 +52,26 @@ public class LoginActivity extends AppCompatActivity {
     @SuppressLint("ClickableViewAccessibility")
     private void initialComponent() {
         // 设置手机号输入框的输入限制
-        phone_number.addTextChangedListener(new TextWatcher() {
-               @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    // 在文本变化之前执行
-                }
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    // 在文本变化时执行
-                }
-
-                @Override
-                public void afterTextChanged(Editable s) {
-                    // 在文本变化之后执行
-                    if (s.length() == 0) {
-                        return;
-                    }else {
-//                        validateInput(s, phone_number);
-                        String phoneRegex = "1[3-9]\\d{9}";
-                        if (!s.toString().matches(phoneRegex)) {
-                            phone_number.setError("请输入正确的手机号");
-                        } else if (s.length() == 11){
-                            phone_number.setError(null);
-                            password.requestFocus();
-                        }
-                    }
-                }
-
-        });
+        phone_number.addTextChangedListener(new CustomTextWatcher(phone_number,
+                InputDataVerification::phoneNumberInputVerification, "请输入正确的手机号", 11, () -> password.requestFocus()));
+//
         // 设置密码输入框的输入限制
-        password.addTextChangedListener(new TextWatcher(){
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-               String regex = "[\\x21-\\x7E]{8,32}";
-               Pattern p = Pattern.compile(regex);
-                if (!p.matcher(editable).matches()) {
-                     password.setError("密码至少包含8个字符，可包含数字、大小写字母和符号", null);
-                } else {
-                     password.setError(null);
-                }
-            }
-        });
+        password.addTextChangedListener(new CustomTextWatcher(password,
+                InputDataVerification::passwordInputVerification, "密码至少包含8个字符，可包含数字、大小写字母和符号"));
+//
         // 设置密码输入框的显示状态
         password.setOnTouchListener((v, event) -> {
             final int DRAWABLE_RIGHT = 2;
 
-            if(event.getAction() == MotionEvent.ACTION_UP) {
-                if(event.getRawX() >= (password.getRight() - password.getCompoundDrawables()[DRAWABLE_RIGHT].getBounds().width() - password.getPaddingEnd())) {
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                if (event.getRawX() >= (password.getRight() - password.getCompoundDrawables()[DRAWABLE_RIGHT].getBounds().width() - password.getPaddingEnd())) {
                     // 切换密码的显示状态
                     if (password.getTransformationMethod() == PasswordTransformationMethod.getInstance()) {
                         password.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
-                        password.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.baseline_visibility_black_24dp, 0);
+                        password.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.baseline_visibility_24, 0);
                     } else {
                         password.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                        password.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.baseline_visibility_off_black_24dp, 0);
+                        password.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.baseline_visibility_off_24, 0);
                     }
                     // 将光标移动到文本末尾
                     password.setSelection(password.getText().length());
@@ -135,6 +89,7 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(LoginActivity.this, "点击了忘记密码", Toast.LENGTH_SHORT).show();
             }
         });
+        // 设置注册按钮的点击事件
         register.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -146,5 +101,4 @@ public class LoginActivity extends AppCompatActivity {
         });
 
     }
-
 }

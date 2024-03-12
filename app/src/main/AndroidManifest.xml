@@ -21,6 +21,10 @@
             android:exported="false"
             android:theme="@style/Theme.NanoScan" />
         <activity
+            android:name=".tools.PortraitCaptureActivity"
+            android:screenOrientation="portrait">
+        </activity>
+        <activity
             android:name=".UserAgreementActivity"
             android:exported="false" />
         <activity
