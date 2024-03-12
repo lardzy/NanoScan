@@ -80,10 +80,10 @@ public class RegisterActivity extends AppCompatActivity {
                 InputDataVerification::phoneNumberInputVerification, "请输入正确的手机号", 11, () -> sms_verification_code.requestFocus()));
         // 设置短信验证码输入框的输入限制
         sms_verification_code.addTextChangedListener(new CustomTextWatcher(sms_verification_code,
-                InputDataVerification::smsVerificationCodeVerification, "请输入正确的验证码"));
+                InputDataVerification::smsVerificationCodeVerification, "请输入正确的验证码", false));
         // 设置密码输入框的输入限制
         password.addTextChangedListener(new CustomTextWatcher(password,
-                InputDataVerification::passwordInputVerification, "密码至少包含8个字符，可包含数字、大小写字母和符号"));
+                InputDataVerification::passwordInputVerification, "密码至少包含8个字符，可包含数字、大小写字母和符号",false));
         check_code.addTextChangedListener(new CustomTextWatcher(check_code,
                 InputDataVerification::checkCodeVerification, "请输入正确的授权码，授权码位于机身正面的机身按钮下侧"));
         // 扫描授权码
