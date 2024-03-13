@@ -55,7 +55,6 @@ public class RegisterActivity extends AppCompatActivity {
             if (result.getContents() == null) {
                 Toast.makeText(this, "扫描取消", Toast.LENGTH_LONG).show();
             } else {
-//                Toast.makeText(this, "扫描结果: " + result.getContents(), Toast.LENGTH_LONG).show();
                 check_code.setText(result.getContents());
                 check_code.setSelection(check_code.getText().length());
             }
