@@ -110,13 +110,16 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
     }
+    // 登录
     private void checkLogin(){
         String phoneNumber = phone_number.getText().toString();
         String password = this.password.getText().toString();
         if (!InputDataVerification.phoneNumberInputVerification(phoneNumber)){
             phone_number.setError("请输入正确的手机号");
+            Toast.makeText(LoginActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
         } else if (!InputDataVerification.passwordInputVerification(password)) {
             this.password.setError("密码至少包含8个字符，可包含数字、大小写字母和符号",null);
+            Toast.makeText(LoginActivity.this, "密码至少包含8个字符，可包含数字、大小写字母和符号", Toast.LENGTH_SHORT).show();
         } else if (InputDataVerification.phoneNumberInputVerification(phoneNumber) && InputDataVerification.passwordInputVerification(password)){
             // 登录
             Toast.makeText(LoginActivity.this, "登录", Toast.LENGTH_SHORT).show();

@@ -93,7 +93,6 @@ public class RegisterActivity extends AppCompatActivity {
             if (event.getAction() == MotionEvent.ACTION_UP) {
                 if (event.getRawX() >= (check_code.getRight() - check_code.getCompoundDrawables()[DRAWABLE_RIGHT].getBounds().width() - check_code.getCompoundDrawablePadding())) {
                     // 扫描条形码
-//                    Toast.makeText(RegisterActivity.this, "drawableRight被点击了！", Toast.LENGTH_SHORT).show();
                     IntentIntegrator integrator = new IntentIntegrator(this);
                     integrator.setOrientationLocked(true); // 锁定屏幕方向
                     integrator.setCaptureActivity(PortraitCaptureActivity.class); // 使用自定义活动
@@ -104,7 +103,7 @@ public class RegisterActivity extends AppCompatActivity {
             return false;
         });
         imageButton_back.setOnClickListener(v -> finish());
-        // 注册按钮的点击事件，如果注册界面已经打开，则返回，否则重新打开注册界面。
+        // 登录按钮的点击事件，如果登录界面已经打开，则返回，否则重新打开登录界面。
         register.setOnClickListener(v -> {
             ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
             List<ActivityManager.RunningTaskInfo> tasks = activityManager.getRunningTasks(Integer.MAX_VALUE);
@@ -115,7 +114,7 @@ public class RegisterActivity extends AppCompatActivity {
                     return;
                 }
             }
-            // 如果注册界面没有打开，则重新打开注册界面。
+            // 如果登录界面没有打开，则重新打开登录界面。
             Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
             startActivity(intent);
         });
@@ -123,9 +122,9 @@ public class RegisterActivity extends AppCompatActivity {
         get_verification_code.setOnClickListener(v -> {
             Toast.makeText(RegisterActivity.this, "点击获取注册码", Toast.LENGTH_SHORT).show();
         });
-        // 点击注册码按钮的事件
+        // 点击立即注册按钮的事件
         register_button.setOnClickListener(v -> {
-            Toast.makeText(RegisterActivity.this, "点击注册！", Toast.LENGTH_SHORT).show();
+            checkRegister();
         });
         // 设置密码输入框的显示状态
         password.setOnTouchListener((v, event) -> {
@@ -149,6 +148,30 @@ public class RegisterActivity extends AppCompatActivity {
             }
             return false;
         });
+
+    }
+    // 注册
+    private void checkRegister(){
+        String phoneNumber = phone_number.getText().toString();
+        String smsCode = sms_verification_code.getText().toString();
+        String password = this.password.getText().toString();
+        String checkCode = check_code.getText().toString();
+        if (!InputDataVerification.phoneNumberInputVerification(phoneNumber)){
+            phone_number.setError("请输入正确的手机号");
+            Toast.makeText(RegisterActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
+        } else if (!InputDataVerification.smsVerificationCodeVerification(smsCode)){
+            sms_verification_code.setError("请输入正确的验证码", null);
+            Toast.makeText(RegisterActivity.this, "请输入正确的验证码", Toast.LENGTH_SHORT).show();
+        } else if (!InputDataVerification.passwordInputVerification(password)){
+            this.password.setError("密码至少包含8个字符，可包含数字、大小写字母和符号",null);
+            Toast.makeText(RegisterActivity.this, "密码至少包含8个字符，可包含数字、大小写字母和符号", Toast.LENGTH_SHORT).show();
+        } else if (!InputDataVerification.checkCodeVerification(checkCode)){
+            check_code.setError("请输入正确的授权码，授权码位于机身正面的机身按钮下侧");
+            Toast.makeText(RegisterActivity.this, "请输入正确的授权码，授权码位于机身正面的机身按钮下侧", Toast.LENGTH_SHORT).show();
+        } else if (InputDataVerification.phoneNumberInputVerification(phoneNumber) && InputDataVerification.smsVerificationCodeVerification(smsCode) && InputDataVerification.passwordInputVerification(password) && InputDataVerification.checkCodeVerification(checkCode)){
+            // 注册
+            Toast.makeText(RegisterActivity.this, "注册", Toast.LENGTH_SHORT).show();
+        }
 
     }
 }
