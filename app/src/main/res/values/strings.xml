@@ -29,6 +29,9 @@
     <string name="check_code_title">机身授权码</string>
     <string name="register_title_1">创建账户以继续</string>
     <string name="register_title_2">欢迎您的使用</string>
+    <string name="verification_code_Description">请输入图形验证码</string>
+    <string name="enter_verification_code">请输入图形验证码</string>
+    <string name="confirm">提交</string>
 
 
     <string name="register_slogan">近红外光谱分析仪</string>

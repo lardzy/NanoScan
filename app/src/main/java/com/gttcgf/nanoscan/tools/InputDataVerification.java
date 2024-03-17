@@ -22,7 +22,7 @@ public class InputDataVerification {
     }
 
     public static boolean checkCodeVerification(String checkCode){
-        Pattern p = Pattern.compile("[\\x21-\\x7E]{6}");
+        Pattern p = Pattern.compile("[\\x21-\\x7E]{4,16}");
         return p.matcher(checkCode).matches();
     }
 }
