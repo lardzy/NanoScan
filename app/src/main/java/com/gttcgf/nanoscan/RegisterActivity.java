@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.DialogFragment;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
@@ -119,7 +120,9 @@ public class RegisterActivity extends AppCompatActivity {
         });
         // 获取验证码按钮的点击事件
         get_verification_code.setOnClickListener(v -> {
-            Toast.makeText(RegisterActivity.this, "点击获取注册码", Toast.LENGTH_SHORT).show();
+            Toast.makeText(RegisterActivity.this, "点击获取验证码", Toast.LENGTH_SHORT).show();
+            DialogFragment df = VerificationCodeDialogFragment.newInstance("test");
+            df.show(getSupportFragmentManager(), "VerificationCodeDialogFragment");
         });
         // 点击立即注册按钮的事件
         register_button.setOnClickListener(v -> {
@@ -147,7 +150,6 @@ public class RegisterActivity extends AppCompatActivity {
             }
             return false;
         });
-
     }
     // 注册
     private void checkRegister(){
