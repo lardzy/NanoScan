@@ -9,15 +9,17 @@ import androidx.annotation.Nullable;
 public class UserDatabaseHelper extends SQLiteOpenHelper {
 
     // 数据库版本号
-    private static final int DATABASE_VERSION = 1;
+    public static final int DATABASE_VERSION = 1;
     // 数据库名称
-    private static final String DATABASE_NAME = "userDatabase.db";
+    public static final String DATABASE_NAME = "userDatabase.db";
 
     private static final String CREATE_TABLE_USERS = "CREATE TABLE IF NOT EXISTS Users (" +
             "UserID INTEGER PRIMARY KEY AUTOINCREMENT," +
             "PhoneNumber TEXT UNIQUE," +
-            "PasswordHash TEXT," +
-            "LoginToken TEXT" +
+            "PasswordHash TEXT NOT NULL," +
+            "LoginToken TEXT," +
+            "CreateTime TEXT," +
+            "UpdateTime TEXT" +
             ")";
 
     private static final String CREATE_TABLE_DEVICES = "CREATE TABLE IF NOT EXISTS Devices (" +
@@ -27,6 +29,8 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
             "MACAddress TEXT UNIQUE," +
             "AuthorizationCode TEXT UNIQUE," +
             "DeviceToken TEXT," +
+            "CreateTime TEXT," +
+            "UpdateTime TEXT," +
             "FOREIGN KEY(UserID) REFERENCES Users(UserID)" +
             ")";
 

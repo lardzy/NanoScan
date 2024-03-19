@@ -44,6 +44,12 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+
+    }
+
     // 初始化组件
     @SuppressLint("ClickableViewAccessibility")
     private void initialComponent() {

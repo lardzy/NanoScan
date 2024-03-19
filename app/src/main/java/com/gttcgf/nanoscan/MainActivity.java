@@ -3,6 +3,7 @@ package com.gttcgf.nanoscan;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -28,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-
+        initializeDatabase();
         checkFirstRunOrUserAgreement();
     }
 
@@ -49,5 +50,12 @@ public class MainActivity extends AppCompatActivity {
         }
         startActivity(intent);
         finish(); // 关闭当前活动，以防用户返回到这个界面
+    }
+    private void initializeDatabase(){
+        // 初始化数据库
+        UserDatabaseHelper userDatabaseHelper = new UserDatabaseHelper
+                (this, UserDatabaseHelper.DATABASE_NAME, null, UserDatabaseHelper.DATABASE_VERSION);
+//        SQLiteDatabase db = userDatabaseHelper.getWritableDatabase();
+//        userDatabaseHelper.onCreate(db);
     }
 }

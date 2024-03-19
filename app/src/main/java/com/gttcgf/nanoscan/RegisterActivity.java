@@ -2,6 +2,7 @@ package com.gttcgf.nanoscan;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -25,7 +26,9 @@ import androidx.fragment.app.DialogFragment;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
+import com.gttcgf.nanoscan.tools.DatabaseUtils;
 import com.gttcgf.nanoscan.tools.InputDataVerification;
+import com.gttcgf.nanoscan.tools.PasswordUtils;
 import com.gttcgf.nanoscan.tools.PortraitCaptureActivity;
 
 import java.util.List;
@@ -120,13 +123,20 @@ public class RegisterActivity extends AppCompatActivity {
         });
         // 获取验证码按钮的点击事件
         get_verification_code.setOnClickListener(v -> {
-            Toast.makeText(RegisterActivity.this, "点击获取验证码", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(RegisterActivity.this, "点击获取验证码", Toast.LENGTH_SHORT).show();
             DialogFragment df = VerificationCodeDialogFragment.newInstance("test");
             df.show(getSupportFragmentManager(), "VerificationCodeDialogFragment");
         });
         // 点击立即注册按钮的事件
         register_button.setOnClickListener(v -> {
-            checkRegister();
+            if (checkComponents()) {
+                if (updateDatabase()) {
+                    Toast.makeText(RegisterActivity.this, "注册成功", Toast.LENGTH_SHORT).show();
+                    finish();
+                } else {
+                    Toast.makeText(RegisterActivity.this, "注册失败", Toast.LENGTH_LONG).show();
+                }
+            }
         });
         // 设置密码输入框的显示状态
         password.setOnTouchListener((v, event) -> {
@@ -151,8 +161,8 @@ public class RegisterActivity extends AppCompatActivity {
             return false;
         });
     }
-    // 注册
-    private void checkRegister(){
+    // 检查输入内容是否合法，如果合法则继续注册，否则提示错误。
+    private boolean checkComponents(){
         String phoneNumber = phone_number.getText().toString();
         String smsCode = sms_verification_code.getText().toString();
         String password = this.password.getText().toString();
@@ -160,19 +170,43 @@ public class RegisterActivity extends AppCompatActivity {
         if (!InputDataVerification.phoneNumberInputVerification(phoneNumber)){
             phone_number.setError("请输入正确的手机号");
             Toast.makeText(RegisterActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (!InputDataVerification.smsVerificationCodeVerification(smsCode)){
             sms_verification_code.setError("请输入正确的验证码", null);
             Toast.makeText(RegisterActivity.this, "请输入正确的验证码", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (!InputDataVerification.passwordInputVerification(password)){
             this.password.setError("密码至少包含8个字符，可包含数字、大小写字母和符号",null);
             Toast.makeText(RegisterActivity.this, "密码至少包含8个字符，可包含数字、大小写字母和符号", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (!InputDataVerification.checkCodeVerification(checkCode)){
             check_code.setError("请输入正确的授权码，授权码位于机身正面的机身按钮下侧");
             Toast.makeText(RegisterActivity.this, "请输入正确的授权码，授权码位于机身正面的机身按钮下侧", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (InputDataVerification.phoneNumberInputVerification(phoneNumber) && InputDataVerification.smsVerificationCodeVerification(smsCode) && InputDataVerification.passwordInputVerification(password) && InputDataVerification.checkCodeVerification(checkCode)){
             // 注册
-            Toast.makeText(RegisterActivity.this, "注册", Toast.LENGTH_SHORT).show();
+            return true;
         }
+        return false;
+    }
+    // 将信息发送至服务器进行验证。
+    private boolean serverVerification(){
+        return true;
+    }
+    private boolean updateDatabase(){
+        DatabaseUtils databaseUtils = new DatabaseUtils(this);
+        ContentValues values = new ContentValues();
 
+        String passwordHash = PasswordUtils.hashPassword(this.password.getText().toString());
+
+        values.put("PhoneNumber", phone_number.getText().toString());
+        values.put("PasswordHash", passwordHash);
+        values.put("LoginToken", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+                "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ." +
+                "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
+        values.put("CreateTime", DatabaseUtils.getCurrentTime());
+        values.put("UpdateTime", DatabaseUtils.getCurrentTime());
+
+        return databaseUtils.insertData(values);
     }
 }
