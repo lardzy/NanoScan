@@ -46,7 +46,7 @@ public class UserAgreementActivity extends AppCompatActivity {
         btnReject.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 用户拒绝协议，可执行退出应用或返回上一页等操作
+                // 用户拒绝协议，返回上一页
                 finish();
             }
         });

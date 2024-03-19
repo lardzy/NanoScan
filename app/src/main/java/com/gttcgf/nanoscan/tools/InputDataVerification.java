@@ -7,7 +7,7 @@ public class InputDataVerification {
 
     // 密码输入框的输入限制
     public static boolean passwordInputVerification(String password) {
-        Pattern p = Pattern.compile("[\\x21-\\x7E]{8,32}");
+        Pattern p = Pattern.compile("[\\x21-\\x7E]{8,64}");
         return p.matcher(password).matches();
     }
     // 手机号输入框的输入限制

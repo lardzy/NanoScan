@@ -5,6 +5,7 @@ import android.app.ActivityManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
@@ -127,15 +128,18 @@ public class RegisterActivity extends AppCompatActivity {
             DialogFragment df = VerificationCodeDialogFragment.newInstance("test");
             df.show(getSupportFragmentManager(), "VerificationCodeDialogFragment");
         });
+
+        // todo: 点击注册按钮的事件
         // 点击立即注册按钮的事件
         register_button.setOnClickListener(v -> {
-            if (checkComponents()) {
-                if (updateDatabase()) {
-                    Toast.makeText(RegisterActivity.this, "注册成功", Toast.LENGTH_SHORT).show();
-                    finish();
-                } else {
-                    Toast.makeText(RegisterActivity.this, "注册失败", Toast.LENGTH_LONG).show();
-                }
+            if (checkComponents() && serverVerification()) {
+                SharedPreferences sharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
+                sharedPreferences.edit().putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString()).apply();
+                String passwordHash = PasswordUtils.hashPassword(password.getText().toString());
+                sharedPreferences.edit().putString(getString(R.string.pref_user_password), passwordHash).apply();
+
+                Toast.makeText(RegisterActivity.this, "注册成功", Toast.LENGTH_LONG).show();
+                finish();
             }
         });
         // 设置密码输入框的显示状态
@@ -183,7 +187,10 @@ public class RegisterActivity extends AppCompatActivity {
             check_code.setError("请输入正确的授权码，授权码位于机身正面的机身按钮下侧");
             Toast.makeText(RegisterActivity.this, "请输入正确的授权码，授权码位于机身正面的机身按钮下侧", Toast.LENGTH_SHORT).show();
             return false;
-        } else if (InputDataVerification.phoneNumberInputVerification(phoneNumber) && InputDataVerification.smsVerificationCodeVerification(smsCode) && InputDataVerification.passwordInputVerification(password) && InputDataVerification.checkCodeVerification(checkCode)){
+        } else if (InputDataVerification.phoneNumberInputVerification(phoneNumber)
+                && InputDataVerification.smsVerificationCodeVerification(smsCode) &&
+                InputDataVerification.passwordInputVerification(password) &&
+                InputDataVerification.checkCodeVerification(checkCode)){
             // 注册
             return true;
         }
@@ -193,20 +200,20 @@ public class RegisterActivity extends AppCompatActivity {
     private boolean serverVerification(){
         return true;
     }
-    private boolean updateDatabase(){
-        DatabaseUtils databaseUtils = new DatabaseUtils(this);
-        ContentValues values = new ContentValues();
-
-        String passwordHash = PasswordUtils.hashPassword(this.password.getText().toString());
-
-        values.put("PhoneNumber", phone_number.getText().toString());
-        values.put("PasswordHash", passwordHash);
-        values.put("LoginToken", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-                "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ." +
-                "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
-        values.put("CreateTime", DatabaseUtils.getCurrentTime());
-        values.put("UpdateTime", DatabaseUtils.getCurrentTime());
-
-        return databaseUtils.insertData(values);
-    }
+//    private boolean updateDatabase(){
+//        DatabaseUtils databaseUtils = new DatabaseUtils(this);
+//        ContentValues values = new ContentValues();
+//
+//        String passwordHash = PasswordUtils.hashPassword(this.password.getText().toString());
+//
+//        values.put("PhoneNumber", phone_number.getText().toString());
+//        values.put("PasswordHash", passwordHash);
+//        values.put("LoginToken", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+//                "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ." +
+//                "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
+//        values.put("CreateTime", DatabaseUtils.getCurrentTime());
+//        values.put("UpdateTime", DatabaseUtils.getCurrentTime());
+//
+//        return databaseUtils.insertData(values);
+//    }
 }

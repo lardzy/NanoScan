@@ -4,6 +4,10 @@
     <string name="app_version_name">v0.0.1</string>
     <string name="pref_first_run">isFirstRun</string>
     <string name="pref_user_agreed">userAgreed</string>
+    <string name="pref_user_phone_number">userPhoneNumber</string>
+    <string name="pref_user_password">userPassword</string>
+
+
     <string name="user_agreement">用户协议</string>
     <string name="accept">同意并继续</string>
     <string name="cancel">取消</string>
