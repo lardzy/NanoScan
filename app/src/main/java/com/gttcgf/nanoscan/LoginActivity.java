@@ -159,7 +159,7 @@ public class LoginActivity extends AppCompatActivity {
             return false;
         } else if (InputDataVerification.phoneNumberInputVerification(phoneNumber) && InputDataVerification.passwordInputVerification(password)){
             // 登录
-            Toast.makeText(LoginActivity.this, "登录", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(LoginActivity.this, "登录", Toast.LENGTH_SHORT).show();
             return true;
         }
         return false;

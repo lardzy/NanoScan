@@ -1,17 +1,24 @@
 package com.gttcgf.nanoscan.guidingSteps;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.gttcgf.nanoscan.DeviceList;
 import com.gttcgf.nanoscan.R;
 
 public class IntroGuideActivity extends AppCompatActivity {
 
     private ImageButton next_step;
+    private ViewPager2 viewPager;
+    private Button start_binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,7 +26,7 @@ public class IntroGuideActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_intro_guide);
 
-        ViewPager2 viewPager = findViewById(R.id.viewPager);
+        viewPager = findViewById(R.id.viewPager);
 
         GuideStepAdapter adapter = new GuideStepAdapter(this);
         viewPager.setAdapter(adapter);
@@ -28,6 +35,32 @@ public class IntroGuideActivity extends AppCompatActivity {
     }
     private void initialComponent(){
         next_step = findViewById(R.id.next_step);
+        start_binding = findViewById(R.id.start_binding);
+        next_step.setOnClickListener(v -> {
+            viewPager = findViewById(R.id.viewPager);
+            viewPager.setCurrentItem(viewPager.getCurrentItem() + 1);
+        });
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                super.onPageSelected(position);
+                if (position == 2) {
+                    next_step.setVisibility(View.GONE);
+                    start_binding.setVisibility(View.VISIBLE);
+                } else {
+                    next_step.setVisibility(View.VISIBLE);
+                    start_binding.setVisibility(View.GONE);
+                }
+            }
+        });
+        start_binding.setOnClickListener(v -> {
+            //跳转到绑定页面
 
+            Intent intent = new Intent(IntroGuideActivity.this, DeviceList.class);
+            startActivity(intent);
+            finish();
+
+        });
     }
+
 }

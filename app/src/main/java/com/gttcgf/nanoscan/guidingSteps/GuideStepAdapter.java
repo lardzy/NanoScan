@@ -15,7 +15,7 @@ public class GuideStepAdapter extends FragmentStateAdapter {
 
     @Override
     public int getItemCount() {
-        return 1;
+        return 3;
     }
 
     @NonNull
@@ -25,10 +25,10 @@ public class GuideStepAdapter extends FragmentStateAdapter {
         switch (position) {
             case 0:
                 return FirstStepAragment.newInstance();
-//            case 1:
-//                return VideoStepFragment.newInstance(R.raw.guide_open_device, "这是第一个视频下方的文字介绍。");
-//            case 2:
-//                return VideoStepFragment.newInstance(R.raw.guide_collecting_device, "这是第二个视频下方的文字介绍。");
+            case 1:
+                return SecondStepAragment.newInstance();
+            case 2:
+                return ThirdStepAragment.newInstance();
             default:
                 throw new IllegalStateException("Unexpected position: " + position);
 //        }

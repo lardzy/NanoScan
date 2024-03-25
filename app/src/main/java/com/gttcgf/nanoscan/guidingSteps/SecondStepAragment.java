@@ -11,22 +11,16 @@ import androidx.fragment.app.Fragment;
 
 import com.gttcgf.nanoscan.R;
 
-public class FirstStepAragment extends Fragment {
-//    private MovingSpotsView movingSpotsView;
-    public FirstStepAragment(){}
-
-    public static FirstStepAragment newInstance() {
-        return new FirstStepAragment();
+public class SecondStepAragment extends Fragment {
+    public SecondStepAragment() {
+    }
+    public static SecondStepAragment newInstance() {
+        return new SecondStepAragment();
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_first_step, container, false);
+        return inflater.inflate(R.layout.fragment_second_step, container, false);
     }
-
-//    @Override
-//    public void onResume() {
-//        super.onResume();
-//    }
 }
