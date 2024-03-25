@@ -12,5 +12,24 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:text="@string/version_number"/>
+    <ImageButton
+        android:id="@+id/next_step"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:contentDescription="@string/next_step_contentDescription"
+        android:src="@drawable/baseline_navigate_next_24"
+        android:background="@drawable/circle_button_background"
+        android:layout_marginBottom="40dp"
+        android:layout_marginEnd="30dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:clickable="true"
+        app:layout_constraintVertical_weight="0.1" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

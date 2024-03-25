@@ -36,6 +36,12 @@
     <string name="verification_code_Description">请输入图形验证码</string>
     <string name="enter_verification_code">请输入图形验证码</string>
     <string name="confirm">提交</string>
+    <string name="next_step">下一步</string>
+    <string name="next_step_contentDescription">下一步</string>
+    <string name="step_1_title">探索光谱的力量</string>
+    <string name="step_1_content">欢迎使用先进的便携式近红外光谱仪。\n通过本应用，
+        您可以轻松连接设备，实时获取和分析光谱数据，开启物质分析的新篇章。</string>
+    <string name="step_1_image_contentDescription">探索光谱的力量</string>
 
 
     <string name="register_slogan">近红外光谱分析仪</string>
@@ -69,4 +75,5 @@
 <p>© 2023 ISC_NIRScan_Android. 版权所有。</p>
 ]]>
 </string>
+    <string name="version_number">内测版本 v0.0.1</string>
 </resources>

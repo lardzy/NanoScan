@@ -10,7 +10,6 @@ import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -21,8 +20,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import java.util.regex.Pattern;
 
+import com.gttcgf.nanoscan.guidingSteps.IntroGuideActivity;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
 import com.gttcgf.nanoscan.tools.InputDataVerification;
 
@@ -180,6 +179,9 @@ public class LoginActivity extends AppCompatActivity {
 
         phone_number.setText(pref_user_phone_number);
         password.setText(pref_user_password);
+
+        password.setTransformationMethod(PasswordTransformationMethod.getInstance());
+        password.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.baseline_visibility_off_24, 0);
 
         userHasEditedPassword = false;
     }

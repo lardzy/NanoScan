@@ -14,7 +14,10 @@
         android:theme="@style/Theme.NanoScan"
         tools:targetApi="31">
         <activity
-            android:name=".IntroGuideActivity"
+            android:name=".guidingSteps.FirstStepAragment"
+            android:exported="false" />
+        <activity
+            android:name=".guidingSteps.IntroGuideActivity"
             android:exported="false" />
         <activity
             android:name=".LoginActivity"
@@ -25,7 +28,7 @@
             android:theme="@style/Theme.NanoScan" />
         <activity
             android:name=".tools.PortraitCaptureActivity"
-            android:screenOrientation="portrait"></activity>
+            android:screenOrientation="portrait" />
         <activity
             android:name=".UserAgreementActivity"
             android:exported="false" />

@@ -206,7 +206,7 @@
 
     <Button
         android:id="@+id/register_button"
-        android:layout_width="360dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:backgroundTint="@color/accept_button"
         android:text="@string/phone_number_register"
@@ -215,7 +215,9 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/check_code" />
+        app:layout_constraintTop_toTopOf="@id/check_code"
+        android:layout_marginStart="30dp"
+        android:layout_marginEnd="30dp" />
 
     <TextView
         android:id="@+id/register"
