@@ -173,6 +173,10 @@ public class LoginActivity extends AppCompatActivity {
         pref_user_phone_number = sharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
         pref_user_password = sharedPreferences.getString(getString(R.string.pref_user_password), "");
 
+        Log.v("LoginActivity", "pref_user_phone_number: " + pref_user_phone_number);
+        Log.v("LoginActivity", "pref_user_password: " + pref_user_password);
+
+        // 如果用户没有保存手机号或密码，则直接返回
         if (pref_user_phone_number.isEmpty() || pref_user_password.isEmpty()){
             return;
         }
@@ -188,6 +192,7 @@ public class LoginActivity extends AppCompatActivity {
 
     // 当用户编辑密码框时，清空本地存储的密码
     private void clearPassword(){
+        Log.v("LoginActivity", "clearPassword 被调用");
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(getString(R.string.pref_user_password), "");
         editor.apply();

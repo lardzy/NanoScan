@@ -1,6 +1,9 @@
 package com.gttcgf.nanoscan;
 
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -16,6 +19,9 @@ import java.util.List;
 
 public class DeviceList extends AppCompatActivity {
     private List<DeviceItem> itemList;
+    private Button button_add_device;
+    private ImageButton imageButton_back, imageButton_search;
+    private View.OnClickListener onClickListener;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,7 +34,6 @@ public class DeviceList extends AppCompatActivity {
         });
         initializeData();
         initialComponent();
-
     }
     private void initializeData(){
         itemList = new ArrayList<>();
@@ -41,6 +46,10 @@ public class DeviceList extends AppCompatActivity {
     }
     private void initialComponent(){
         RecyclerView recyclerView = findViewById(R.id.device_list);
+        button_add_device = findViewById(R.id.button_add_device);
+        imageButton_back = findViewById(R.id.imageButton_back);
+        imageButton_search = findViewById(R.id.imageButton_search);
+
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         DeviceListAdapter adapter = new DeviceListAdapter(itemList);
         recyclerView.setAdapter(adapter);
@@ -49,5 +58,19 @@ public class DeviceList extends AppCompatActivity {
             Toast.makeText(this,"点击了：" +
                     itemList.get(position).getDeviceName(),Toast.LENGTH_SHORT).show();
         });
+
+        onClickListener = view -> {
+            if (view.getId() == R.id.button_add_device){
+                Toast.makeText(DeviceList.this,"点击了添加设备",Toast.LENGTH_SHORT).show();
+            } else if (view.getId() == R.id.imageButton_back){
+                finish();
+            } else if (view.getId() == R.id.imageButton_search){
+                Toast.makeText(DeviceList.this,"点击了搜索设备",Toast.LENGTH_SHORT).show();
+            }
+        };
+
+        button_add_device.setOnClickListener(onClickListener);
+        imageButton_back.setOnClickListener(onClickListener);
+        imageButton_search.setOnClickListener(onClickListener);
     }
 }
