@@ -17,7 +17,8 @@ public class DatabaseUtils {
     private Context context;
     private UserDatabaseHelper userDatabaseHelper;
     private SQLiteDatabase db;
-    public DatabaseUtils(Context context){
+
+    public DatabaseUtils(Context context) {
         this.context = context;
         this.userDatabaseHelper = new UserDatabaseHelper
                 (context, UserDatabaseHelper.DATABASE_NAME, null, UserDatabaseHelper.DATABASE_VERSION);
@@ -36,10 +37,12 @@ public class DatabaseUtils {
             return false;
         }
     }
-    public static String getCurrentTime(){
+
+    public static String getCurrentTime() {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         return sdf.format(new Date());
     }
+
     public Cursor queryData(String table, String[] columns, String selection, String[] selectionArgs) {
         return db.query(table, columns, selection, selectionArgs, null, null, null);
     }

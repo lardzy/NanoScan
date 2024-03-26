@@ -129,7 +129,6 @@ public class RegisterActivity extends AppCompatActivity {
             df.show(getSupportFragmentManager(), "VerificationCodeDialogFragment");
         });
 
-        // todo: 点击注册按钮的事件
         // 点击立即注册按钮的事件
         register_button.setOnClickListener(v -> {
             if (checkComponents() && serverVerification()) {

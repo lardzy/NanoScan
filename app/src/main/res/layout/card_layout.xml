@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="256dp"
+    android:layout_height="120dp"
     android:background="@drawable/rounded_rectangle"
-    android:layout_marginBottom="24dp"
+    android:layout_marginBottom="12dp"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    <TextView
+        android:id="@+id/card_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/gray"
+        android:textStyle="bold"
+        android:alpha="0.1"
+        android:textSize="64sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginStart="-4dp"
+        android:text="@string/card_id"/>
     <ImageView
         android:id="@+id/card_image"
         android:layout_width="0dp"
@@ -14,10 +27,10 @@
         app:layout_constraintEnd_toStartOf="@+id/card_title"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_marginTop="24dp"
-        android:layout_marginBottom="24dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
         android:scaleType="fitCenter"
-        app:layout_constraintHorizontal_weight="0.6"
+        app:layout_constraintHorizontal_weight="0.5"
         android:contentDescription="@string/card_image_contentDescription" />
     <TextView
         android:id="@+id/card_title"
@@ -27,10 +40,10 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/card_title_1"
-        app:layout_constraintHorizontal_weight="0.4"
+        app:layout_constraintHorizontal_weight="0.5"
         android:layout_marginBottom="12dp"
         android:text="@string/device_name"
-        android:textSize="32dp"
+        android:textSize="28sp"
         android:textStyle="bold"
         android:gravity="center_horizontal|bottom"/>
     <TextView
@@ -42,9 +55,9 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/card_title"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintHorizontal_weight="0.4"
+        app:layout_constraintHorizontal_weight="0.5"
         android:text="@string/device_type_nir"
-        android:textSize="18sp"
+        android:textSize="16sp"
         android:gravity="center_horizontal|top"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

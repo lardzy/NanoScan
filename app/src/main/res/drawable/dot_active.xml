@@ -4,5 +4,5 @@
     <size
         android:width="8dp"
         android:height="8dp"/>
-    <solid android:color="#FF0000"/> <!-- 使用你的选中颜色 -->
+    <solid android:color="#257ef4"/> <!-- 使用你的选中颜色 -->
 </shape>

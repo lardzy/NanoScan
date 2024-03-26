@@ -13,15 +13,19 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
     // 数据库名称
     public static final String DATABASE_NAME = "userDatabase.db";
 
+    // 用户表：UserID 主键, PhoneNumber 用户手机号、要求唯一, PasswordHash 用户密码、要求非空, IMEI 设备IMEI号
+    // , LoginToken 登录Token, CreateTime, UpdateTime
     private static final String CREATE_TABLE_USERS = "CREATE TABLE IF NOT EXISTS Users (" +
             "UserID INTEGER PRIMARY KEY AUTOINCREMENT," +
             "PhoneNumber TEXT UNIQUE," +
             "PasswordHash TEXT NOT NULL," +
             "LoginToken TEXT," +
-            "CreateTime TEXT," +
-            "UpdateTime TEXT" +
+            "IMEI TEXT," +
+            "CreateTime TEXT NOT NULL," +
+            "UpdateTime TEXT NOT NULL" +
             ")";
 
+    // 设备表：DeviceID, UserID, CustomName, MACAddress, AuthorizationCode, DeviceToken, CreateTime, UpdateTime
     private static final String CREATE_TABLE_DEVICES = "CREATE TABLE IF NOT EXISTS Devices (" +
             "DeviceID INTEGER PRIMARY KEY AUTOINCREMENT," +
             "UserID INTEGER," +
@@ -29,8 +33,8 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
             "MACAddress TEXT UNIQUE," +
             "AuthorizationCode TEXT UNIQUE," +
             "DeviceToken TEXT," +
-            "CreateTime TEXT," +
-            "UpdateTime TEXT," +
+            "CreateTime TEXT NOT NULL," +
+            "UpdateTime TEXT NOT NULL," +
             "FOREIGN KEY(UserID) REFERENCES Users(UserID)" +
             ")";
 

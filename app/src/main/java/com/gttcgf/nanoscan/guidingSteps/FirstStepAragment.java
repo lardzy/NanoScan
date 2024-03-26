@@ -25,8 +25,4 @@ public class FirstStepAragment extends Fragment {
         return inflater.inflate(R.layout.fragment_first_step, container, false);
     }
 
-//    @Override
-//    public void onResume() {
-//        super.onResume();
-//    }
 }

@@ -2,12 +2,12 @@ package com.gttcgf.nanoscan;
 
 public class DeviceItem {
     private int ImageResource;
-    private String Title, Title1;
+    private String deviceName, deviceType;
 
-    public DeviceItem(int imageResource, String title, String title1) {
+    public DeviceItem(int imageResource, String deviceName, String deviceType) {
         ImageResource = imageResource;
-        Title = title;
-        Title1 = title1;
+        this.deviceName = deviceName;
+        this.deviceType = deviceType;
     }
 
     public int getImageResource() {
@@ -18,19 +18,19 @@ public class DeviceItem {
         ImageResource = imageResource;
     }
 
-    public String getTitle() {
-        return Title;
+    public String getDeviceName() {
+        return deviceName;
     }
 
-    public void setTitle(String title) {
-        Title = title;
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
 
-    public String getTitle1() {
-        return Title1;
+    public String getDeviceType() {
+        return deviceType;
     }
 
-    public void setTitle1(String title1) {
-        Title1 = title1;
+    public void setDeviceType(String deviceType) {
+        this.deviceType = deviceType;
     }
 }
