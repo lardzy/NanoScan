@@ -1,78 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:layout_height="match_parent">
+
     <ImageButton
         android:id="@+id/imageButton_back"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
         android:layout_marginStart="32dp"
         android:layout_marginTop="64dp"
-        app:layout_constraintTop_toTopOf="parent"
+        android:background="@android:color/transparent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/baseline_arrow_back_ios_24" />
+
     <TextView
         android:id="@+id/device_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintStart_toEndOf="@+id/imageButton_back"
-        app:layout_constraintEnd_toStartOf="@+id/imageButton_search"
-        app:layout_constraintTop_toTopOf="parent"
         android:layout_marginTop="60dp"
         android:text="@string/device_title"
         android:textSize="24sp"
-        android:textStyle="bold"/>
+        android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@+id/imageButton_search"
+        app:layout_constraintStart_toEndOf="@+id/imageButton_back"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <ImageButton
         android:id="@+id/imageButton_search"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        android:layout_marginEnd="32dp"
         android:layout_marginTop="64dp"
+        android:layout_marginEnd="32dp"
+        android:background="@android:color/transparent"
         android:clickable="true"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/baseline_search_24"/>
+        app:srcCompat="@drawable/baseline_search_24" />
+
     <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/device_list"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:id="@+id/device_list"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageButton_back"
-        app:layout_constraintBottom_toTopOf="@+id/button_add_device"
-        app:layout_constraintVertical_weight="0.92"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
         android:layout_marginStart="12dp"
-        android:layout_marginEnd="12dp"/>
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="16dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintBottom_toTopOf="@+id/button_add_device"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imageButton_back"
+        app:layout_constraintVertical_weight="0.92" />
+
     <ImageView
+        android:id="@+id/imageView3"
         android:layout_width="match_parent"
         android:layout_height="32dp"
-        android:src="@drawable/gradient_edge_below"
         android:scaleType="fitXY"
+        android:src="@drawable/gradient_edge_below"
         app:layout_constraintBottom_toBottomOf="@+id/device_list"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <Button
         android:id="@+id/button_add_device"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="48dp"
+        android:backgroundTint="@color/accept_button"
         android:text="@string/add_device"
         android:textSize="18sp"
         android:textStyle="bold"
-        app:layout_constraintVertical_weight="0.08"
-        android:backgroundTint="@color/accept_button"
-        android:layout_marginBottom="48dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginStart="24dp"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/device_list"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintVertical_weight="0.08" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

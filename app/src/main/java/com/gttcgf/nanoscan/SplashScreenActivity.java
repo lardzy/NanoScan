@@ -14,7 +14,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-public class SplashScreen extends AppCompatActivity {
+public class SplashScreenActivity extends AppCompatActivity {
     private Animation topAnim, bottomAnim;
     private ImageView image;
     private TextView slogan, app_version_name;
@@ -36,7 +36,7 @@ public class SplashScreen extends AppCompatActivity {
         app_version_name.setAnimation(bottomAnim);
 
         new Handler().postDelayed(() -> {
-            startActivity(new Intent(SplashScreen.this, MainActivity.class));
+            startActivity(new Intent(SplashScreenActivity.this, MainActivity.class));
             finish();
         }, 1000);
 

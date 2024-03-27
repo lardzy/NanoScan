@@ -93,4 +93,9 @@
 </string>
     <string name="version_number">内测版本 v0.0.1</string>
     <string name="card_id">N/A</string>
+    <string name="NA">N/A</string>
+    <string name="device_information_dialog_device_name">设备名称：</string>
+    <string name="device_information_dialog_device_name_hint">设备名称最长不超过10个字</string>
+    <string name="device_information_dialog_device_info">设备信息：</string>
+    <string name="device_information_dialog_device_type">设备类型：</string>
 </resources>

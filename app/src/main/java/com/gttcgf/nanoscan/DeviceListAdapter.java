@@ -40,6 +40,10 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         holder.itemView.setOnClickListener(view -> {
             myItemClickListener.OnItemClick(position);
         });
+        holder.itemView.setOnLongClickListener(view -> {
+            myItemClickListener.OnItemLongClick(position);
+            return true; // 返回true表示这个事件已经被处理，不会再传递给其他的监听器
+        });
     }
 
     // 返回RecyclerView子项的数目
@@ -64,5 +68,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
     }
     interface OnItemClickListener{
         void OnItemClick(int position);
+        void OnItemLongClick(int position);
     }
 }

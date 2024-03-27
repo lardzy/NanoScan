@@ -6,13 +6,12 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.gttcgf.nanoscan.DeviceList;
+import com.gttcgf.nanoscan.DeviceListActivity;
 import com.gttcgf.nanoscan.R;
 
 public class IntroGuideActivity extends AppCompatActivity {
@@ -73,7 +72,7 @@ public class IntroGuideActivity extends AppCompatActivity {
         });
         start_binding.setOnClickListener(v -> {
             //跳转到设备绑定页面
-            Intent intent = new Intent(IntroGuideActivity.this, DeviceList.class);
+            Intent intent = new Intent(IntroGuideActivity.this, DeviceListActivity.class);
             startActivity(intent);
             finish();
 
