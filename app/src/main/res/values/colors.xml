@@ -13,5 +13,6 @@
     <color name="accept_button">#257ef4</color>
     <color name="reject_button">#FF808080</color>
     <color name="video_background">#E8E8E6</color>
+    <color name="device_details_purple">#332d5a</color>
 
 </resources>
