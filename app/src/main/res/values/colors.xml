@@ -14,5 +14,7 @@
     <color name="reject_button">#FF808080</color>
     <color name="video_background">#E8E8E6</color>
     <color name="device_details_purple">#332d5a</color>
+    <color name="collect_component_background_color">#FF9800</color>
+    <color name="scan_btn_background_color">#F5B54E</color>
 
 </resources>
