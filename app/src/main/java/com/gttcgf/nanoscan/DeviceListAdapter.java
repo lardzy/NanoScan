@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
 
-public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder>{
+public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder> {
     private List<DeviceItem> deviceItems;
     private OnItemClickListener myItemClickListener;
 
@@ -55,6 +55,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
     public static class DeviceViewHolder extends RecyclerView.ViewHolder {
         public ImageView card_image;
         public TextView card_title, card_title_1, card_id;
+
         public DeviceViewHolder(@NonNull View itemView) {
             super(itemView);
             card_image = itemView.findViewById(R.id.card_image);
@@ -63,11 +64,14 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
             card_id = itemView.findViewById(R.id.card_id);
         }
     }
-    public void setOnItemClickListener(OnItemClickListener myItemClickListener){
+
+    public void setOnItemClickListener(OnItemClickListener myItemClickListener) {
         this.myItemClickListener = myItemClickListener;
     }
-    interface OnItemClickListener{
+
+    interface OnItemClickListener {
         void OnItemClick(int position);
+
         void OnItemLongClick(int position);
     }
 }

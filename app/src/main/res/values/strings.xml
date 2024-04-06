@@ -108,4 +108,5 @@
     <string name="humidity_value">N/A</string>
     <string name="preheat_toggle">预热光源</string>
     <string name="not_preheat_toggle">不预热光源</string>
+    <string name="recent_spectral_data_list_empty">近期无光谱测量数据</string>
 </resources>

@@ -27,6 +27,7 @@ public class DeviceListActivity extends AppCompatActivity {
     private View.OnClickListener onClickListener;
     private TextView device_type_input, device_info_input;
     private EditText device_name_input;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -40,7 +41,8 @@ public class DeviceListActivity extends AppCompatActivity {
         initializeData();
         initialComponent();
     }
-    private void initializeData(){
+
+    private void initializeData() {
         itemList = new ArrayList<>();
         itemList.add(new DeviceItem(R.drawable.equipment_front, "设备1", "便携式近红外光谱仪"));
         itemList.add(new DeviceItem(R.drawable.equipment_front, "设备2", "便携式近红外光谱仪"));
@@ -49,7 +51,8 @@ public class DeviceListActivity extends AppCompatActivity {
         itemList.add(new DeviceItem(R.drawable.equipment_front, "设备5", "便携式近红外光谱仪"));
         itemList.add(new DeviceItem(R.drawable.equipment_front, "设备6", "便携式近红外光谱仪"));
     }
-    private void initialComponent(){
+
+    private void initialComponent() {
         RecyclerView recyclerView = findViewById(R.id.device_list);
         button_add_device = findViewById(R.id.button_add_device);
         imageButton_back = findViewById(R.id.imageButton_back);
@@ -61,8 +64,8 @@ public class DeviceListActivity extends AppCompatActivity {
         adapter.setOnItemClickListener(new DeviceListAdapter.OnItemClickListener() {
             @Override
             public void OnItemClick(int position) {
-                Toast.makeText(DeviceListActivity.this,position + " ," +"点击了：" +
-                        itemList.get(position).getDeviceName(),Toast.LENGTH_SHORT).show();
+                Toast.makeText(DeviceListActivity.this, position + " ," + "点击了：" +
+                        itemList.get(position).getDeviceName(), Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -72,12 +75,12 @@ public class DeviceListActivity extends AppCompatActivity {
         });
 
         onClickListener = view -> {
-            if (view.getId() == R.id.button_add_device){
-                Toast.makeText(DeviceListActivity.this,"点击了添加设备",Toast.LENGTH_SHORT).show();
-            } else if (view.getId() == R.id.imageButton_back){
+            if (view.getId() == R.id.button_add_device) {
+                Toast.makeText(DeviceListActivity.this, "点击了添加设备", Toast.LENGTH_SHORT).show();
+            } else if (view.getId() == R.id.imageButton_back) {
                 finish();
-            } else if (view.getId() == R.id.imageButton_search){
-                Toast.makeText(DeviceListActivity.this,"点击了搜索设备",Toast.LENGTH_SHORT).show();
+            } else if (view.getId() == R.id.imageButton_search) {
+                Toast.makeText(DeviceListActivity.this, "点击了搜索设备", Toast.LENGTH_SHORT).show();
             }
         };
         // 绑定监听器
@@ -85,8 +88,9 @@ public class DeviceListActivity extends AppCompatActivity {
         imageButton_back.setOnClickListener(onClickListener);
         imageButton_search.setOnClickListener(onClickListener);
     }
+
     // todo:这个方法仅测试用，正式版将删除。
-    private void modifyDeviceInformation(int position, DeviceListAdapter adapter){
+    private void modifyDeviceInformation(int position, DeviceListAdapter adapter) {
         AlertDialog.Builder builder = new AlertDialog.Builder(DeviceListActivity.this);
         builder.setTitle("修改设备信息");
         View view = getLayoutInflater().inflate(R.layout.modify_device_information_dialog_layout, null);
@@ -99,19 +103,19 @@ public class DeviceListActivity extends AppCompatActivity {
         builder.setView(view);
 
         builder.setPositiveButton("确认", (dialog, which) -> {
-            if (device_name_input.getText().toString().isEmpty() || device_name_input.getText().toString().length() > 10){
-                Toast.makeText(DeviceListActivity.this,"设备名称格式有误!",Toast.LENGTH_SHORT).show();
+            if (device_name_input.getText().toString().isEmpty() || device_name_input.getText().toString().length() > 10) {
+                Toast.makeText(DeviceListActivity.this, "设备名称格式有误!", Toast.LENGTH_SHORT).show();
                 return;
             }
             itemList.get(position).setDeviceName(device_name_input.getText().toString());
             adapter.notifyItemChanged(position);
-            Toast.makeText(DeviceListActivity.this,"修改成功",Toast.LENGTH_SHORT).show();
+            Toast.makeText(DeviceListActivity.this, "修改成功", Toast.LENGTH_SHORT).show();
         });
         builder.setNeutralButton("删除设备", (dialog, which) -> {
             itemList.remove(position);
             adapter.notifyItemRemoved(position);
             adapter.notifyItemRangeChanged(position, itemList.size() - position);
-            Toast.makeText(DeviceListActivity.this,"删除成功",Toast.LENGTH_SHORT).show();
+            Toast.makeText(DeviceListActivity.this, "删除成功", Toast.LENGTH_SHORT).show();
         });
         builder.setNegativeButton("取消", (dialog, which) -> {
         });
