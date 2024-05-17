@@ -1,5 +1,6 @@
 package com.gttcgf.nanoscan;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -44,12 +45,13 @@ public class DeviceListActivity extends AppCompatActivity {
 
     private void initializeData() {
         itemList = new ArrayList<>();
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "设备1", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "设备2", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "设备3", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "设备4", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "设备5", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "设备6", "便携式近红外光谱仪"));
+        // todo:测试用数据
+        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪"));
+        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备2", "便携式近红外光谱仪"));
+        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备3", "便携式近红外光谱仪"));
+        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备4", "便携式近红外光谱仪"));
+        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备5", "便携式近红外光谱仪"));
+        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备6", "便携式近红外光谱仪"));
     }
 
     private void initialComponent() {
@@ -64,8 +66,11 @@ public class DeviceListActivity extends AppCompatActivity {
         adapter.setOnItemClickListener(new DeviceListAdapter.OnItemClickListener() {
             @Override
             public void OnItemClick(int position) {
-                Toast.makeText(DeviceListActivity.this, position + " ," + "点击了：" +
-                        itemList.get(position).getDeviceName(), Toast.LENGTH_SHORT).show();
+//                Toast.makeText(DeviceListActivity.this, position + " ," + "点击了：" +
+//                        itemList.get(position).getDeviceName(), Toast.LENGTH_SHORT).show();
+                Intent i = new Intent(DeviceListActivity.this, DeviceDetailsActivity.class);
+                i.putExtra("device_name", itemList.get(position).getDeviceName());
+                startActivity(i);
             }
 
             @Override

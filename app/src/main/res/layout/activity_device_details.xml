@@ -255,12 +255,14 @@
             android:layout_marginEnd="0.9dp"
             android:background="@drawable/preheat_toggle_background"
             android:textColor="@color/gray"
-            android:textOff="@string/preheat_toggle"
+            android:textOn="@string/preheat_light_source_switch"
+            android:textOff="@string/preheat_light_source_switch"
             android:textSize="12sp"
             android:textStyle="bold"
+            android:clickable="false"
             app:layout_constraintBottom_toBottomOf="@id/view"
             app:layout_constraintEnd_toStartOf="@id/not_preheat_toggle"
-            app:layout_constraintHeight_percent="0.13"
+            app:layout_constraintHeight_percent="0.2"
             app:layout_constraintTop_toTopOf="@id/view" />
 
         <ToggleButton
@@ -271,29 +273,17 @@
             android:background="@drawable/not_preheat_toggle_background"
             android:textColor="@color/gray"
             android:textOff="@string/not_preheat_toggle"
+            android:textOn="@string/preheat_toggle"
             android:textSize="12sp"
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="@id/view"
             app:layout_constraintEnd_toEndOf="@+id/view"
-            app:layout_constraintHeight_percent="0.13"
+            app:layout_constraintHeight_percent="0.2"
             app:layout_constraintTop_toTopOf="@id/view" />
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!--    <TextView-->
-    <!--        android:id="@+id/textView4"-->
-    <!--        android:layout_width="wrap_content"-->
-    <!--        android:layout_height="wrap_content"-->
-    <!--        android:layout_marginStart="16dp"-->
-    <!--        android:layout_marginTop="8dp"-->
-    <!--        android:alpha="0.8"-->
-    <!--        android:text="@string/device_name"-->
-    <!--        android:textColor="@color/device_details_purple"-->
-    <!--        android:textSize="24sp"-->
-    <!--        android:textStyle="bold"-->
-    <!--        app:layout_constraintStart_toStartOf="parent"-->
-    <!--        app:layout_constraintTop_toBottomOf="@+id/device_details_layout" />-->
     <TextView
         android:id="@+id/recent_spectral_data_list_empty"
         android:layout_width="wrap_content"

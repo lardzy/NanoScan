@@ -20,7 +20,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         this.deviceItems = deviceItems;
     }
 
-    // 用于创建ViewHolder的实例，并把加载的布局传入ViewHolder的构造函数中。
+    // 创建ViewHolder的实例，并把加载的布局传入ViewHolder的构造函数中。
     @NonNull
     @Override
     public DeviceListAdapter.DeviceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -52,6 +52,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         return deviceItems.size();
     }
 
+    // 自定义的ViewHolder类，继承自RecyclerView.ViewHolder
     public static class DeviceViewHolder extends RecyclerView.ViewHolder {
         public ImageView card_image;
         public TextView card_title, card_title_1, card_id;
