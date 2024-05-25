@@ -107,7 +107,8 @@
     <string name="humidity_text">设备湿度：</string>
     <string name="humidity_value">N/A</string>
     <string name="preheat_light_source_switch">是否预热光源</string>
-    <string name="preheat_toggle">预热</string>
-    <string name="not_preheat_toggle">不预热</string>
+    <string name="preheat_toggle">预热光源</string>
+    <string name="not_preheat_toggle">不预热光源</string>
     <string name="recent_spectral_data_list_empty">近期无光谱测量数据</string>
+    <string name="scan_contentDescription">开始扫描</string>
 </resources>

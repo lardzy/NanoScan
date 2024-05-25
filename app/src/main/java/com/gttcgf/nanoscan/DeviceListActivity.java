@@ -2,6 +2,7 @@ package com.gttcgf.nanoscan;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -34,6 +35,7 @@ public class DeviceListActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_device_list);
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.device_list), (v, insets) -> {
             Insets insets1 = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(insets1.left, insets1.top, insets1.right, insets1.bottom);
@@ -66,13 +68,11 @@ public class DeviceListActivity extends AppCompatActivity {
         adapter.setOnItemClickListener(new DeviceListAdapter.OnItemClickListener() {
             @Override
             public void OnItemClick(int position) {
-//                Toast.makeText(DeviceListActivity.this, position + " ," + "点击了：" +
-//                        itemList.get(position).getDeviceName(), Toast.LENGTH_SHORT).show();
+                // 点击设备列表中的设备，跳转到设备详情页面
                 Intent i = new Intent(DeviceListActivity.this, DeviceDetailsActivity.class);
                 i.putExtra("device_name", itemList.get(position).getDeviceName());
                 startActivity(i);
             }
-
             @Override
             public void OnItemLongClick(int position) {
                 modifyDeviceInformation(position, adapter);

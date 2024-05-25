@@ -53,28 +53,23 @@ public class VerificationCodeDialogFragment extends DialogFragment {
 
         return dialog;
     }
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Find the buttons in the layout
         Button buttonConfirm = view.findViewById(R.id.buttonConfirm);
         Button buttonCancel = view.findViewById(R.id.buttonCancel);
         ProgressBar progressBar = view.findViewById(R.id.progressBar);
 
         progressBar.setVisibility(View.VISIBLE);
-        // Set a click listener for the confirm button
         buttonConfirm.setOnClickListener(v -> {
-            // TODO: Handle the confirm button click
             Toast.makeText(getActivity(), "确认按钮被点击", Toast.LENGTH_SHORT).show();
             progressBar.setVisibility(View.GONE);
 
         });
 
-        // Set a click listener for the cancel button
         buttonCancel.setOnClickListener(v -> {
-            // TODO: Handle the cancel button click
-//            Toast.makeText(getActivity(), "取消按钮被点击", Toast.LENGTH_SHORT).show();
             dismiss();
         });
     }

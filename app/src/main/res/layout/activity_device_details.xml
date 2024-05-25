@@ -14,6 +14,7 @@
         android:layout_marginStart="32dp"
         android:layout_marginTop="28dp"
         android:background="@android:color/transparent"
+        android:clickable="true"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/baseline_arrow_back_ios_24" />
@@ -26,18 +27,19 @@
         android:text="@string/device_type_nir"
         android:textSize="24sp"
         android:textStyle="bold"
-        app:layout_constraintEnd_toStartOf="@+id/imageButton_search"
+        app:layout_constraintEnd_toStartOf="@+id/imageButton_menu"
         app:layout_constraintStart_toEndOf="@+id/imageButton_back"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageButton
-        android:id="@+id/imageButton_search"
+        android:id="@+id/imageButton_menu"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="28dp"
         android:layout_marginEnd="32dp"
         android:background="@android:color/transparent"
         android:clickable="true"
+        android:contextClickable="true"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/baseline_more_horiz_24" />
@@ -76,6 +78,7 @@
             android:layout_marginStart="12dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/rounded_rectangle"
+            android:clickable="true"
             android:elevation="4dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -132,6 +135,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
+            android:id="@+id/battery_level"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
@@ -241,7 +245,22 @@
             android:alpha="0.8"
             android:background="@drawable/circle_button_background"
             android:backgroundTint="@color/scan_btn_background_color"
-            android:src="@drawable/baseline_crop_free_24"
+            android:clickable="true"
+            android:contentDescription="@string/scan_contentDescription"
+            android:src="@drawable/baseline_add_link_24"
+            app:layout_constraintBottom_toTopOf="@id/view"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.2"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/view" />
+
+        <ProgressBar
+            android:id="@+id/scan_progressbar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.8"
+            android:indeterminate="true"
+            android:visibility="invisible"
             app:layout_constraintBottom_toTopOf="@id/view"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.2"
@@ -249,32 +268,16 @@
             app:layout_constraintTop_toTopOf="@id/view" />
 
         <ToggleButton
-            android:id="@+id/preheat_toggle"
-            android:layout_width="wrap_content"
-            android:layout_height="0dp"
-            android:layout_marginEnd="0.9dp"
-            android:background="@drawable/preheat_toggle_background"
-            android:textColor="@color/gray"
-            android:textOn="@string/preheat_light_source_switch"
-            android:textOff="@string/preheat_light_source_switch"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:clickable="false"
-            app:layout_constraintBottom_toBottomOf="@id/view"
-            app:layout_constraintEnd_toStartOf="@id/not_preheat_toggle"
-            app:layout_constraintHeight_percent="0.2"
-            app:layout_constraintTop_toTopOf="@id/view" />
-
-        <ToggleButton
             android:id="@+id/not_preheat_toggle"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
-            android:layout_marginEnd="12dp"
+            android:layout_marginEnd="24dp"
             android:background="@drawable/not_preheat_toggle_background"
+            android:backgroundTint="@color/white"
             android:textColor="@color/gray"
             android:textOff="@string/not_preheat_toggle"
             android:textOn="@string/preheat_toggle"
-            android:textSize="12sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="@id/view"
             app:layout_constraintEnd_toEndOf="@+id/view"
@@ -289,8 +292,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/recent_spectral_data_list_empty"
-        android:textSize="14sp"
         android:textColor="@color/gray"
+        android:textSize="14sp"
         app:layout_constraintBottom_toBottomOf="@+id/recent_spectral_data_list"
         app:layout_constraintEnd_toEndOf="@+id/recent_spectral_data_list"
         app:layout_constraintStart_toStartOf="@+id/recent_spectral_data_list"
@@ -304,9 +307,9 @@
         android:layout_marginTop="12dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
-        android:visibility="invisible"
         android:background="@drawable/rounded_rectangle"
         android:elevation="4dp"
+        android:visibility="invisible"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

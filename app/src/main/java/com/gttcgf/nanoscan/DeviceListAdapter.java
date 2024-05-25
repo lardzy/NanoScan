@@ -52,7 +52,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         return deviceItems.size();
     }
 
-    // 自定义的ViewHolder类，继承自RecyclerView.ViewHolder
+    // 自定义的ViewHolder类，继承自RecyclerView.ViewHolder，用于对控件进行缓存。
     public static class DeviceViewHolder extends RecyclerView.ViewHolder {
         public ImageView card_image;
         public TextView card_title, card_title_1, card_id;

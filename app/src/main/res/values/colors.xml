@@ -16,5 +16,6 @@
     <color name="device_details_purple">#332d5a</color>
     <color name="collect_component_background_color">#257ef4</color>
     <color name="scan_btn_background_color">#257ef4</color>
+    <color name="preheat_toggle_text">#8CBEFF</color>
 
 </resources>

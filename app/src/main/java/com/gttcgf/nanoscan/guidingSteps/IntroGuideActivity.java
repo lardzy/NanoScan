@@ -28,13 +28,13 @@ public class IntroGuideActivity extends AppCompatActivity {
         setContentView(R.layout.activity_intro_guide);
 
         viewPager = findViewById(R.id.viewPager);
-
         GuideStepAdapter adapter = new GuideStepAdapter(this);
         viewPager.setAdapter(adapter);
         initialComponent();
 
     }
-    private void initialComponent(){
+
+    private void initialComponent() {
         next_step = findViewById(R.id.next_step);
         start_binding = findViewById(R.id.start_binding);
         dot_step_1 = findViewById(R.id.dot_step_1);
@@ -49,7 +49,7 @@ public class IntroGuideActivity extends AppCompatActivity {
             @Override
             public void onPageSelected(int position) {
                 super.onPageSelected(position);
-                if (position == 0){
+                if (position == 0) {
                     next_step.setVisibility(View.VISIBLE);
                     start_binding.setVisibility(View.GONE);
                     dot_step_1.setImageResource(R.drawable.dot_active);

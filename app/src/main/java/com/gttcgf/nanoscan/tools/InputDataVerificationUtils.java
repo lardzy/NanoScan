@@ -2,8 +2,8 @@ package com.gttcgf.nanoscan.tools;
 
 import java.util.regex.Pattern;
 
-public class InputDataVerification {
-    private InputDataVerification(){}
+public class InputDataVerificationUtils {
+    private InputDataVerificationUtils(){}
 
     // 密码输入框的输入限制
     public static boolean passwordInputVerification(String password) {

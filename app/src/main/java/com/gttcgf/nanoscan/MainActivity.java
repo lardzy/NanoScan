@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         // 初始化数据库
         UserDatabaseHelper userDatabaseHelper = new UserDatabaseHelper
                 (this, UserDatabaseHelper.DATABASE_NAME, null, UserDatabaseHelper.DATABASE_VERSION);
-//        SQLiteDatabase db = userDatabaseHelper.getWritableDatabase();
-//        userDatabaseHelper.onCreate(db);
+        SQLiteDatabase db = userDatabaseHelper.getWritableDatabase();
+        userDatabaseHelper.onCreate(db);
     }
 }

@@ -23,7 +23,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.gttcgf.nanoscan.guidingSteps.IntroGuideActivity;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
-import com.gttcgf.nanoscan.tools.InputDataVerification;
+import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
 
 public class LoginActivity extends AppCompatActivity {
     private EditText phone_number, password;
@@ -70,11 +70,11 @@ public class LoginActivity extends AppCompatActivity {
 
         // 设置手机号输入框的输入限制
         phone_number.addTextChangedListener(new CustomTextWatcher(phone_number,
-                InputDataVerification::phoneNumberInputVerification, "请输入正确的手机号", 11, () -> password.requestFocus()));
+                InputDataVerificationUtils::phoneNumberInputVerification, "请输入正确的手机号", 11, () -> password.requestFocus()));
 
         // 设置密码输入框的输入限制
         password.addTextChangedListener(new CustomTextWatcher(password,
-                InputDataVerification::passwordInputVerification, "密码至少包含8个字符，可包含数字、大小写字母和符号", false));
+                InputDataVerificationUtils::passwordInputVerification, "密码至少包含8个字符，可包含数字、大小写字母和符号", false));
 
         // 设置密码输入框的监听事件, 当用户编辑自动输入的密码时，清空本地存储的密码
         password.addTextChangedListener(new TextWatcher() {
@@ -149,15 +149,15 @@ public class LoginActivity extends AppCompatActivity {
     private boolean checkLogin(){
         String phoneNumber = phone_number.getText().toString();
         String password = this.password.getText().toString();
-        if (!InputDataVerification.phoneNumberInputVerification(phoneNumber)){
+        if (!InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber)){
             phone_number.setError("请输入正确的手机号");
             Toast.makeText(LoginActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
             return false;
-        } else if (!InputDataVerification.passwordInputVerification(password)) {
+        } else if (!InputDataVerificationUtils.passwordInputVerification(password)) {
             this.password.setError("密码至少包含8个字符，可包含数字、大小写字母和符号",null);
             Toast.makeText(LoginActivity.this, "密码至少包含8个字符，可包含数字、大小写字母和符号", Toast.LENGTH_SHORT).show();
             return false;
-        } else if (InputDataVerification.phoneNumberInputVerification(phoneNumber) && InputDataVerification.passwordInputVerification(password)){
+        } else if (InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber) && InputDataVerificationUtils.passwordInputVerification(password)){
             // 登录
 //            Toast.makeText(LoginActivity.this, "登录", Toast.LENGTH_SHORT).show();
             return true;

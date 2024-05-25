@@ -2,7 +2,6 @@ package com.gttcgf.nanoscan;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -27,8 +26,7 @@ import androidx.fragment.app.DialogFragment;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
-import com.gttcgf.nanoscan.tools.DatabaseUtils;
-import com.gttcgf.nanoscan.tools.InputDataVerification;
+import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
 import com.gttcgf.nanoscan.tools.PasswordUtils;
 import com.gttcgf.nanoscan.tools.PortraitCaptureActivity;
 
@@ -39,6 +37,7 @@ public class RegisterActivity extends AppCompatActivity {
     private Button register_button;
     private ImageButton imageButton_back;
     private TextView get_verification_code, register;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,7 +68,7 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private void initialComponent(){
+    private void initialComponent() {
         phone_number = findViewById(R.id.phone_number);
         sms_verification_code = findViewById(R.id.sms_verification_code);
         password = findViewById(R.id.password);
@@ -81,15 +80,15 @@ public class RegisterActivity extends AppCompatActivity {
 
         // 设置手机号输入框的输入限制
         phone_number.addTextChangedListener(new CustomTextWatcher(phone_number,
-                InputDataVerification::phoneNumberInputVerification, "请输入正确的手机号", 11, () -> sms_verification_code.requestFocus()));
+                InputDataVerificationUtils::phoneNumberInputVerification, "请输入正确的手机号", 11, () -> sms_verification_code.requestFocus()));
         // 设置短信验证码输入框的输入限制
         sms_verification_code.addTextChangedListener(new CustomTextWatcher(sms_verification_code,
-                InputDataVerification::smsVerificationCodeVerification, "请输入正确的验证码", false));
+                InputDataVerificationUtils::smsVerificationCodeVerification, "请输入正确的验证码", false));
         // 设置密码输入框的输入限制
         password.addTextChangedListener(new CustomTextWatcher(password,
-                InputDataVerification::passwordInputVerification, "密码至少包含8个字符，可包含数字、大小写字母和符号",false));
+                InputDataVerificationUtils::passwordInputVerification, "密码至少包含8个字符，可包含数字、大小写字母和符号", false));
         check_code.addTextChangedListener(new CustomTextWatcher(check_code,
-                InputDataVerification::checkCodeVerification, "请输入正确的授权码，授权码位于机身正面的机身按钮下侧"));
+                InputDataVerificationUtils::checkCodeVerification, "请输入正确的授权码，授权码位于机身正面的机身按钮下侧"));
         // 扫描授权码
         check_code.setOnTouchListener((v, event) -> {
             final int DRAWABLE_RIGHT = 2;
@@ -124,7 +123,6 @@ public class RegisterActivity extends AppCompatActivity {
         });
         // 获取验证码按钮的点击事件
         get_verification_code.setOnClickListener(v -> {
-//            Toast.makeText(RegisterActivity.this, "点击获取验证码", Toast.LENGTH_SHORT).show();
             DialogFragment df = VerificationCodeDialogFragment.newInstance("test");
             df.show(getSupportFragmentManager(), "VerificationCodeDialogFragment");
         });
@@ -132,11 +130,11 @@ public class RegisterActivity extends AppCompatActivity {
         // 点击立即注册按钮的事件
         register_button.setOnClickListener(v -> {
             if (checkComponents() && serverVerification()) {
+                // 注册成功后，保存用户名、加密并保存密码
                 SharedPreferences sharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
                 sharedPreferences.edit().putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString()).apply();
                 String passwordHash = PasswordUtils.hashPassword(password.getText().toString());
                 sharedPreferences.edit().putString(getString(R.string.pref_user_password), passwordHash).apply();
-
                 Toast.makeText(RegisterActivity.this, "注册成功", Toast.LENGTH_LONG).show();
                 finish();
             }
@@ -144,7 +142,6 @@ public class RegisterActivity extends AppCompatActivity {
         // 设置密码输入框的显示状态
         password.setOnTouchListener((v, event) -> {
             final int DRAWABLE_RIGHT = 2;
-
             if (event.getAction() == MotionEvent.ACTION_UP) {
                 if (event.getRawX() >= (password.getRight() - password.getCompoundDrawables()[DRAWABLE_RIGHT].getBounds().width() - password.getPaddingEnd())) {
                     // 切换密码的显示状态
@@ -164,39 +161,41 @@ public class RegisterActivity extends AppCompatActivity {
             return false;
         });
     }
+
     // 检查输入内容是否合法，如果合法则继续注册，否则提示错误。
-    private boolean checkComponents(){
+    private boolean checkComponents() {
         String phoneNumber = phone_number.getText().toString();
         String smsCode = sms_verification_code.getText().toString();
         String password = this.password.getText().toString();
         String checkCode = check_code.getText().toString();
-        if (!InputDataVerification.phoneNumberInputVerification(phoneNumber)){
+        if (!InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber)) {
             phone_number.setError("请输入正确的手机号");
             Toast.makeText(RegisterActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
             return false;
-        } else if (!InputDataVerification.smsVerificationCodeVerification(smsCode)){
+        } else if (!InputDataVerificationUtils.smsVerificationCodeVerification(smsCode)) {
             sms_verification_code.setError("请输入正确的验证码", null);
             Toast.makeText(RegisterActivity.this, "请输入正确的验证码", Toast.LENGTH_SHORT).show();
             return false;
-        } else if (!InputDataVerification.passwordInputVerification(password)){
-            this.password.setError("密码至少包含8个字符，可包含数字、大小写字母和符号",null);
+        } else if (!InputDataVerificationUtils.passwordInputVerification(password)) {
+            this.password.setError("密码至少包含8个字符，可包含数字、大小写字母和符号", null);
             Toast.makeText(RegisterActivity.this, "密码至少包含8个字符，可包含数字、大小写字母和符号", Toast.LENGTH_SHORT).show();
             return false;
-        } else if (!InputDataVerification.checkCodeVerification(checkCode)){
+        } else if (!InputDataVerificationUtils.checkCodeVerification(checkCode)) {
             check_code.setError("请输入正确的授权码，授权码位于机身正面的机身按钮下侧");
             Toast.makeText(RegisterActivity.this, "请输入正确的授权码，授权码位于机身正面的机身按钮下侧", Toast.LENGTH_SHORT).show();
             return false;
-        } else if (InputDataVerification.phoneNumberInputVerification(phoneNumber)
-                && InputDataVerification.smsVerificationCodeVerification(smsCode) &&
-                InputDataVerification.passwordInputVerification(password) &&
-                InputDataVerification.checkCodeVerification(checkCode)){
+        } else if (InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber)
+                && InputDataVerificationUtils.smsVerificationCodeVerification(smsCode) &&
+                InputDataVerificationUtils.passwordInputVerification(password) &&
+                InputDataVerificationUtils.checkCodeVerification(checkCode)) {
             // 注册
             return true;
         }
         return false;
     }
+
     // 将信息发送至服务器进行验证。
-    private boolean serverVerification(){
+    private boolean serverVerification() {
         return true;
     }
 //    private boolean updateDatabase(){

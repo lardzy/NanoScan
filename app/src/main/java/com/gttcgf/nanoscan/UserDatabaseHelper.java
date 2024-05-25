@@ -28,16 +28,24 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
     // 设备表：DeviceID, UserID, CustomName, MACAddress, AuthorizationCode, DeviceToken, CreateTime, UpdateTime
     private static final String CREATE_TABLE_DEVICES = "CREATE TABLE IF NOT EXISTS Devices (" +
             "DeviceID INTEGER PRIMARY KEY AUTOINCREMENT," +
-            "UserID INTEGER," +
+            "UserID INTEGER NOT NULL," +
             "CustomName TEXT," +
-            "MACAddress TEXT UNIQUE," +
-            "AuthorizationCode TEXT UNIQUE," +
+            "MACAddress TEXT UNIQUE NOT NULL," +
+            "AuthorizationCode TEXT UNIQUE NOT NULL," +
             "DeviceToken TEXT," +
             "CreateTime TEXT NOT NULL," +
             "UpdateTime TEXT NOT NULL," +
             "FOREIGN KEY(UserID) REFERENCES Users(UserID)" +
             ")";
-
+    private static final String CREATE_SPECTRA_FILES = "CREATE TABLE IF NOT EXISTS SpectraFiles (" +
+            "SpectrumID INTEGER PRIMARY KEY AUTOINCREMENT," +
+            "DeviceID INTEGER NOT NULL," +
+            "FilePath TEXT NOT NULL," +
+            "CollectionTime TEXT NOT NULL," +
+            "CreateTime TEXT NOT NULL," +
+            "UpdateTime TEXT NOT NULL," +
+            "FOREIGN KEY(DeviceID) REFERENCES Devices(DeviceID)" +
+            ")";
 
     public UserDatabaseHelper(@Nullable Context context, @Nullable String name, @Nullable SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
@@ -47,6 +55,7 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
         sqLiteDatabase.execSQL(CREATE_TABLE_USERS);
         sqLiteDatabase.execSQL(CREATE_TABLE_DEVICES);
+        sqLiteDatabase.execSQL(CREATE_SPECTRA_FILES);
     }
 
     @Override
