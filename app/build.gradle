@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.gttcgf.nanoscan"
-        minSdk 29
+        minSdk 28
         targetSdk 34
         versionCode 1
         versionName "0.1"
