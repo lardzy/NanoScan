@@ -5,7 +5,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -60,7 +59,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         public DeviceViewHolder(@NonNull View itemView) {
             super(itemView);
             card_image = itemView.findViewById(R.id.card_image);
-            card_title = itemView.findViewById(R.id.card_title);
+            card_title = itemView.findViewById(R.id.tv_nano_name);
             card_title_1 = itemView.findViewById(R.id.card_title_1);
             card_id = itemView.findViewById(R.id.card_id);
         }

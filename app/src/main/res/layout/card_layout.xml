@@ -28,7 +28,7 @@
         android:layout_height="0dp"
         android:src="@drawable/equipment_front"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/card_title"
+        app:layout_constraintEnd_toStartOf="@+id/tv_nano_name"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         android:layout_marginTop="4dp"
@@ -37,7 +37,7 @@
         app:layout_constraintHorizontal_weight="0.5"
         android:contentDescription="@string/card_image_contentDescription" />
     <TextView
-        android:id="@+id/card_title"
+        android:id="@+id/tv_nano_name"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintStart_toEndOf="@+id/card_image"
@@ -57,7 +57,7 @@
         android:textColor="@color/gray"
         app:layout_constraintStart_toEndOf="@+id/card_image"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/card_title"
+        app:layout_constraintTop_toBottomOf="@+id/tv_nano_name"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintHorizontal_weight="0.5"
         android:text="@string/device_type_nir"

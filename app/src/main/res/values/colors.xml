@@ -17,5 +17,6 @@
     <color name="collect_component_background_color">#257ef4</color>
     <color name="scan_btn_background_color">#257ef4</color>
     <color name="preheat_toggle_text">#8CBEFF</color>
+    <color name="row_nano_scan_item_background">#f7fcfc</color>
 
 </resources>
