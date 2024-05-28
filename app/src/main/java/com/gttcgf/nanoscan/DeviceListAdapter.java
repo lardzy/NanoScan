@@ -60,7 +60,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
             super(itemView);
             card_image = itemView.findViewById(R.id.card_image);
             card_title = itemView.findViewById(R.id.tv_nano_name);
-            card_title_1 = itemView.findViewById(R.id.card_title_1);
+            card_title_1 = itemView.findViewById(R.id.card_mac_address);
             card_id = itemView.findViewById(R.id.card_id);
         }
     }

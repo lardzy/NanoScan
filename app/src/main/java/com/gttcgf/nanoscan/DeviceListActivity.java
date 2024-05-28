@@ -81,7 +81,9 @@ public class DeviceListActivity extends AppCompatActivity {
 
         onClickListener = view -> {
             if (view.getId() == R.id.button_add_device) {
-                Toast.makeText(DeviceListActivity.this, "点击了添加设备", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(DeviceListActivity.this, "点击了添加设备", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(DeviceListActivity.this, SelectDeviceViewActivity.class);
+                startActivity(intent);
             } else if (view.getId() == R.id.imageButton_back) {
                 finish();
             } else if (view.getId() == R.id.imageButton_search) {

@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
         boolean isFirstRun = prefs.getBoolean(getString(R.string.pref_first_run), true);
         boolean userAgreed = prefs.getBoolean(getString(R.string.pref_user_agreed), false);
 
-        Intent intent;// 同样关闭当前活动
+        Intent intent;
         if (isFirstRun || !userAgreed) {
             // UserAgreementActivity 是用户协议界面的Activity
             intent = new Intent(this, UserAgreementActivity.class);

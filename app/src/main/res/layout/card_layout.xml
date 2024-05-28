@@ -43,7 +43,7 @@
         app:layout_constraintStart_toEndOf="@+id/card_image"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/card_title_1"
+        app:layout_constraintBottom_toTopOf="@+id/card_mac_address"
         app:layout_constraintHorizontal_weight="0.5"
         android:layout_marginBottom="16dp"
         android:text="@string/device_name"
@@ -51,7 +51,7 @@
         android:textStyle="bold"
         android:gravity="center_horizontal|bottom"/>
     <TextView
-        android:id="@+id/card_title_1"
+        android:id="@+id/card_mac_address"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:textColor="@color/gray"
