@@ -115,6 +115,7 @@
     <string name="recent_spectral_data_list_empty">近期无光谱测量数据</string>
     <string name="scan_contentDescription">开始扫描</string>
     <string name="nano_confirmation_title">确定选择这个设备吗？</string>
-    <string name="nano_confirmation_msg">确定使用这个设备吗？</string>
+    <string name="nano_confirmation_msg">确定使用设备%s吗？</string>
     <string name="ok">确定</string>
+    <string name="device_list_empty">设备列表为空</string>
 </resources>

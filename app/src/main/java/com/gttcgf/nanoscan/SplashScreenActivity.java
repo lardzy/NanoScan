@@ -34,6 +34,8 @@ public class SplashScreenActivity extends AppCompatActivity {
             // todo:处理重复启动的神秘bug
             Log.d(TAG, "Activity is being recreated");
             isActivityStarted = savedInstanceState.getBoolean("isActivityStarted", false);
+            finish();
+            return;
         }
 
         EdgeToEdge.enable(this);

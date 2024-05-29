@@ -2,10 +2,10 @@ package com.gttcgf.nanoscan;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,9 +25,9 @@ import java.util.List;
 public class DeviceListActivity extends AppCompatActivity {
     private List<DeviceItem> itemList;
     private Button button_add_device;
-    private ImageButton imageButton_back, imageButton_search;
+    private ImageButton imageButton_search, imageButton_back;
     private View.OnClickListener onClickListener;
-    private TextView device_type_input, device_info_input;
+    private TextView device_type_input, device_info_input, device_list_empty;
     private EditText device_name_input;
 
     @Override
@@ -49,18 +49,21 @@ public class DeviceListActivity extends AppCompatActivity {
         itemList = new ArrayList<>();
         // todo:测试用数据
         itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备2", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备3", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备4", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备5", "便携式近红外光谱仪"));
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备6", "便携式近红外光谱仪"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备2", "便携式近红外光谱仪"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备3", "便携式近红外光谱仪"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备4", "便携式近红外光谱仪"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备5", "便携式近红外光谱仪"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备6", "便携式近红外光谱仪"));
     }
 
     private void initialComponent() {
         RecyclerView recyclerView = findViewById(R.id.device_list);
         button_add_device = findViewById(R.id.button_add_device);
-        imageButton_back = findViewById(R.id.imageButton_back);
         imageButton_search = findViewById(R.id.imageButton_search);
+        imageButton_back = findViewById(R.id.imageButton_back);
+        device_list_empty = findViewById(R.id.device_list_empty);
+
+        updateEmptyState();
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         DeviceListAdapter adapter = new DeviceListAdapter(itemList);
@@ -73,6 +76,7 @@ public class DeviceListActivity extends AppCompatActivity {
                 i.putExtra("device_name", itemList.get(position).getDeviceName());
                 startActivity(i);
             }
+
             @Override
             public void OnItemLongClick(int position) {
                 modifyDeviceInformation(position, adapter);
@@ -81,7 +85,6 @@ public class DeviceListActivity extends AppCompatActivity {
 
         onClickListener = view -> {
             if (view.getId() == R.id.button_add_device) {
-//                Toast.makeText(DeviceListActivity.this, "点击了添加设备", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(DeviceListActivity.this, SelectDeviceViewActivity.class);
                 startActivity(intent);
             } else if (view.getId() == R.id.imageButton_back) {
@@ -92,8 +95,9 @@ public class DeviceListActivity extends AppCompatActivity {
         };
         // 绑定监听器
         button_add_device.setOnClickListener(onClickListener);
-        imageButton_back.setOnClickListener(onClickListener);
         imageButton_search.setOnClickListener(onClickListener);
+        imageButton_back.setOnClickListener(onClickListener);
+
     }
 
     // todo:这个方法仅测试用，正式版将删除。
@@ -123,10 +127,19 @@ public class DeviceListActivity extends AppCompatActivity {
             adapter.notifyItemRemoved(position);
             adapter.notifyItemRangeChanged(position, itemList.size() - position);
             Toast.makeText(DeviceListActivity.this, "删除成功", Toast.LENGTH_SHORT).show();
+
+            updateEmptyState();
         });
         builder.setNegativeButton("取消", (dialog, which) -> {
         });
         // 创建并显示AlertDialog
         builder.create().show();
+    }
+    private void updateEmptyState() {
+        if (itemList.isEmpty()) {
+            device_list_empty.setVisibility(TextView.VISIBLE);
+        } else {
+            device_list_empty.setVisibility(TextView.INVISIBLE);
+        }
     }
 }
