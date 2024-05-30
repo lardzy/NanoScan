@@ -1,5 +1,6 @@
 package com.gttcgf.nanoscan;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -11,6 +12,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContract;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -86,6 +92,7 @@ public class DeviceListActivity extends AppCompatActivity {
         onClickListener = view -> {
             if (view.getId() == R.id.button_add_device) {
                 Intent intent = new Intent(DeviceListActivity.this, SelectDeviceViewActivity.class);
+//                startActivityForResult();
                 startActivity(intent);
             } else if (view.getId() == R.id.imageButton_back) {
                 finish();
@@ -99,6 +106,19 @@ public class DeviceListActivity extends AppCompatActivity {
         imageButton_back.setOnClickListener(onClickListener);
 
     }
+    private ActivityResultLauncher<Intent> activityResultLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult o) {
+                    if (o.getResultCode() == Activity.RESULT_OK) {
+                        Intent data = o.getData();
+                        if (data != null) {
+                            String returnedResult = data.getStringExtra("result_key");
+                            // 处理返回的数据
+                        }
+                    }
+                }
+            });
 
     // todo:这个方法仅测试用，正式版将删除。
     private void modifyDeviceInformation(int position, DeviceListAdapter adapter) {
@@ -142,7 +162,7 @@ public class DeviceListActivity extends AppCompatActivity {
             device_list_empty.setVisibility(TextView.INVISIBLE);
         }
     }
-    public interface addDeviceCallback{
-        void addDevice(String name, String type, String mac);
-    }
+//    public interface addDeviceCallback{
+//        void addDevice(String name, String type, String mac);
+//    }
 }
