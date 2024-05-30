@@ -59,7 +59,7 @@ public class UserAgreementActivity extends AppCompatActivity {
     }
     private void userAcceptedAgreement() {
         SharedPreferences prefs = this.getSharedPreferences("default", Context.MODE_PRIVATE);
-        prefs.edit().putBoolean(getString(R.string.pref_first_run), false).apply();
+//        prefs.edit().putBoolean(getString(R.string.pref_first_run), false).apply();
         prefs.edit().putBoolean(getString(R.string.pref_user_agreed), true).apply();
 
         // 用户接受协议后跳转到登录界面

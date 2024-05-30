@@ -1,6 +1,7 @@
 package com.gttcgf.nanoscan;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -16,6 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -25,19 +27,42 @@ import com.gttcgf.nanoscan.guidingSteps.IntroGuideActivity;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
 import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 public class LoginActivity extends AppCompatActivity {
+    private static final String serverUrl = "http://8.138.102.24:5000";
+    private static final String TAG = "LoginActivity";
     private EditText phone_number, password;
     private TextView forgot_password, register;
     private Button login_button;
-    private boolean userHasEditedPassword;
+    private boolean userHasEditedPassword, isFirstTimeUse;
     private String pref_user_phone_number, pref_user_password;
     private SharedPreferences sharedPreferences;
+    private OkHttpClient client;
+    private Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-
+        client = new OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
+                .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
+                .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
+                .build();
+        context = this;
         // 初始化组件
         initialComponent();
         // 初始化用户数据
@@ -81,9 +106,11 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
             }
+
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
             }
+
             @Override
             public void afterTextChanged(Editable editable) {
                 // 检查用户是否编辑过密码
@@ -107,7 +134,7 @@ public class LoginActivity extends AppCompatActivity {
                         password.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
                         password.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.baseline_visibility_24, 0);
                         // 当密码为自动填入时，用户尝试查看密码，清空密码。
-                        if (!userHasEditedPassword){
+                        if (!userHasEditedPassword) {
                             password.getText().clear();
                             userHasEditedPassword = true;
                             clearPassword();
@@ -135,49 +162,85 @@ public class LoginActivity extends AppCompatActivity {
             startActivity(i);
 
         });
+        // 点击登录按钮后
         login_button.setOnClickListener(view -> {
             // 登录
-            if (checkLogin()){
-                // 登录成功，跳转到主页面
-                Intent i = new Intent(LoginActivity.this, IntroGuideActivity.class);
-                startActivity(i);
-                finish();
+            if (checkLogin()) {
+                disableAllComponents();
+                try {
+                    serverVerification(new ServerLoginVerificationCallback() {
+                        @Override
+                        public void onSuccess() {
+                            // 登录成功，保存账号密码，跳转到主页面
+                            SharedPreferences sharedPreferences = context.getSharedPreferences("default", Context.MODE_PRIVATE);
+                            sharedPreferences.edit().putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString()).apply();
+                            sharedPreferences.edit().putString(getString(R.string.pref_user_password), password.getText().toString()).apply();
+                            Intent i;
+                            if (isFirstTimeUse) {
+                                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
+                            } else {
+                                i = new Intent(LoginActivity.this, DeviceListActivity.class);
+                            }
+                            startActivity(i);
+                            finish();
+                        }
+
+                        @Override
+                        public void onFailed(String msg) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(context, "登录失败！\n" + msg, Toast.LENGTH_LONG).show();
+                                    enableAllComponents();
+                                }
+                            });
+                        }
+                    });
+                } catch (JSONException e) {
+                    runOnUiThread(this::enableAllComponents);
+                    Toast.makeText(context, "本地信息异常，请重启软件后尝试！", Toast.LENGTH_LONG).show();
+                    throw new RuntimeException(e);
+
+                }
+
             }
         });
     }
+
     // 检查输入框信息。
-    private boolean checkLogin(){
+    private boolean checkLogin() {
         String phoneNumber = phone_number.getText().toString();
         String password = this.password.getText().toString();
-        if (!InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber)){
+        if (!InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber)) {
             phone_number.setError("请输入正确的手机号");
             Toast.makeText(LoginActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
             return false;
         } else if (!InputDataVerificationUtils.passwordInputVerification(password)) {
-            this.password.setError("密码至少包含8个字符，可包含数字、大小写字母和符号",null);
+            this.password.setError("密码至少包含8个字符，可包含数字、大小写字母和符号", null);
             Toast.makeText(LoginActivity.this, "密码至少包含8个字符，可包含数字、大小写字母和符号", Toast.LENGTH_SHORT).show();
             return false;
-        } else if (InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber) && InputDataVerificationUtils.passwordInputVerification(password)){
+        } else if (InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber) && InputDataVerificationUtils.passwordInputVerification(password)) {
             // 登录
-//            Toast.makeText(LoginActivity.this, "登录", Toast.LENGTH_SHORT).show();
             return true;
         }
         return false;
     }
+
     // 初始化用户数据
-    private void initializeData(){
+    private void initializeData() {
 
         userHasEditedPassword = true;
 
         sharedPreferences = this.getSharedPreferences("default", MODE_PRIVATE);
         pref_user_phone_number = sharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
         pref_user_password = sharedPreferences.getString(getString(R.string.pref_user_password), "");
+        isFirstTimeUse = sharedPreferences.getBoolean(getString(R.string.pref_first_run), true);
 
         Log.v("LoginActivity", "pref_user_phone_number: " + pref_user_phone_number);
         Log.v("LoginActivity", "pref_user_password: " + pref_user_password);
 
         // 如果用户没有保存手机号或密码，则直接返回
-        if (pref_user_phone_number.isEmpty() || pref_user_password.isEmpty()){
+        if (pref_user_phone_number.isEmpty() || pref_user_password.isEmpty()) {
             return;
         }
 
@@ -191,10 +254,77 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     // 当用户编辑密码框时，清空本地存储的密码
-    private void clearPassword(){
+    private void clearPassword() {
         Log.v("LoginActivity", "clearPassword 被调用");
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(getString(R.string.pref_user_password), "");
         editor.apply();
+    }
+
+    // 服务器验证
+    private void serverVerification(ServerLoginVerificationCallback verificationCallback) throws JSONException {
+        String uri = serverUrl + "/login";
+        MediaType JSON = MediaType.get("application/json");
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("phone_number", phone_number.getText().toString());
+        jsonObject.put("password", password.getText().toString());
+        String json = jsonObject.toString();
+        RequestBody body = RequestBody.create(json, JSON);
+        Request request = new Request.Builder()
+                .url(uri)
+                .post(body)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                verificationCallback.onFailed(e.toString());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
+                    verificationCallback.onSuccess();
+                } else {
+                    String message = "";
+                    if (response.body() != null) {
+                        String string = response.body().string();
+                        if (!string.isEmpty()) {
+                            try {
+                                JSONObject jsonObject1 = new JSONObject(string);
+                                message = jsonObject1.getString("message");
+                            } catch (JSONException e) {
+//                            throw new RuntimeException(e);
+                                Log.e(TAG, "json解析失败！" + e);
+                            }
+                        }
+
+
+                    }
+                    verificationCallback.onFailed(message);
+                }
+
+            }
+        });
+    }
+
+    public interface ServerLoginVerificationCallback {
+        void onSuccess();
+
+        void onFailed(String msg);
+    }
+    private void disableAllComponents() {
+        phone_number.setEnabled(false);
+        password.setEnabled(false);
+        forgot_password.setEnabled(false);
+        login_button.setEnabled(false);
+        register.setEnabled(false);
+    }
+    private void enableAllComponents() {
+        phone_number.setEnabled(true);
+        password.setEnabled(true);
+        forgot_password.setEnabled(true);
+        login_button.setEnabled(true);
+        register.setEnabled(true);
     }
 }

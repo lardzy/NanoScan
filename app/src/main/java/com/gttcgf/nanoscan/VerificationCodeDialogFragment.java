@@ -28,6 +28,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,6 +42,10 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class VerificationCodeDialogFragment extends DialogFragment {
+    private static final long fetchCaptchaImage_DELAY = 1000;  // 刷新验证码的间隔时长
+    private static final String TAG = "VerificationCodeDialogF";
+    //    private static final String serverUrl = "https://newnirtechnolgy.top/api";
+    private static final String serverUrl = "http://8.138.102.24:5000";
     private OkHttpClient client;
     private Context context;
     private String phone_number;
@@ -48,13 +53,12 @@ public class VerificationCodeDialogFragment extends DialogFragment {
     private ProgressBar progressBar;
     private EditText editTextVerificationInput;
     private Handler handler;
-    private static final long fetchCaptchaImage_DELAY = 1000;  // 刷新验证码的间隔时长
+    private GetCaptchaCodeCallback getCaptchaCodeCallback;
     private boolean fetchCaptchaImage_clickable = true;  // 验证码图片是否可以更新
-    private static final String TAG = "VerificationCodeDialogF";
-    private static final String serverUrl = "http://8.138.102.24:5000";
 
-    public static VerificationCodeDialogFragment newInstance(String phone_number) {
+    public static VerificationCodeDialogFragment newInstance(String phone_number, GetCaptchaCodeCallback getCaptchaCodeCallback) {
         VerificationCodeDialogFragment fragment = new VerificationCodeDialogFragment();
+        fragment.setGetCaptchaCodeCallback(getCaptchaCodeCallback);
         Bundle args = new Bundle();
         args.putString("PHONE_NUMBER", phone_number);
         fragment.setArguments(args);
@@ -64,6 +68,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // 获取存储的Bundle
         this.context = getActivity();
         this.phone_number = getArguments().getString("PHONE_NUMBER");
         View view = inflater.inflate(R.layout.dialog_verification_code_image, container, false);
@@ -78,15 +83,19 @@ public class VerificationCodeDialogFragment extends DialogFragment {
         return view;
     }
 
+    // 获取验证码图片
     private void fetchCaptchaImage(String phone_number) {
-        client = new OkHttpClient();
-//        String url = serverUrl + "/request_digit_code?";
+        client = new OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
+                .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
+                .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
+                .build();
         HttpUrl.Builder urlBuilder = HttpUrl.parse(serverUrl + "/request_digit_code").newBuilder();
         urlBuilder.addQueryParameter("phone_number", phone_number);
         String url = urlBuilder.toString();
-
+//        String url = serverUrl + "/captcha/" + phone_number;
         Request request = new Request.Builder()
-                .url(url + "phone_number=" + phone_number)
+                .url(url)
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
@@ -94,7 +103,13 @@ public class VerificationCodeDialogFragment extends DialogFragment {
             public void onFailure(Call call, IOException e) {
                 e.printStackTrace();
                 if (getActivity() != null) {
-                    getActivity().runOnUiThread(() -> Toast.makeText(context, "验证码请求失败！\n" + e, Toast.LENGTH_SHORT).show());
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(context, "验证码请求失败！\n" + e, Toast.LENGTH_SHORT).show();
+                            dismiss();
+                        }
+                    });
                 }
 
             }
@@ -136,27 +151,35 @@ public class VerificationCodeDialogFragment extends DialogFragment {
                     }
                 } else {
                     if (getActivity() != null) {
-                        getActivity().runOnUiThread(() -> Toast.makeText(context, "验证码请求失败！", Toast.LENGTH_SHORT).show());
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(context, "验证码请求失败！" + response.code(), Toast.LENGTH_SHORT).show();
+//                                dismiss();
+                            }
+                        });
                     }
                 }
             }
         });
     }
 
-    private boolean verifyCaptchaCode(String result) {
+    private void verifyCaptchaCode(String result, VerifyCaptchaCallback callback) {
         if (result.isEmpty()) {
-            return false;
+            callback.onFailed();
+            return;
         }
         String reg = "[a-zA-Z0-9]{6}";
         Pattern pattern = Pattern.compile(reg);
         Matcher matcher = pattern.matcher(result);
         if (!matcher.matches()) {
-            return false;
+            callback.onFailed();
+            return;
         }
 
         client = new OkHttpClient();
         String url = serverUrl + "/verify_digit_code";
-        MediaType JSON = MediaType.get("application/json; charset=utf-8");
+        MediaType JSON = MediaType.get("application/json");
         String json = "{\"phone_number\":\"" + phone_number + "\", \"digit_code\":\"" + result + "\"}";
         RequestBody body = RequestBody.create(json, JSON);
         Request request = new Request.Builder()
@@ -170,6 +193,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
                 FragmentActivity activity = getActivity();
                 if (activity != null) {
                     getActivity().runOnUiThread(() -> Toast.makeText(context, "请求失败！\n" + e, Toast.LENGTH_SHORT).show());
+                    callback.onFailed();
                 }
             }
 
@@ -179,14 +203,15 @@ public class VerificationCodeDialogFragment extends DialogFragment {
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(context, "请求成功！" + result , Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context, "图形验证码校验成功！" + result, Toast.LENGTH_LONG).show();
+                            callback.onSuccess();
                         }
                     });
+                } else {
+                    callback.onFailed();
                 }
             }
         });
-
-        return false;
     }
 
     @NonNull
@@ -220,20 +245,41 @@ public class VerificationCodeDialogFragment extends DialogFragment {
         ProgressBar progressBar = view.findViewById(R.id.progressBar);
 
         progressBar.setVisibility(View.VISIBLE);
+        // 验证码弹窗点击确认后
         buttonConfirm.setOnClickListener(v -> {
             progressBar.setVisibility(View.GONE);
             buttonConfirm.setClickable(false);
-            Toast.makeText(getActivity(), "确认按钮被点击", Toast.LENGTH_SHORT).show();
-            boolean result = verifyCaptchaCode(editTextVerificationInput.getText().toString());
-            if (result) {
-                dismiss();
-            } else {
-                buttonConfirm.setClickable(true);
-                editTextVerificationInput.setError("验证码错误，请重试！");
-                fetchCaptchaImage(phone_number);
-            }
+            // 内容为空时，直接标红
+//            if (editTextVerificationInput.getText().toString().isEmpty()) {
+//                editTextVerificationInput.setError("验证码为空！");
+//            }
+            verifyCaptchaCode(editTextVerificationInput.getText().toString(), new VerifyCaptchaCallback() {
+                @Override
+                public void onSuccess() {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            getCaptchaCodeCallback.getCode(editTextVerificationInput.getText().toString());
+                            dismiss();
+                        }
+                    });
 
-//            dismiss();
+                }
+
+                @Override
+                public void onFailed() {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            buttonConfirm.setClickable(true);
+                            editTextVerificationInput.setText("");
+                            editTextVerificationInput.setError("验证码错误，请重试！");
+                            fetchCaptchaImage(phone_number);
+                        }
+                    });
+
+                }
+            });
         });
 
         buttonCancel.setOnClickListener(v -> {
@@ -255,5 +301,19 @@ public class VerificationCodeDialogFragment extends DialogFragment {
 
             }
         });
+    }
+
+    public void setGetCaptchaCodeCallback(GetCaptchaCodeCallback getCaptchaCodeCallback) {
+        this.getCaptchaCodeCallback = getCaptchaCodeCallback;
+    }
+
+    public interface VerifyCaptchaCallback {
+        void onSuccess();
+
+        void onFailed();
+    }
+
+    public interface GetCaptchaCodeCallback {
+        void getCode(String code);
     }
 }

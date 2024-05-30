@@ -48,7 +48,7 @@ public class DeviceListActivity extends AppCompatActivity {
     private void initializeData() {
         itemList = new ArrayList<>();
         // todo:测试用数据
-        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪"));
 //        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备2", "便携式近红外光谱仪"));
 //        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备3", "便携式近红外光谱仪"));
 //        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备4", "便携式近红外光谱仪"));
@@ -90,7 +90,7 @@ public class DeviceListActivity extends AppCompatActivity {
             } else if (view.getId() == R.id.imageButton_back) {
                 finish();
             } else if (view.getId() == R.id.imageButton_search) {
-                Toast.makeText(DeviceListActivity.this, "点击了搜索设备", Toast.LENGTH_SHORT).show();
+                Toast.makeText(DeviceListActivity.this, "搜索设备功能正在开发中...", Toast.LENGTH_SHORT).show();
             }
         };
         // 绑定监听器
@@ -141,5 +141,8 @@ public class DeviceListActivity extends AppCompatActivity {
         } else {
             device_list_empty.setVisibility(TextView.INVISIBLE);
         }
+    }
+    public interface addDeviceCallback{
+        void addDevice(String name, String type, String mac);
     }
 }

@@ -1,6 +1,7 @@
 package com.gttcgf.nanoscan.guidingSteps;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -71,12 +72,18 @@ public class IntroGuideActivity extends AppCompatActivity {
             }
         });
         start_binding.setOnClickListener(v -> {
+            storageData();
             //跳转到设备绑定页面
             Intent intent = new Intent(IntroGuideActivity.this, DeviceListActivity.class);
             startActivity(intent);
             finish();
-
         });
+    }
+    private void storageData(){
+        SharedPreferences sharedPreferences = this.getSharedPreferences("default", MODE_PRIVATE);
+        SharedPreferences.Editor edit = sharedPreferences.edit();
+        edit.putBoolean(getString(R.string.pref_first_run), false);
+        edit.apply();
     }
 
 }

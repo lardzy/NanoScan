@@ -6,16 +6,22 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
+import android.util.Log;
 import android.view.MotionEvent;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -27,22 +33,66 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
 import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
-import com.gttcgf.nanoscan.tools.PasswordUtils;
 import com.gttcgf.nanoscan.tools.PortraitCaptureActivity;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class RegisterActivity extends AppCompatActivity {
+    private static final String serverUrl = "http://8.138.102.24:5000";
+    private static final String TAG = "RegisterActivity";
     private EditText phone_number, sms_verification_code, password, check_code;
+    private ProgressBar progress;
     private Button register_button;
     private ImageButton imageButton_back;
     private TextView get_verification_code, register;
+    private Handler handler;
+    private String digit_code;
+    private int fetchCaptchaSecondsRemaining;
+    // 用于获取短信验证码按钮的倒计时
+    private final Runnable updateCountdownRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (fetchCaptchaSecondsRemaining > 0) {
+                get_verification_code.setClickable(false);
+                get_verification_code.setText(String.valueOf(fetchCaptchaSecondsRemaining) + "s");
+                fetchCaptchaSecondsRemaining--;
+                handler.postDelayed(this, 1000);
+            } else {
+                get_verification_code.setClickable(true);
+                get_verification_code.setText(getResources().getString(R.string.get_verification_code));
+            }
+        }
+    };
+    private Context context;
+    private OkHttpClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_register);
+        this.context = this;
+        client = new OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
+                .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
+                .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
+                .build();
+
+        handler = new Handler(Looper.getMainLooper());
+
         initialComponent();
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -77,6 +127,7 @@ public class RegisterActivity extends AppCompatActivity {
         imageButton_back = findViewById(R.id.imageButton_back);
         get_verification_code = findViewById(R.id.get_verification_code);
         register = findViewById(R.id.register);
+        progress = findViewById(R.id.progress);
 
         // 设置手机号输入框的输入限制
         phone_number.addTextChangedListener(new CustomTextWatcher(phone_number,
@@ -106,7 +157,7 @@ public class RegisterActivity extends AppCompatActivity {
             return false;
         });
         imageButton_back.setOnClickListener(v -> finish());
-        // 登录按钮的点击事件，如果登录界面已经打开，则返回，否则重新打开登录界面。
+        // 已有账号登录按钮的点击事件，如果登录界面已经打开，则返回，否则重新打开登录界面。
         register.setOnClickListener(v -> {
             ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
             List<ActivityManager.RunningTaskInfo> tasks = activityManager.getRunningTasks(Integer.MAX_VALUE);
@@ -132,20 +183,54 @@ public class RegisterActivity extends AppCompatActivity {
                 Toast.makeText(RegisterActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
                 return;
             }
-            DialogFragment df = VerificationCodeDialogFragment.newInstance(phone_number.getText().toString());
+            // todo:临时设定的回调函数，实际上线替换为获取验证码
+            DialogFragment df = VerificationCodeDialogFragment.newInstance(phone_number.getText().toString(), new VerificationCodeDialogFragment.GetCaptchaCodeCallback() {
+                @Override
+                public void getCode(String code) {
+                    if (!code.isEmpty()) {
+                        digit_code = code;
+                        sms_verification_code.setText(code);
+                        startCountingDown(60);
+                    }
+                }
+            });
             df.show(getSupportFragmentManager(), "VerificationCodeDialogFragment");
+
         });
 
         // 点击立即注册按钮的事件
         register_button.setOnClickListener(v -> {
-            if (checkComponents() && serverVerification()) {
-                // 注册成功后，保存用户名、加密并保存密码
-                SharedPreferences sharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
-                sharedPreferences.edit().putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString()).apply();
-                String passwordHash = PasswordUtils.hashPassword(password.getText().toString());
-                sharedPreferences.edit().putString(getString(R.string.pref_user_password), passwordHash).apply();
-                Toast.makeText(RegisterActivity.this, "注册成功", Toast.LENGTH_LONG).show();
-                finish();
+            if (checkComponents()) {
+                disableAllComponents();
+                try {
+                    serverVerification(new ServerRegisterVerificationCallback() {
+                        @Override
+                        public void onSuccess() {
+                            runOnUiThread(() -> {
+                                // 注册成功后，保存用户名、加密并保存密码
+                                SharedPreferences sharedPreferences = context.getSharedPreferences("default", Context.MODE_PRIVATE);
+                                sharedPreferences.edit().putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString()).apply();
+//                                String passwordHash = PasswordUtils.hashPassword(password.getText().toString());
+                                sharedPreferences.edit().putString(getString(R.string.pref_user_password), password.getText().toString()).apply();
+                                Toast.makeText(RegisterActivity.this, "注册成功", Toast.LENGTH_LONG).show();
+                                finish();
+                            });
+                        }
+
+                        @Override
+                        public void onFailed(String msg) {
+                            runOnUiThread(() -> {
+                                Toast.makeText(context, "注册失败！\n" + msg, Toast.LENGTH_LONG).show();
+                                enableAllComponents();
+                            });
+
+                        }
+                    });
+                } catch (JSONException e) {
+                    runOnUiThread(this::enableAllComponents);
+                    Toast.makeText(context, "本地信息异常，请重启软件后尝试！", Toast.LENGTH_LONG).show();
+                    throw new RuntimeException(e);
+                }
             }
         });
         // 设置密码输入框的显示状态
@@ -169,6 +254,14 @@ public class RegisterActivity extends AppCompatActivity {
             }
             return false;
         });
+    }
+
+    private void startCountingDown(int i) {
+        if (i <= 0) {
+            return;
+        }
+        fetchCaptchaSecondsRemaining = i;
+        handler.post(updateCountdownRunnable);
     }
 
     // 检查输入内容是否合法，如果合法则继续注册，否则提示错误。
@@ -204,8 +297,76 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     // 将信息发送至服务器进行验证。
-    private boolean serverVerification() {
-        return true;
+    private void serverVerification(ServerRegisterVerificationCallback serverRegisterVerificationCallback) throws JSONException {
+        String uri = serverUrl + "/register";
+        MediaType JSON = MediaType.get("application/json");
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("phone_number", phone_number.getText().toString());
+        jsonObject.put("password", password.getText().toString());
+        jsonObject.put("digit_code", digit_code);
+        jsonObject.put("sms_code", "123123");  // 暂时不验证
+        jsonObject.put("authorization_code", check_code.getText().toString()); // 暂时不验证
+        String json = jsonObject.toString();
+        RequestBody body = RequestBody.create(json, JSON);
+        Request request = new Request.Builder()
+                .url(uri)
+                .post(body)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                serverRegisterVerificationCallback.onFailed(e.toString());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
+                    serverRegisterVerificationCallback.onSuccess();
+                } else {
+                    String message = "";
+                    if (response.body() != null) {
+                        String string = response.body().string();
+                        if (!string.isEmpty()) {
+                            try {
+                                JSONObject jsonObject1 = new JSONObject(string);
+                                message = jsonObject1.getString("message");
+                            } catch (JSONException e) {
+                                Log.e(TAG, "json解析失败！" + e);
+                                // 添加错误处理代码
+                                runOnUiThread(() -> {
+                                    Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
+                                });
+                                return;
+                            }
+                        }
+                    }
+                    serverRegisterVerificationCallback.onFailed(message);
+                }
+            }
+        });
+    }
+
+    private void disableAllComponents() {
+        phone_number.setEnabled(false);
+        sms_verification_code.setEnabled(false);
+        password.setEnabled(false);
+        check_code.setEnabled(false);
+        progress.setVisibility(View.VISIBLE);
+    }
+
+    private void enableAllComponents() {
+        phone_number.setEnabled(true);
+        sms_verification_code.setEnabled(true);
+        password.setEnabled(true);
+        check_code.setEnabled(true);
+        progress.setVisibility(View.GONE);
+    }
+
+    public interface ServerRegisterVerificationCallback {
+        void onSuccess();
+
+        void onFailed(String meg);
     }
     //    private boolean updateDatabase(){
 //        DatabaseUtils databaseUtils = new DatabaseUtils(this);

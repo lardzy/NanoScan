@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        initializeDatabase();
+//        initializeDatabase();
         checkFirstRunOrUserAgreement();
     }
 
@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
         boolean userAgreed = prefs.getBoolean(getString(R.string.pref_user_agreed), false);
 
         Intent intent;
-        if (isFirstRun || !userAgreed) {
+        if (isFirstRun && !userAgreed) {
             // UserAgreementActivity 是用户协议界面的Activity
             intent = new Intent(this, UserAgreementActivity.class);
         } else {
@@ -51,11 +51,11 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
         finish(); // 关闭当前活动，以防用户返回到这个界面
     }
-    private void initializeDatabase(){
-        // 初始化数据库
-        UserDatabaseHelper userDatabaseHelper = new UserDatabaseHelper
-                (this, UserDatabaseHelper.DATABASE_NAME, null, UserDatabaseHelper.DATABASE_VERSION);
-        SQLiteDatabase db = userDatabaseHelper.getWritableDatabase();
-        userDatabaseHelper.onCreate(db);
-    }
+//    private void initializeDatabase(){
+//        // 初始化数据库
+//        UserDatabaseHelper userDatabaseHelper = new UserDatabaseHelper
+//                (this, UserDatabaseHelper.DATABASE_NAME, null, UserDatabaseHelper.DATABASE_VERSION);
+//        SQLiteDatabase db = userDatabaseHelper.getWritableDatabase();
+//        userDatabaseHelper.onCreate(db);
+//    }
 }
