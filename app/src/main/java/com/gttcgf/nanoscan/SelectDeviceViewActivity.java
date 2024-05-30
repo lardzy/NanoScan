@@ -86,22 +86,25 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
         initialData();
         initialComponent();
 
-        final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        // 获取 BluetoothLeScanner 实例
+        BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
         if (mBluetoothAdapter != null) {
             mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
         } else {
             Toast.makeText(this, "蓝牙未启用！", Toast.LENGTH_SHORT).show();
         }
+
         nanoScanAdapter = new NanoScanAdapter(this, nanoDeviceList);
         lv_nanoDevices.setAdapter(nanoScanAdapter);
-        lv_nanoDevices.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                confirmationDialog(nanoDeviceList.get(i).getNanoMac(), nanoDeviceList.get(i).getNanoName());
-            }
-        });
+
+        lv_nanoDevices.setOnItemClickListener((adapterView, view, i, l) ->
+                confirmationDialog(nanoDeviceList.get(i).getNanoMac(), nanoDeviceList.get(i).getNanoName()));
+
+        // 实例化handle
         handler = new Handler();
+
+        // 扫描设备
         scanLeDevice(true);
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -119,9 +122,11 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
     private void initialComponent() {
         imageButton_back = findViewById(R.id.imageButton_back);
         lv_nanoDevices = findViewById(R.id.lv_nanoDevices);
-
         imageButton_back.setOnClickListener(this);
+
+        // 设置扫描回调
         scannerCallback = new ScanCallback() {
+            // 处理单个扫描结果
             @Override
             public void onScanResult(int callbackType, ScanResult result) {
                 super.onScanResult(callbackType, result);
@@ -130,7 +135,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
                 if (name != null && name.contains(DEVICE_NAME) && result.getScanRecord() != null) {
                     Boolean isDeviceInList = false;
                     ISCNIRScanSDK.NanoDevice nanoDevice = new ISCNIRScanSDK.NanoDevice(device, result.getRssi(), result.getScanRecord().getBytes());
-
+                    // 判断设备是否已在列表中，如果已经在，就该设备更新信号强度。
                     for (ISCNIRScanSDK.NanoDevice d : nanoDeviceList) {
                         if (d.getNanoMac().equals(device.getAddress())) {
                             isDeviceInList = true;
@@ -138,6 +143,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
                             nanoScanAdapter.notifyDataSetChanged();
                         }
                     }
+                    // 如果不在设备列表中，则添加到设备集合中，并通知列表更新。
                     if (!isDeviceInList) {
                         nanoDeviceList.add(nanoDevice);
                         nanoScanAdapter.notifyDataSetChanged();
@@ -152,7 +158,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
             Toast.makeText(this, "蓝牙未启用！", Toast.LENGTH_SHORT);
         } else {
             if (enable) {
-                handler.postDelayed(() -> mBluetoothLeScanner.stopScan(scannerCallback), ISCNIRScanSDK.SCAN_PERIOD);
+                handler.postDelayed(() -> mBluetoothLeScanner.stopScan(scannerCallback), ISCNIRScanSDK.SCAN_PERIOD);  // 6000L
                 mBluetoothLeScanner.startScan(scannerCallback);
             } else {
                 mBluetoothLeScanner.startScan(scannerCallback);
@@ -170,6 +176,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
 
         alertDialogBuilder.setPositiveButton(getResources().getString(R.string.ok), (arg0, arg1) -> {
             alertDialog.dismiss();
+            // 存储选中的设备信息，包括设备mac和名称
             storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceMac);
             storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, name);
             finish();

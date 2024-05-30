@@ -127,7 +127,7 @@ public class LoginActivity extends AppCompatActivity {
 
         // 设置忘记密码按钮的点击事件
         forgot_password.setOnClickListener(view ->
-                Toast.makeText(LoginActivity.this, "点击了忘记密码", Toast.LENGTH_SHORT).show());
+                Toast.makeText(LoginActivity.this, "忘记密码功能开发中...", Toast.LENGTH_SHORT).show());
         // 设置注册按钮的点击事件
         register.setOnClickListener(view -> {
             // 跳转到注册页面

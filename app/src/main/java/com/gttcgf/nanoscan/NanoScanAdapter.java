@@ -19,7 +19,7 @@ public class NanoScanAdapter extends ArrayAdapter<ISCNIRScanSDK.NanoDevice> {
     private Context context;
 
     public NanoScanAdapter(@NonNull Context context, ArrayList<ISCNIRScanSDK.NanoDevice> values) {
-        super(context, -1, values);
+        super(context, -1, values);  // 这里传入了ArrayList<ISCNIRScanSDK.NanoDevice>，后续getItem()获取的是这个集合里面的对象。
         this.nanoDevices = values;
         this.context = context;
     }
@@ -38,6 +38,7 @@ public class NanoScanAdapter extends ArrayAdapter<ISCNIRScanSDK.NanoDevice> {
         } else {
             viewHolder = (ViewHolder) convertView.getTag();
         }
+        // 读取设备列表信息
         final ISCNIRScanSDK.NanoDevice device = getItem(position);
         if (device != null) {
             viewHolder.tv_nano_name.setText(device.getNanoName());

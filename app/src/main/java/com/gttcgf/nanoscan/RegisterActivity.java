@@ -121,9 +121,18 @@ public class RegisterActivity extends AppCompatActivity {
             Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
             startActivity(intent);
         });
+
         // 获取验证码按钮的点击事件
         get_verification_code.setOnClickListener(v -> {
-            DialogFragment df = VerificationCodeDialogFragment.newInstance("test");
+            // todo:验证是否输入了正确的手机号
+            EditText phoneNumber;
+            phoneNumber = findViewById(R.id.phone_number);
+            if (!InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber.getText().toString())) {
+                phone_number.setError("请输入正确的手机号");
+                Toast.makeText(RegisterActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            DialogFragment df = VerificationCodeDialogFragment.newInstance(phone_number.getText().toString());
             df.show(getSupportFragmentManager(), "VerificationCodeDialogFragment");
         });
 
@@ -198,7 +207,7 @@ public class RegisterActivity extends AppCompatActivity {
     private boolean serverVerification() {
         return true;
     }
-//    private boolean updateDatabase(){
+    //    private boolean updateDatabase(){
 //        DatabaseUtils databaseUtils = new DatabaseUtils(this);
 //        ContentValues values = new ContentValues();
 //
