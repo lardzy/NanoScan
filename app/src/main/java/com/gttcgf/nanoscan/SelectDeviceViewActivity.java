@@ -4,6 +4,7 @@ import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -13,6 +14,7 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -179,6 +181,10 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
             // 存储选中的设备信息，包括设备mac和名称
             storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceMac);
             storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, name);
+            Intent i = new Intent();
+            i.putExtra("NAME", name);
+            i.putExtra("MAC", mac);
+            setResult(Activity.RESULT_OK, i);
             finish();
         });
 

@@ -44,8 +44,8 @@ import okhttp3.Response;
 public class VerificationCodeDialogFragment extends DialogFragment {
     private static final long fetchCaptchaImage_DELAY = 1000;  // 刷新验证码的间隔时长
     private static final String TAG = "VerificationCodeDialogF";
-    //    private static final String serverUrl = "https://newnirtechnolgy.top/api";
-    private static final String serverUrl = "http://8.138.102.24:5000";
+        private static final String serverUrl = "https://newnirtechnolgy.top/api";
+//    private static final String serverUrl = "https://newnirtechnolgy.top";
     private OkHttpClient client;
     private Context context;
     private String phone_number;
@@ -90,10 +90,10 @@ public class VerificationCodeDialogFragment extends DialogFragment {
                 .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
                 .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
                 .build();
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(serverUrl + "/request_digit_code").newBuilder();
-        urlBuilder.addQueryParameter("phone_number", phone_number);
-        String url = urlBuilder.toString();
-//        String url = serverUrl + "/captcha/" + phone_number;
+//        HttpUrl.Builder urlBuilder = HttpUrl.parse(serverUrl + "/request_digit_code").newBuilder();
+//        urlBuilder.addQueryParameter("phone_number", phone_number);
+//        String url = urlBuilder.toString();
+        String url = serverUrl + "/captcha/" + phone_number;
         Request request = new Request.Builder()
                 .url(url)
                 .build();

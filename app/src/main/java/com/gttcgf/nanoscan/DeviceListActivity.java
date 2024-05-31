@@ -35,6 +35,8 @@ public class DeviceListActivity extends AppCompatActivity {
     private View.OnClickListener onClickListener;
     private TextView device_type_input, device_info_input, device_list_empty;
     private EditText device_name_input;
+    private ActivityResultLauncher<Intent> activityResultLauncher;
+    private DeviceListAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,17 +51,27 @@ public class DeviceListActivity extends AppCompatActivity {
         });
         initializeData();
         initialComponent();
+
+        // 注册activityResultLauncher
+        activityResultLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
+            @Override
+            public void onActivityResult(ActivityResult o) {
+                if (o.getResultCode() == Activity.RESULT_OK) {
+                    Intent data = o.getData();
+                    if (data != null) {
+                        String deviceName = data.getStringExtra("NAME");
+                        String deviceMac = data.getStringExtra("MAC");
+                        addDevice(new DeviceItem(R.drawable.equipment_front, deviceName, "便携式近红外光谱仪", deviceMac));
+                    }
+                }
+            }
+        });
     }
 
     private void initializeData() {
         itemList = new ArrayList<>();
         // todo:测试用数据
 //        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备2", "便携式近红外光谱仪"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备3", "便携式近红外光谱仪"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备4", "便携式近红外光谱仪"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备5", "便携式近红外光谱仪"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备6", "便携式近红外光谱仪"));
     }
 
     private void initialComponent() {
@@ -69,10 +81,11 @@ public class DeviceListActivity extends AppCompatActivity {
         imageButton_back = findViewById(R.id.imageButton_back);
         device_list_empty = findViewById(R.id.device_list_empty);
 
+        // 是否显示“列表为空
         updateEmptyState();
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        DeviceListAdapter adapter = new DeviceListAdapter(itemList);
+        adapter = new DeviceListAdapter(itemList);
         recyclerView.setAdapter(adapter);
         adapter.setOnItemClickListener(new DeviceListAdapter.OnItemClickListener() {
             @Override
@@ -91,9 +104,11 @@ public class DeviceListActivity extends AppCompatActivity {
 
         onClickListener = view -> {
             if (view.getId() == R.id.button_add_device) {
+                // 添加新设备
                 Intent intent = new Intent(DeviceListActivity.this, SelectDeviceViewActivity.class);
-//                startActivityForResult();
-                startActivity(intent);
+//                startActivity(intent);
+                activityResultLauncher.launch(intent);
+
             } else if (view.getId() == R.id.imageButton_back) {
                 finish();
             } else if (view.getId() == R.id.imageButton_search) {
@@ -106,19 +121,6 @@ public class DeviceListActivity extends AppCompatActivity {
         imageButton_back.setOnClickListener(onClickListener);
 
     }
-    private ActivityResultLauncher<Intent> activityResultLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
-                @Override
-                public void onActivityResult(ActivityResult o) {
-                    if (o.getResultCode() == Activity.RESULT_OK) {
-                        Intent data = o.getData();
-                        if (data != null) {
-                            String returnedResult = data.getStringExtra("result_key");
-                            // 处理返回的数据
-                        }
-                    }
-                }
-            });
 
     // todo:这个方法仅测试用，正式版将删除。
     private void modifyDeviceInformation(int position, DeviceListAdapter adapter) {
@@ -155,6 +157,20 @@ public class DeviceListActivity extends AppCompatActivity {
         // 创建并显示AlertDialog
         builder.create().show();
     }
+
+    private void addDevice(DeviceItem newItem) {
+        for (DeviceItem deviceItem : itemList) {
+            if (deviceItem.getDeviceMac().equals(newItem.getDeviceMac())) {
+                Toast.makeText(this, "设备已在列表中！", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        itemList.add(newItem);
+        adapter.notifyItemInserted(itemList.size() - 1);
+        updateEmptyState();
+    }
+
+    // 更新列表是否为空的状态
     private void updateEmptyState() {
         if (itemList.isEmpty()) {
             device_list_empty.setVisibility(TextView.VISIBLE);

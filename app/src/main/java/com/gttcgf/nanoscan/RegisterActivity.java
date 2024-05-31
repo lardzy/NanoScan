@@ -51,7 +51,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class RegisterActivity extends AppCompatActivity {
-    private static final String serverUrl = "http://8.138.102.24:5000";
+    private static final String serverUrl = "https://newnirtechnolgy.top";
     private static final String TAG = "RegisterActivity";
     private EditText phone_number, sms_verification_code, password, check_code;
     private ProgressBar progress;

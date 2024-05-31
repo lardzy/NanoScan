@@ -47,7 +47,7 @@
         app:layout_constraintHorizontal_weight="0.5"
         android:layout_marginBottom="16dp"
         android:text="@string/device_name"
-        android:textSize="28sp"
+        android:textSize="16sp"
         android:textStyle="bold"
         android:gravity="center_horizontal|bottom"/>
     <TextView

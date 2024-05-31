@@ -26,8 +26,8 @@
     <string name="forgot_password">忘记密码了？</string>
     <string name="phone_number_register">立即注册</string>
     <string name="or">或</string>
-    <string name="sms_verification_code">请输入短信验证码</string>
-    <string name="sms_verification_code_title">短信验证码</string>
+    <string name="sms_verification_code">请输入图形验证码</string>
+    <string name="sms_verification_code_title">图形验证码</string>
     <string name="get_verification_code">获取验证码</string>
     <string name="check_code">请输入机身授权码</string>
     <string name="check_code_title">机身授权码</string>
