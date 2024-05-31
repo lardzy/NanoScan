@@ -132,11 +132,12 @@ public class DeviceListActivity extends AppCompatActivity {
         device_name_input = view.findViewById(R.id.device_name_input);
         device_name_input.setText(itemList.get(position).getDeviceName());
         device_type_input.setText(itemList.get(position).getDeviceType());
+        device_info_input.setText(itemList.get(position).getDeviceMac());
 
         builder.setView(view);
 
         builder.setPositiveButton("确认", (dialog, which) -> {
-            if (device_name_input.getText().toString().isEmpty() || device_name_input.getText().toString().length() > 10) {
+            if (device_name_input.getText().toString().isEmpty() || device_name_input.getText().toString().length() > 20) {
                 Toast.makeText(DeviceListActivity.this, "设备名称格式有误!", Toast.LENGTH_SHORT).show();
                 return;
             }

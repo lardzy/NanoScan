@@ -2,6 +2,7 @@ package com.gttcgf.nanoscan;
 
 import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
@@ -34,18 +35,15 @@ import java.util.regex.Pattern;
 
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.HttpUrl;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class VerificationCodeDialogFragment extends DialogFragment {
     private static final long fetchCaptchaImage_DELAY = 1000;  // 刷新验证码的间隔时长
     private static final String TAG = "VerificationCodeDialogF";
-        private static final String serverUrl = "https://newnirtechnolgy.top/api";
-//    private static final String serverUrl = "https://newnirtechnolgy.top";
+    private static final String serverUrl = "https://newnirtechnolgy.top/api";
+    //    private static final String serverUrl = "https://newnirtechnolgy.top";
     private OkHttpClient client;
     private Context context;
     private String phone_number;
@@ -54,6 +52,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
     private EditText editTextVerificationInput;
     private Handler handler;
     private GetCaptchaCodeCallback getCaptchaCodeCallback;
+    private boolean isDismissedWithResult = false;
     private boolean fetchCaptchaImage_clickable = true;  // 验证码图片是否可以更新
 
     public static VerificationCodeDialogFragment newInstance(String phone_number, GetCaptchaCodeCallback getCaptchaCodeCallback) {
@@ -141,6 +140,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
                         activity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                // 验证码图片获取成功
                                 progressBar.setVisibility(View.GONE);
                                 imageViewVerificationCode.setVisibility(View.VISIBLE);
                                 imageViewVerificationCode.setImageBitmap(bitmap);
@@ -164,6 +164,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
         });
     }
 
+    // 对输入的验证码进行格式校验
     private void verifyCaptchaCode(String result, VerifyCaptchaCallback callback) {
         if (result.isEmpty()) {
             callback.onFailed();
@@ -176,42 +177,8 @@ public class VerificationCodeDialogFragment extends DialogFragment {
             callback.onFailed();
             return;
         }
-
-        client = new OkHttpClient();
-        String url = serverUrl + "/verify_digit_code";
-        MediaType JSON = MediaType.get("application/json");
-        String json = "{\"phone_number\":\"" + phone_number + "\", \"digit_code\":\"" + result + "\"}";
-        RequestBody body = RequestBody.create(json, JSON);
-        Request request = new Request.Builder()
-                .url(url)
-                .post(body)
-                .build();
-
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                FragmentActivity activity = getActivity();
-                if (activity != null) {
-                    getActivity().runOnUiThread(() -> Toast.makeText(context, "请求失败！\n" + e, Toast.LENGTH_SHORT).show());
-                    callback.onFailed();
-                }
-            }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(context, "图形验证码校验成功！" + result, Toast.LENGTH_LONG).show();
-                            callback.onSuccess();
-                        }
-                    });
-                } else {
-                    callback.onFailed();
-                }
-            }
-        });
+        // 验证码格式正确
+        callback.onSuccess();
     }
 
     @NonNull
@@ -245,20 +212,19 @@ public class VerificationCodeDialogFragment extends DialogFragment {
         ProgressBar progressBar = view.findViewById(R.id.progressBar);
 
         progressBar.setVisibility(View.VISIBLE);
-        // 验证码弹窗点击确认后
+
+        // 点击了验证码窗口的确认按钮
         buttonConfirm.setOnClickListener(v -> {
             progressBar.setVisibility(View.GONE);
             buttonConfirm.setClickable(false);
-            // 内容为空时，直接标红
-//            if (editTextVerificationInput.getText().toString().isEmpty()) {
-//                editTextVerificationInput.setError("验证码为空！");
-//            }
             verifyCaptchaCode(editTextVerificationInput.getText().toString(), new VerifyCaptchaCallback() {
                 @Override
                 public void onSuccess() {
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            isDismissedWithResult = true;
+                            // 调用注册界面RegisterActivity的接口实现类，传递验证码数字
                             getCaptchaCodeCallback.getCode(editTextVerificationInput.getText().toString());
                             dismiss();
                         }
@@ -273,7 +239,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
                         public void run() {
                             buttonConfirm.setClickable(true);
                             editTextVerificationInput.setText("");
-                            editTextVerificationInput.setError("验证码错误，请重试！");
+                            editTextVerificationInput.setError("验证码格式错误，请重试！");
                             fetchCaptchaImage(phone_number);
                         }
                     });
@@ -282,9 +248,11 @@ public class VerificationCodeDialogFragment extends DialogFragment {
             });
         });
 
+        // 点击了验证码窗口的取消按钮
         buttonCancel.setOnClickListener(v -> {
             dismiss();
         });
+        // 设置验证码图案的点击事件监听，点击时进行刷新，频率限制为1秒一次。
         imageViewVerificationCode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -307,6 +275,15 @@ public class VerificationCodeDialogFragment extends DialogFragment {
         this.getCaptchaCodeCallback = getCaptchaCodeCallback;
     }
 
+    @Override
+    public void onDismiss(@NonNull DialogInterface dialog) {
+        super.onDismiss(dialog);
+        Log.d(TAG, "Dialog dismissed");
+        if (getCaptchaCodeCallback != null) {
+            getCaptchaCodeCallback.onDialogDismiss(isDismissedWithResult);
+        }
+    }
+
     public interface VerifyCaptchaCallback {
         void onSuccess();
 
@@ -315,5 +292,6 @@ public class VerificationCodeDialogFragment extends DialogFragment {
 
     public interface GetCaptchaCodeCallback {
         void getCode(String code);
+        void onDialogDismiss(boolean isDismissedWithResult);
     }
 }

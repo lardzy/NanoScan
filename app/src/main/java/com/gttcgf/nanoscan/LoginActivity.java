@@ -11,6 +11,7 @@ import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -22,11 +23,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.gttcgf.nanoscan.guidingSteps.IntroGuideActivity;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
 import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -41,14 +44,17 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class LoginActivity extends AppCompatActivity {
-    private static final String serverUrl = "http://8.138.102.24:5000";
+public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
+    private static final String serverUrl = "https://newnirtechnolgy.top/api";
     private static final String TAG = "LoginActivity";
+    // todo: 调试用
+    Button btn_debug;
     private EditText phone_number, password;
     private TextView forgot_password, register;
     private Button login_button;
     private boolean userHasEditedPassword, isFirstTimeUse;
-    private String pref_user_phone_number, pref_user_password;
+    private String pref_user_phone_number, pref_user_password, pref_user_token;
+    private String captchaCode;
     private SharedPreferences sharedPreferences;
     private OkHttpClient client;
     private Context context;
@@ -92,6 +98,8 @@ public class LoginActivity extends AppCompatActivity {
         forgot_password = findViewById(R.id.forgot_password); // 获取忘记密码按钮
         register = findViewById(R.id.register); // 获取注册按钮
         login_button = findViewById(R.id.login_button);
+
+        btn_debug = findViewById(R.id.btn_debug);
 
         // 设置手机号输入框的输入限制
         phone_number.addTextChangedListener(new CustomTextWatcher(phone_number,
@@ -153,61 +161,46 @@ public class LoginActivity extends AppCompatActivity {
         });
 
         // 设置忘记密码按钮的点击事件
-        forgot_password.setOnClickListener(view ->
-                Toast.makeText(LoginActivity.this, "忘记密码功能开发中...", Toast.LENGTH_SHORT).show());
+        forgot_password.setOnClickListener(this);
+
         // 设置注册按钮的点击事件
-        register.setOnClickListener(view -> {
-            // 跳转到注册页面
-            Intent i = new Intent(LoginActivity.this, RegisterActivity.class);
-            startActivity(i);
-
-        });
+        register.setOnClickListener(this);
         // 点击登录按钮后
-        login_button.setOnClickListener(view -> {
-            // 登录
-            if (checkLogin()) {
-                disableAllComponents();
-                try {
-                    serverVerification(new ServerLoginVerificationCallback() {
-                        @Override
-                        public void onSuccess() {
-                            // 登录成功，保存账号密码，跳转到主页面
-                            SharedPreferences sharedPreferences = context.getSharedPreferences("default", Context.MODE_PRIVATE);
-                            sharedPreferences.edit().putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString()).apply();
-                            sharedPreferences.edit().putString(getString(R.string.pref_user_password), password.getText().toString()).apply();
-                            Intent i;
-                            if (isFirstTimeUse) {
-                                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
-                            } else {
-                                i = new Intent(LoginActivity.this, DeviceListActivity.class);
-                            }
-                            startActivity(i);
-                            finish();
-                        }
-
-                        @Override
-                        public void onFailed(String msg) {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Toast.makeText(context, "登录失败！\n" + msg, Toast.LENGTH_LONG).show();
-                                    enableAllComponents();
-                                }
-                            });
-                        }
-                    });
-                } catch (JSONException e) {
-                    runOnUiThread(this::enableAllComponents);
-                    Toast.makeText(context, "本地信息异常，请重启软件后尝试！", Toast.LENGTH_LONG).show();
-                    throw new RuntimeException(e);
-
-                }
-
-            }
-        });
+        login_button.setOnClickListener(this);
+        btn_debug.setOnClickListener(this);
     }
 
-    // 检查输入框信息。
+    // 初始化用户数据
+    private void initializeData() {
+
+        userHasEditedPassword = true;
+
+        sharedPreferences = this.getSharedPreferences("default", MODE_PRIVATE);
+        pref_user_phone_number = sharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
+        pref_user_password = sharedPreferences.getString(getString(R.string.pref_user_password), "");
+        pref_user_token = sharedPreferences.getString(getString(R.string.pref_user_token), "");
+        isFirstTimeUse = sharedPreferences.getBoolean(getString(R.string.pref_first_run), true);
+
+        Log.d(TAG, "pref_user_phone_number: " + pref_user_phone_number);
+        Log.d(TAG, "pref_user_password: " + pref_user_password);
+        Log.d(TAG, "pref_user_token: " + pref_user_password);
+
+        // 如果用户没有保存手机号或密码，则直接返回
+        if (pref_user_phone_number.isEmpty() || pref_user_password.isEmpty()) {
+            return;
+        }
+
+        phone_number.setText(pref_user_phone_number);
+        password.setText(pref_user_password);
+
+        password.setTransformationMethod(PasswordTransformationMethod.getInstance());
+        password.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.baseline_visibility_off_24, 0);
+
+        // 用于判断用户有没有编辑密码框
+        userHasEditedPassword = false;
+    }
+
+    // 检查输入框格式信息。
     private boolean checkLogin() {
         String phoneNumber = phone_number.getText().toString();
         String password = this.password.getText().toString();
@@ -226,32 +219,6 @@ public class LoginActivity extends AppCompatActivity {
         return false;
     }
 
-    // 初始化用户数据
-    private void initializeData() {
-
-        userHasEditedPassword = true;
-
-        sharedPreferences = this.getSharedPreferences("default", MODE_PRIVATE);
-        pref_user_phone_number = sharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
-        pref_user_password = sharedPreferences.getString(getString(R.string.pref_user_password), "");
-        isFirstTimeUse = sharedPreferences.getBoolean(getString(R.string.pref_first_run), true);
-
-        Log.v("LoginActivity", "pref_user_phone_number: " + pref_user_phone_number);
-        Log.v("LoginActivity", "pref_user_password: " + pref_user_password);
-
-        // 如果用户没有保存手机号或密码，则直接返回
-        if (pref_user_phone_number.isEmpty() || pref_user_password.isEmpty()) {
-            return;
-        }
-
-        phone_number.setText(pref_user_phone_number);
-        password.setText(pref_user_password);
-
-        password.setTransformationMethod(PasswordTransformationMethod.getInstance());
-        password.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.baseline_visibility_off_24, 0);
-
-        userHasEditedPassword = false;
-    }
 
     // 当用户编辑密码框时，清空本地存储的密码
     private void clearPassword() {
@@ -263,11 +230,17 @@ public class LoginActivity extends AppCompatActivity {
 
     // 服务器验证
     private void serverVerification(ServerLoginVerificationCallback verificationCallback) throws JSONException {
-        String uri = serverUrl + "/login";
+        String uri = serverUrl + "/users/login";
         MediaType JSON = MediaType.get("application/json");
+        JSONObject userObject = new JSONObject();
+        userObject.put("username", phone_number.getText().toString());
+        userObject.put("password", password.getText().toString());
+        // todo:添加数字验证码输入
+        userObject.put("captcha", captchaCode);
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("phone_number", phone_number.getText().toString());
-        jsonObject.put("password", password.getText().toString());
+
+        jsonObject.put("user", userObject);
+
         String json = jsonObject.toString();
         RequestBody body = RequestBody.create(json, JSON);
         Request request = new Request.Builder()
@@ -284,6 +257,21 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
+                    // 登录成功！
+                    // 解析响应结果
+                    try {
+                        JSONObject jsonObject = new JSONObject(response.body().string());
+                        JSONObject userObject = jsonObject.getJSONObject("user");
+                        pref_user_phone_number = userObject.getString("username");
+                        pref_user_token = userObject.getString("token");
+                    } catch (JSONException e) {
+//                        throw new RuntimeException(e);
+                        Log.e(TAG, "json解析失败！" + e);
+                        // 添加错误处理代码
+                        runOnUiThread(() -> {
+                            Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
+                        });
+                    }
                     verificationCallback.onSuccess();
                 } else {
                     String message = "";
@@ -292,14 +280,21 @@ public class LoginActivity extends AppCompatActivity {
                         if (!string.isEmpty()) {
                             try {
                                 JSONObject jsonObject1 = new JSONObject(string);
-                                message = jsonObject1.getString("message");
+                                JSONArray jsonArray = jsonObject1.getJSONArray("errors");
+                                StringBuilder sb = new StringBuilder(message);
+                                for (int i = 0; i < jsonArray.length(); i++) {
+                                    sb.append(jsonArray.getString(i));
+                                }
+                                message = sb.toString();
                             } catch (JSONException e) {
 //                            throw new RuntimeException(e);
                                 Log.e(TAG, "json解析失败！" + e);
+                                // 添加错误处理代码
+                                runOnUiThread(() -> {
+                                    Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
+                                });
                             }
                         }
-
-
                     }
                     verificationCallback.onFailed(message);
                 }
@@ -308,23 +303,108 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    private void setComponentsEnabled(boolean enabled) {
+        phone_number.setEnabled(enabled);
+        password.setEnabled(enabled);
+        forgot_password.setEnabled(enabled);
+        login_button.setEnabled(enabled);
+        register.setEnabled(enabled);
+    }
+
+    private void disableAllComponents() {
+        setComponentsEnabled(false);
+    }
+
+    private void enableAllComponents() {
+        setComponentsEnabled(true);
+    }
+
+    // 处理点击事件
+    @Override
+    public void onClick(View view) {
+        if (view.getId() == R.id.login_button) {
+            if (checkLogin()) {  // 检查输入框格式信息。
+                disableAllComponents();  // 禁用所有组件
+                VerificationCodeDialogFragment verificationCodeDialogFragment = VerificationCodeDialogFragment.newInstance(
+                        phone_number.getText().toString(), new VerificationCodeDialogFragment.GetCaptchaCodeCallback() {
+                            @Override
+                            public void getCode(String code) {
+                                captchaCode = code;
+                                Log.d(TAG, "用户已输入数字验证码：" + code);
+                                try {
+                                    // 在服务器校验登录信息
+                                    serverVerification(new ServerLoginVerificationCallback() {
+                                        @Override
+                                        public void onSuccess() {
+                                            // 登录成功，保存账号密码token，跳转到主页面
+                                            SharedPreferences sharedPreferences = context.getSharedPreferences("default", Context.MODE_PRIVATE);
+                                            SharedPreferences.Editor edit = sharedPreferences.edit();
+                                            edit.putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString());
+                                            edit.putString(getString(R.string.pref_user_password), password.getText().toString());
+                                            edit.putString(getString(R.string.pref_user_token), pref_user_token);
+                                            edit.apply();
+
+                                            Intent i;
+                                            if (isFirstTimeUse) {
+                                                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
+                                            } else {
+                                                i = new Intent(LoginActivity.this, DeviceListActivity.class);
+                                            }
+                                            startActivity(i);
+                                            finish();
+                                        }
+
+                                        @Override
+                                        public void onFailed(String msg) {
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    Toast.makeText(context, "登录失败！\n" + msg, Toast.LENGTH_LONG).show();
+                                                    enableAllComponents();
+                                                }
+                                            });
+                                        }
+                                    });
+                                } catch (JSONException e) {
+                                    runOnUiThread(() -> enableAllComponents());
+                                    Toast.makeText(context, "本地信息异常，请重启软件后尝试！", Toast.LENGTH_LONG).show();
+                                    throw new RuntimeException(e);
+                                }
+                            }
+
+                            @Override
+                            public void onDialogDismiss(boolean isDismissedWithResult) {
+                                if (!isDismissedWithResult) {
+                                    enableAllComponents();
+                                }
+                            }
+                        }
+                );
+                verificationCodeDialogFragment.show(getSupportFragmentManager(), "verificationCodeDialogFragment");
+
+            }
+        } else if (view.getId() == R.id.register) {
+            // 跳转到注册页面
+            Intent i = new Intent(LoginActivity.this, RegisterActivity.class);
+            startActivity(i);
+        } else if (view.getId() == R.id.forgot_password) {
+            Toast.makeText(LoginActivity.this, "功能开发中...", Toast.LENGTH_SHORT).show();
+        } else if (view.getId() == R.id.btn_debug) {
+            Intent i;
+            if (isFirstTimeUse) {
+                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
+            } else {
+                i = new Intent(LoginActivity.this, DeviceListActivity.class);
+            }
+            startActivity(i);
+            finish();
+        }
+    }
+
+
     public interface ServerLoginVerificationCallback {
         void onSuccess();
 
         void onFailed(String msg);
-    }
-    private void disableAllComponents() {
-        phone_number.setEnabled(false);
-        password.setEnabled(false);
-        forgot_password.setEnabled(false);
-        login_button.setEnabled(false);
-        register.setEnabled(false);
-    }
-    private void enableAllComponents() {
-        phone_number.setEnabled(true);
-        password.setEnabled(true);
-        forgot_password.setEnabled(true);
-        login_button.setEnabled(true);
-        register.setEnabled(true);
     }
 }

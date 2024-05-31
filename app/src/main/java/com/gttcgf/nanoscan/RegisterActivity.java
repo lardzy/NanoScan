@@ -35,6 +35,7 @@ import com.gttcgf.nanoscan.tools.CustomTextWatcher;
 import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
 import com.gttcgf.nanoscan.tools.PortraitCaptureActivity;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -51,7 +52,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class RegisterActivity extends AppCompatActivity {
-    private static final String serverUrl = "https://newnirtechnolgy.top";
+    private static final String serverUrl = "https://newnirtechnolgy.top/api";
     private static final String TAG = "RegisterActivity";
     private EditText phone_number, sms_verification_code, password, check_code;
     private ProgressBar progress;
@@ -59,7 +60,7 @@ public class RegisterActivity extends AppCompatActivity {
     private ImageButton imageButton_back;
     private TextView get_verification_code, register;
     private Handler handler;
-    private String digit_code;
+    private String digit_code, token, username;
     private int fetchCaptchaSecondsRemaining;
     // 用于获取短信验证码按钮的倒计时
     private final Runnable updateCountdownRunnable = new Runnable() {
@@ -92,7 +93,7 @@ public class RegisterActivity extends AppCompatActivity {
                 .build();
 
         handler = new Handler(Looper.getMainLooper());
-
+        // 初始化布局组件
         initialComponent();
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -117,6 +118,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
     }
 
+    // 初始化布局组件
     @SuppressLint("ClickableViewAccessibility")
     private void initialComponent() {
         phone_number = findViewById(R.id.phone_number);
@@ -138,6 +140,7 @@ public class RegisterActivity extends AppCompatActivity {
         // 设置密码输入框的输入限制
         password.addTextChangedListener(new CustomTextWatcher(password,
                 InputDataVerificationUtils::passwordInputVerification, "密码至少包含8个字符，可包含数字、大小写字母和符号", false));
+        // 设置设备授权码输入框的输入限制
         check_code.addTextChangedListener(new CustomTextWatcher(check_code,
                 InputDataVerificationUtils::checkCodeVerification, "请输入正确的授权码，授权码位于机身正面的机身按钮下侧"));
         // 扫描授权码
@@ -157,6 +160,7 @@ public class RegisterActivity extends AppCompatActivity {
             return false;
         });
         imageButton_back.setOnClickListener(v -> finish());
+
         // 已有账号登录按钮的点击事件，如果登录界面已经打开，则返回，否则重新打开登录界面。
         register.setOnClickListener(v -> {
             ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -175,10 +179,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         // 获取验证码按钮的点击事件
         get_verification_code.setOnClickListener(v -> {
-            // todo:验证是否输入了正确的手机号
-            EditText phoneNumber;
-            phoneNumber = findViewById(R.id.phone_number);
-            if (!InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber.getText().toString())) {
+            if (!InputDataVerificationUtils.phoneNumberInputVerification(phone_number.getText().toString())) {
                 phone_number.setError("请输入正确的手机号");
                 Toast.makeText(RegisterActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
                 return;
@@ -187,13 +188,21 @@ public class RegisterActivity extends AppCompatActivity {
             DialogFragment df = VerificationCodeDialogFragment.newInstance(phone_number.getText().toString(), new VerificationCodeDialogFragment.GetCaptchaCodeCallback() {
                 @Override
                 public void getCode(String code) {
+                    // 如果获取的验证码不为空，则更新验证码文本框，并且设定冷却时间
                     if (!code.isEmpty()) {
                         digit_code = code;
                         sms_verification_code.setText(code);
-                        startCountingDown(60);
+                        startCountingDown(5);
                     }
                 }
+
+                @Override
+                public void onDialogDismiss(boolean isDismissedWithResult) {
+
+                }
+
             });
+            // 显示弹窗
             df.show(getSupportFragmentManager(), "VerificationCodeDialogFragment");
 
         });
@@ -207,11 +216,13 @@ public class RegisterActivity extends AppCompatActivity {
                         @Override
                         public void onSuccess() {
                             runOnUiThread(() -> {
-                                // 注册成功后，保存用户名、加密并保存密码
+                                // 注册成功后，保存用户名、密码、token
                                 SharedPreferences sharedPreferences = context.getSharedPreferences("default", Context.MODE_PRIVATE);
-                                sharedPreferences.edit().putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString()).apply();
+                                SharedPreferences.Editor edit = sharedPreferences.edit();
+                                edit.putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString());
 //                                String passwordHash = PasswordUtils.hashPassword(password.getText().toString());
-                                sharedPreferences.edit().putString(getString(R.string.pref_user_password), password.getText().toString()).apply();
+                                edit.putString(getString(R.string.pref_user_password), password.getText().toString());
+                                edit.putString(getString(R.string.pref_user_token), token).apply();
                                 Toast.makeText(RegisterActivity.this, "注册成功", Toast.LENGTH_LONG).show();
                                 finish();
                             });
@@ -221,6 +232,8 @@ public class RegisterActivity extends AppCompatActivity {
                         public void onFailed(String msg) {
                             runOnUiThread(() -> {
                                 Toast.makeText(context, "注册失败！\n" + msg, Toast.LENGTH_LONG).show();
+                                // 如果注册失败则清空图形验证码框
+                                sms_verification_code.setText("");
                                 enableAllComponents();
                             });
 
@@ -296,17 +309,18 @@ public class RegisterActivity extends AppCompatActivity {
         return false;
     }
 
-    // 将信息发送至服务器进行验证。
+    // 将注册信息发送至服务器进行验证。
     private void serverVerification(ServerRegisterVerificationCallback serverRegisterVerificationCallback) throws JSONException {
-        String uri = serverUrl + "/register";
+        String uri = serverUrl + "/users/register";
         MediaType JSON = MediaType.get("application/json");
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("phone_number", phone_number.getText().toString());
+        JSONObject userObject = new JSONObject();
+        jsonObject.put("username", phone_number.getText().toString());
         jsonObject.put("password", password.getText().toString());
-        jsonObject.put("digit_code", digit_code);
-        jsonObject.put("sms_code", "123123");  // 暂时不验证
-        jsonObject.put("authorization_code", check_code.getText().toString()); // 暂时不验证
-        String json = jsonObject.toString();
+        jsonObject.put("captcha", digit_code);
+        jsonObject.put("deviceauthorizationcode", check_code.getText().toString());
+        userObject.put("user", jsonObject);
+        String json = userObject.toString();
         RequestBody body = RequestBody.create(json, JSON);
         Request request = new Request.Builder()
                 .url(uri)
@@ -321,7 +335,22 @@ public class RegisterActivity extends AppCompatActivity {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
+                if (response.isSuccessful() && response.code() == 201 && response.body() != null) {
+                    // 如果注册成功
+                    // 解析响应结果
+                    try {
+                        JSONObject jsonObject = new JSONObject(response.body().string());
+                        JSONObject userObject = jsonObject.getJSONObject("user");
+                        username = userObject.getString("username");
+                        token = userObject.getString("token");
+                    } catch (JSONException e) {
+//                        throw new RuntimeException(e);
+                        Log.e(TAG, "json解析失败！" + e);
+                        // 添加错误处理代码
+                        runOnUiThread(() -> {
+                            Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
+                        });
+                    }
                     serverRegisterVerificationCallback.onSuccess();
                 } else {
                     String message = "";
@@ -330,14 +359,18 @@ public class RegisterActivity extends AppCompatActivity {
                         if (!string.isEmpty()) {
                             try {
                                 JSONObject jsonObject1 = new JSONObject(string);
-                                message = jsonObject1.getString("message");
+                                JSONArray jsonArray = jsonObject1.getJSONArray("errors");
+                                StringBuilder sb = new StringBuilder(message);
+                                for (int i = 0; i < jsonArray.length(); i++) {
+                                    sb.append(jsonArray.getString(i));
+                                }
+                                message = sb.toString();
                             } catch (JSONException e) {
                                 Log.e(TAG, "json解析失败！" + e);
                                 // 添加错误处理代码
                                 runOnUiThread(() -> {
                                     Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
                                 });
-                                return;
                             }
                         }
                     }
@@ -347,20 +380,21 @@ public class RegisterActivity extends AppCompatActivity {
         });
     }
 
+
     private void disableAllComponents() {
-        phone_number.setEnabled(false);
-        sms_verification_code.setEnabled(false);
-        password.setEnabled(false);
-        check_code.setEnabled(false);
-        progress.setVisibility(View.VISIBLE);
+        setComponentsEnabled(false);
     }
 
     private void enableAllComponents() {
-        phone_number.setEnabled(true);
-        sms_verification_code.setEnabled(true);
-        password.setEnabled(true);
-        check_code.setEnabled(true);
-        progress.setVisibility(View.GONE);
+        setComponentsEnabled(true);
+    }
+
+    private void setComponentsEnabled(boolean enabled) {
+        phone_number.setEnabled(enabled);
+        sms_verification_code.setEnabled(enabled);
+        password.setEnabled(enabled);
+        check_code.setEnabled(enabled);
+        progress.setVisibility(enabled ? View.GONE : View.VISIBLE);
     }
 
     public interface ServerRegisterVerificationCallback {
@@ -368,20 +402,4 @@ public class RegisterActivity extends AppCompatActivity {
 
         void onFailed(String meg);
     }
-    //    private boolean updateDatabase(){
-//        DatabaseUtils databaseUtils = new DatabaseUtils(this);
-//        ContentValues values = new ContentValues();
-//
-//        String passwordHash = PasswordUtils.hashPassword(this.password.getText().toString());
-//
-//        values.put("PhoneNumber", phone_number.getText().toString());
-//        values.put("PasswordHash", passwordHash);
-//        values.put("LoginToken", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-//                "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ." +
-//                "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
-//        values.put("CreateTime", DatabaseUtils.getCurrentTime());
-//        values.put("UpdateTime", DatabaseUtils.getCurrentTime());
-//
-//        return databaseUtils.insertData(values);
-//    }
 }

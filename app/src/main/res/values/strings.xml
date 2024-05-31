@@ -6,6 +6,7 @@
     <string name="pref_user_agreed">userAgreed</string>
     <string name="pref_user_phone_number">userPhoneNumber</string>
     <string name="pref_user_password">userPassword</string>
+    <string name="pref_user_token">userToken</string>
 
 
     <string name="user_agreement">用户协议</string>

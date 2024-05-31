@@ -17,12 +17,12 @@ public class InputDataVerificationUtils {
     }
     // 短信验证码输入框的输入限制
     public static boolean smsVerificationCodeVerification(String smsCode){
-        Pattern p = Pattern.compile("\\d{6}");
+        Pattern p = Pattern.compile("[a-zA-Z0-9]{6}");
         return p.matcher(smsCode).matches();
     }
 
     public static boolean checkCodeVerification(String checkCode){
-        Pattern p = Pattern.compile("[\\x21-\\x7E]{4,16}");
+        Pattern p = Pattern.compile("[\\x21-\\x7E]{3,16}");
         return p.matcher(checkCode).matches();
     }
 }
