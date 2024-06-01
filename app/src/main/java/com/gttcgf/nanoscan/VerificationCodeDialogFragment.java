@@ -43,7 +43,6 @@ public class VerificationCodeDialogFragment extends DialogFragment {
     private static final long fetchCaptchaImage_DELAY = 1000;  // 刷新验证码的间隔时长
     private static final String TAG = "VerificationCodeDialogF";
     private static final String serverUrl = "https://newnirtechnolgy.top/api";
-    //    private static final String serverUrl = "https://newnirtechnolgy.top";
     private OkHttpClient client;
     private Context context;
     private String phone_number;
@@ -70,13 +69,10 @@ public class VerificationCodeDialogFragment extends DialogFragment {
         // 获取存储的Bundle
         this.context = getActivity();
         this.phone_number = getArguments().getString("PHONE_NUMBER");
-        View view = inflater.inflate(R.layout.dialog_verification_code_image, container, false);
+        View view = getLayoutInflater().inflate(R.layout.dialog_verification_code_image, container, false);
+//        View view = inflater.inflate(R.layout.dialog_verification_code_image, container, false);
 
         handler = new Handler();
-
-        imageViewVerificationCode = view.findViewById(R.id.imageViewVerificationCode);
-        progressBar = view.findViewById(R.id.progressBar);
-        editTextVerificationInput = view.findViewById(R.id.editTextVerificationInput);
 
         fetchCaptchaImage(phone_number);
         return view;
@@ -114,7 +110,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (response.isSuccessful() && response.body() != null) {
                     byte[] imageBytes = null;
                     if (response.body().contentType().toString().equals("application/json")) {
@@ -141,7 +137,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
                             @Override
                             public void run() {
                                 // 验证码图片获取成功
-                                progressBar.setVisibility(View.GONE);
+                                progressBar.setVisibility(View.INVISIBLE);
                                 imageViewVerificationCode.setVisibility(View.VISIBLE);
                                 imageViewVerificationCode.setImageBitmap(bitmap);
                             }
@@ -155,7 +151,6 @@ public class VerificationCodeDialogFragment extends DialogFragment {
                             @Override
                             public void run() {
                                 Toast.makeText(context, "验证码请求失败！" + response.code(), Toast.LENGTH_SHORT).show();
-//                                dismiss();
                             }
                         });
                     }
@@ -185,37 +180,48 @@ public class VerificationCodeDialogFragment extends DialogFragment {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         Dialog dialog = super.onCreateDialog(savedInstanceState);
+        // 设置无标题样式
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        return dialog;
+    }
 
+    @Override
+    public void onStart() {
+        super.onStart();
         // 设置参数，获取到窗口的尺寸
-        dialog.setOnShowListener(dialogInterface -> {
+        Dialog dialog = getDialog();
+        if (dialog != null) {
             // 获取窗口对象和参数
             Window window = dialog.getWindow();
-            WindowManager.LayoutParams params = window.getAttributes();
+            if (window != null) {
+                window.setBackgroundDrawableResource(R.drawable.rounded_rectangle);
+                WindowManager.LayoutParams params = window.getAttributes();
+                // 设置宽度为屏幕的70%
+                params.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.8);
+//                params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+                params.height = (int) (getResources().getDisplayMetrics().heightPixels * 0.3);
+                // 将设置好的参数应用到窗口
+                window.setAttributes(params);
+            }
 
-            // 设置宽度和高度为屏幕的70%
-            params.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.8);
-//            params.height = (int) (getResources().getDisplayMetrics().heightPixels * 0.5);
-
-            // 将设置好的参数应用到窗口
-            window.setAttributes(params);
-        });
-
-        return dialog;
+        }
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        Button buttonConfirm = view.findViewById(R.id.buttonConfirm);
-        Button buttonCancel = view.findViewById(R.id.buttonCancel);
-        ProgressBar progressBar = view.findViewById(R.id.progressBar);
+        Button buttonConfirm = view.findViewById(R.id.button_confirm);
+        Button buttonCancel = view.findViewById(R.id.button_cancel);
+        imageViewVerificationCode = view.findViewById(R.id.imageViewVerificationCode);
+        progressBar = view.findViewById(R.id.progressBar);
+        editTextVerificationInput = view.findViewById(R.id.editTextVerificationInput);
 
         progressBar.setVisibility(View.VISIBLE);
 
         // 点击了验证码窗口的确认按钮
         buttonConfirm.setOnClickListener(v -> {
-            progressBar.setVisibility(View.GONE);
+            progressBar.setVisibility(View.VISIBLE);
             buttonConfirm.setClickable(false);
             verifyCaptchaCode(editTextVerificationInput.getText().toString(), new VerifyCaptchaCallback() {
                 @Override
@@ -240,7 +246,9 @@ public class VerificationCodeDialogFragment extends DialogFragment {
                             buttonConfirm.setClickable(true);
                             editTextVerificationInput.setText("");
                             editTextVerificationInput.setError("验证码格式错误，请重试！");
-                            fetchCaptchaImage(phone_number);
+                            // 重新获取验证码图片
+                            progressBar.setVisibility(View.INVISIBLE);
+//                            fetchCaptchaImage(phone_number);
                         }
                     });
 
@@ -257,6 +265,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
             @Override
             public void onClick(View view) {
                 if (fetchCaptchaImage_clickable) {
+                    progressBar.setVisibility(View.VISIBLE);
                     fetchCaptchaImage(phone_number);
                     fetchCaptchaImage_clickable = false;
                     handler.postDelayed(new Runnable() {
@@ -292,6 +301,7 @@ public class VerificationCodeDialogFragment extends DialogFragment {
 
     public interface GetCaptchaCodeCallback {
         void getCode(String code);
+
         void onDialogDismiss(boolean isDismissedWithResult);
     }
 }

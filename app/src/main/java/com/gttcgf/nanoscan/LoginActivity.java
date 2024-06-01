@@ -4,6 +4,10 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -34,6 +38,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
@@ -53,7 +61,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     private TextView forgot_password, register;
     private Button login_button;
     private boolean userHasEditedPassword, isFirstTimeUse;
-    private String pref_user_phone_number, pref_user_password, pref_user_token;
+    private String pref_user_phone_number, pref_user_password, pref_user_token, pref_user_ipAddress;
     private String captchaCode;
     private SharedPreferences sharedPreferences;
     private OkHttpClient client;
@@ -172,6 +180,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
     // 初始化用户数据
     private void initializeData() {
+        // 获取用户IP地址
+        pref_user_ipAddress = getIpAddress(this);
 
         userHasEditedPassword = true;
 
@@ -228,7 +238,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         editor.apply();
     }
 
-    // 服务器验证
+    // 服务器验证登录信息
     private void serverVerification(ServerLoginVerificationCallback verificationCallback) throws JSONException {
         String uri = serverUrl + "/users/login";
         MediaType JSON = MediaType.get("application/json");
@@ -264,15 +274,14 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                         JSONObject userObject = jsonObject.getJSONObject("user");
                         pref_user_phone_number = userObject.getString("username");
                         pref_user_token = userObject.getString("token");
+                        verificationCallback.onSuccess();
                     } catch (JSONException e) {
 //                        throw new RuntimeException(e);
                         Log.e(TAG, "json解析失败！" + e);
                         // 添加错误处理代码
-                        runOnUiThread(() -> {
-                            Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
-                        });
+                        verificationCallback.onFailed("服务器返回的数据格式错误，请稍后再试");
                     }
-                    verificationCallback.onSuccess();
+
                 } else {
                     String message = "";
                     if (response.body() != null) {
@@ -342,6 +351,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                                             edit.putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString());
                                             edit.putString(getString(R.string.pref_user_password), password.getText().toString());
                                             edit.putString(getString(R.string.pref_user_token), pref_user_token);
+                                            edit.putString(getString(R.string.pref_user_ipAddress), pref_user_ipAddress);
                                             edit.apply();
 
                                             Intent i;
@@ -401,6 +411,42 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
+    // 用于获取IP地址
+    @SuppressLint("DefaultLocale")
+    public String getIpAddress(Context context) {
+        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
+
+        if (activeNetwork != null && activeNetwork.isConnected()) {
+            if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
+                // Wi-Fi 连接
+                WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+                WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                int ipAddress = wifiInfo.getIpAddress();
+                return String.format("%d.%d.%d.%d",
+                        (ipAddress & 0xff),
+                        (ipAddress >> 8 & 0xff),
+                        (ipAddress >> 16 & 0xff),
+                        (ipAddress >> 24 & 0xff));
+            } else if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE) {
+                // 移动数据连接
+                try {
+                    List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+                    for (NetworkInterface intf : interfaces) {
+                        List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                        for (InetAddress addr : addrs) {
+                            if (!addr.isLoopbackAddress() && !addr.isLinkLocalAddress()) {
+                                return addr.getHostAddress();
+                            }
+                        }
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+        return null;
+    }
 
     public interface ServerLoginVerificationCallback {
         void onSuccess();

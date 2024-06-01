@@ -1,10 +1,16 @@
 package com.gttcgf.nanoscan;
 
-public class DeviceItem {
-    private int ImageResource;
-    private String deviceName, deviceType, deviceMac;
+import java.io.Serializable;
 
-    public DeviceItem(int imageResource, String deviceName, String deviceType, String deviceMac) {
+public class DeviceItem implements Serializable {
+    private int ImageResource;
+    private static final long serialVersionUID = 1L;
+    private String deviceName, deviceType, deviceMac, deviceToken;
+
+    public DeviceItem() {
+    }
+
+    public DeviceItem(int imageResource, String deviceName, String deviceType, String deviceMac, String deviceToken) {
         ImageResource = imageResource;
         this.deviceName = deviceName;
         this.deviceType = deviceType;

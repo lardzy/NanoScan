@@ -3,10 +3,10 @@ package com.gttcgf.nanoscan;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,7 +15,6 @@ import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContract;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,6 +24,11 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,6 +41,7 @@ public class DeviceListActivity extends AppCompatActivity {
     private EditText device_name_input;
     private ActivityResultLauncher<Intent> activityResultLauncher;
     private DeviceListAdapter adapter;
+    private static final String TAG = "DeviceListActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,7 +66,9 @@ public class DeviceListActivity extends AppCompatActivity {
                     if (data != null) {
                         String deviceName = data.getStringExtra("NAME");
                         String deviceMac = data.getStringExtra("MAC");
-                        addDevice(new DeviceItem(R.drawable.equipment_front, deviceName, "便携式近红外光谱仪", deviceMac));
+                        String deviceToken = data.getStringExtra("DEVICE_TOKEN");
+                        // 将选中的设备添加进集合
+                        addDevice(new DeviceItem(R.drawable.equipment_front, deviceName, "便携式近红外光谱仪", deviceMac, deviceToken));
                     }
                 }
             }
@@ -70,7 +77,8 @@ public class DeviceListActivity extends AppCompatActivity {
 
     private void initializeData() {
         itemList = new ArrayList<>();
-        // todo:测试用数据
+        // todo:获取本地的序列化数据
+        loadItemListFromFile();
 //        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪"));
     }
 
@@ -122,7 +130,7 @@ public class DeviceListActivity extends AppCompatActivity {
 
     }
 
-    // todo:这个方法仅测试用，正式版将删除。
+    // 用于长按列表项目条修改项目条内容。
     private void modifyDeviceInformation(int position, DeviceListAdapter adapter) {
         AlertDialog.Builder builder = new AlertDialog.Builder(DeviceListActivity.this);
         builder.setTitle("修改设备信息");
@@ -144,13 +152,16 @@ public class DeviceListActivity extends AppCompatActivity {
             itemList.get(position).setDeviceName(device_name_input.getText().toString());
             adapter.notifyItemChanged(position);
             Toast.makeText(DeviceListActivity.this, "修改成功", Toast.LENGTH_SHORT).show();
+
+            itemListChangedToFile();
         });
         builder.setNeutralButton("删除设备", (dialog, which) -> {
             itemList.remove(position);
             adapter.notifyItemRemoved(position);
             adapter.notifyItemRangeChanged(position, itemList.size() - position);
             Toast.makeText(DeviceListActivity.this, "删除成功", Toast.LENGTH_SHORT).show();
-
+            // 更新
+            itemListChangedToFile();
             updateEmptyState();
         });
         builder.setNegativeButton("取消", (dialog, which) -> {
@@ -159,6 +170,7 @@ public class DeviceListActivity extends AppCompatActivity {
         builder.create().show();
     }
 
+    // 添加设备，更新列表和本地配置文件
     private void addDevice(DeviceItem newItem) {
         for (DeviceItem deviceItem : itemList) {
             if (deviceItem.getDeviceMac().equals(newItem.getDeviceMac())) {
@@ -169,6 +181,7 @@ public class DeviceListActivity extends AppCompatActivity {
         itemList.add(newItem);
         adapter.notifyItemInserted(itemList.size() - 1);
         updateEmptyState();
+        itemListChangedToFile();
     }
 
     // 更新列表是否为空的状态
@@ -177,6 +190,25 @@ public class DeviceListActivity extends AppCompatActivity {
             device_list_empty.setVisibility(TextView.VISIBLE);
         } else {
             device_list_empty.setVisibility(TextView.INVISIBLE);
+        }
+    }
+
+    private void itemListChangedToFile() {
+        try (FileOutputStream fos = openFileOutput("deviceItem.ser", MODE_PRIVATE);
+             ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+            oos.writeObject(itemList);
+            Log.d(TAG, "设备列表配置文件已写入本地");
+        } catch (IOException e) {
+            Toast.makeText(this, "配置信息写入失败，请检查设备存储空间！", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void loadItemListFromFile() {
+        try (FileInputStream fis = openFileInput("deviceItem.ser");
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            itemList = (List<DeviceItem>) ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            Log.e(TAG, "设备列表文件读取失败");
         }
     }
 //    public interface addDeviceCallback{

@@ -7,6 +7,7 @@
     <string name="pref_user_phone_number">userPhoneNumber</string>
     <string name="pref_user_password">userPassword</string>
     <string name="pref_user_token">userToken</string>
+    <string name="pref_user_ipAddress">userIp</string>
 
 
     <string name="user_agreement">用户协议</string>
@@ -116,7 +117,8 @@
     <string name="recent_spectral_data_list_empty">近期无光谱测量数据</string>
     <string name="scan_contentDescription">开始扫描</string>
     <string name="nano_confirmation_title">确定选择这个设备吗？</string>
-    <string name="nano_confirmation_msg">确定使用设备%s吗？</string>
+    <string name="nano_confirmation_msg">请输入授权码以继续绑定设备\n%s</string>
     <string name="ok">确定</string>
     <string name="device_list_empty">设备列表为空</string>
+    <string name="verification_dialog_title">请输入数字验证码</string>
 </resources>

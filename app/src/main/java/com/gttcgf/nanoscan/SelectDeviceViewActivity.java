@@ -15,6 +15,7 @@ import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,6 +24,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -51,6 +53,8 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
     private ArrayList<ISCNIRScanSDK.NanoDevice> nanoDeviceList = new ArrayList<>();
     private NanoScanAdapter nanoScanAdapter;
     private AlertDialog alertDialog;
+    private SharedPreferences sharedPreferences;
+    private String pref_user_phone_number, pref_user_password, pref_user_token, pref_user_ipAddress;
 
     // 需要的权限列表，获取位置和蓝牙相关权限。
     private static String[] getRequiredPermissions() {
@@ -118,13 +122,18 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
 
     private void initialData() {
         DEVICE_NAME = ISCNIRScanSDK.getStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.DeviceFilter, "NIR");
-
+        sharedPreferences = getSharedPreferences("default", MODE_PRIVATE);
+        pref_user_phone_number = sharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
+        pref_user_password = sharedPreferences.getString(getString(R.string.pref_user_password), "");
+        pref_user_token = sharedPreferences.getString(getString(R.string.pref_user_token), "");
+        pref_user_ipAddress = sharedPreferences.getString(getString(R.string.pref_user_ipAddress), "");
     }
 
     private void initialComponent() {
         imageButton_back = findViewById(R.id.imageButton_back);
         lv_nanoDevices = findViewById(R.id.lv_nanoDevices);
         imageButton_back.setOnClickListener(this);
+
 
         // 设置扫描回调
         scannerCallback = new ScanCallback() {
@@ -154,6 +163,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
             }
         };
     }
+
     @SuppressLint("MissingPermission")
     private void scanLeDevice(boolean enable) {
         if (mBluetoothLeScanner == null) {
@@ -170,28 +180,37 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
 
     // todo:需要联网验证设备是否合法
     public void confirmationDialog(String mac, final String name) {
+        Bundle bundle = new Bundle();
+        bundle.putString("username", pref_user_phone_number);
+        bundle.putString("password", pref_user_password);
+        bundle.putString("pcode", pref_user_ipAddress);
+        bundle.putString("mcode", mac);
+        bundle.putString("token", pref_user_token);
 
-        final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-        final String deviceMac = mac;
-        alertDialogBuilder.setTitle(this.getResources().getString(R.string.nano_confirmation_title));
-        alertDialogBuilder.setMessage(this.getResources().getString(R.string.nano_confirmation_msg, mac));
+        DevicePermissionCheckFragment checkFragment = DevicePermissionCheckFragment.newInstance(bundle, new DevicePermissionCheckFragment.VerifyDevicePermissionCallback() {
+            @Override
+            public void onSuccess(String token) {
+                if (!token.isEmpty()) {
+                    final String deviceMac = mac;
+                    // 存储选中的设备信息，包括设备mac和名称
+                    storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceMac);
+                    storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, name);
+                    Intent i = new Intent();
+                    i.putExtra("NAME", name);
+                    i.putExtra("MAC", mac);
+                    i.putExtra("DEVICE_TOKEN", token);
+                    setResult(Activity.RESULT_OK, i);
+                    finish();
+                }
+            }
 
-        alertDialogBuilder.setPositiveButton(getResources().getString(R.string.ok), (arg0, arg1) -> {
-            alertDialog.dismiss();
-            // 存储选中的设备信息，包括设备mac和名称
-            storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceMac);
-            storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, name);
-            Intent i = new Intent();
-            i.putExtra("NAME", name);
-            i.putExtra("MAC", mac);
-            setResult(Activity.RESULT_OK, i);
-            finish();
+            @Override
+            public void onFailed() {
+
+            }
         });
+        checkFragment.show(getSupportFragmentManager(), "DevicePermissionCheckFragment");
 
-        alertDialogBuilder.setNegativeButton(getResources().getString(R.string.cancel), (dialog, which) -> alertDialog.dismiss());
-
-        alertDialog = alertDialogBuilder.create();
-        alertDialog.show();
     }
 
     @Override
