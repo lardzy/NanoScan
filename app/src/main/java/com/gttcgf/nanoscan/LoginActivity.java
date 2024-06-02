@@ -4,10 +4,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -27,7 +23,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.gttcgf.nanoscan.guidingSteps.IntroGuideActivity;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
@@ -38,10 +33,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
@@ -54,6 +45,7 @@ import okhttp3.Response;
 
 public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String serverUrl = "https://newnirtechnolgy.top/api";
+    private static final String IPIFY_URL = "https://api.ipify.org";
     private static final String TAG = "LoginActivity";
     // todo: 调试用
     Button btn_debug;
@@ -92,7 +84,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     @Override
     protected void onRestart() {
         super.onRestart();
-        Log.d("LoginActivity", "onRestart");
+        Log.d(TAG, "登录界面-onRestart()被调用。");
         // 初始化用户数据
         initializeData();
     }
@@ -100,6 +92,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     // 初始化组件
     @SuppressLint("ClickableViewAccessibility")
     private void initialComponent() {
+        Log.d(TAG, "登录界面-initialComponent()开始初始化布局组件。");
         setContentView(R.layout.activity_login);
         phone_number = findViewById(R.id.phone_number); // 获取手机号输入框
         password = findViewById(R.id.password); // 获取密码输入框
@@ -170,7 +163,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
         // 设置忘记密码按钮的点击事件
         forgot_password.setOnClickListener(this);
-
         // 设置注册按钮的点击事件
         register.setOnClickListener(this);
         // 点击登录按钮后
@@ -180,9 +172,28 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
     // 初始化用户数据
     private void initializeData() {
-        // 获取用户IP地址
-        pref_user_ipAddress = getIpAddress(this);
+        Log.d(TAG, "登录界面-initializeData()开始初始化界面数据。");
+        try {
+            // 获取用户IP地址
+            getIpAddress(new IpAddressCallback() {
+                @Override
+                public void onSuccess(String ipAddress) {
+                    Log.d(TAG, "登录界面-成功获取到本机ip:" + ipAddress);
+                    if (ipAddress != null) {
+                        pref_user_ipAddress = ipAddress;
+                    }
+                }
 
+                @Override
+                public void onFailure(Exception e) {
+                    Log.e(TAG, "登录界面-获取到本机ip失败！\n" + e);
+                }
+            });
+            Log.d(TAG, "登录界面-用户当前ipv4地址:" + pref_user_ipAddress);
+        } catch (IOException e) {
+//            throw new RuntimeException(e);
+            Log.e(TAG, "登录界面-获取用户当前ipv4地址失败！\n" + e);
+        }
         userHasEditedPassword = true;
 
         sharedPreferences = this.getSharedPreferences("default", MODE_PRIVATE);
@@ -191,9 +202,9 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         pref_user_token = sharedPreferences.getString(getString(R.string.pref_user_token), "");
         isFirstTimeUse = sharedPreferences.getBoolean(getString(R.string.pref_first_run), true);
 
-        Log.d(TAG, "pref_user_phone_number: " + pref_user_phone_number);
-        Log.d(TAG, "pref_user_password: " + pref_user_password);
-        Log.d(TAG, "pref_user_token: " + pref_user_password);
+        Log.d(TAG, "登录界面-从sharedPreferences中读取到：pref_user_phone_number: " + pref_user_phone_number);
+        Log.d(TAG, "登录界面-从sharedPreferences中读取到：pref_user_password: " + pref_user_password);
+        Log.d(TAG, "登录界面-从sharedPreferences中读取到：pref_user_token: " + pref_user_password);
 
         // 如果用户没有保存手机号或密码，则直接返回
         if (pref_user_phone_number.isEmpty() || pref_user_password.isEmpty()) {
@@ -224,6 +235,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             return false;
         } else if (InputDataVerificationUtils.phoneNumberInputVerification(phoneNumber) && InputDataVerificationUtils.passwordInputVerification(password)) {
             // 登录
+            Log.d(TAG, "登录界面-登录界面文本框内容格式无误！");
             return true;
         }
         return false;
@@ -232,7 +244,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
     // 当用户编辑密码框时，清空本地存储的密码
     private void clearPassword() {
-        Log.v("LoginActivity", "clearPassword 被调用");
+        Log.d(TAG, "登录界面-clearPassword()被调用。");
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(getString(R.string.pref_user_password), "");
         editor.apply();
@@ -245,7 +257,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         JSONObject userObject = new JSONObject();
         userObject.put("username", phone_number.getText().toString());
         userObject.put("password", password.getText().toString());
-        // todo:添加数字验证码输入
         userObject.put("captcha", captchaCode);
         JSONObject jsonObject = new JSONObject();
 
@@ -261,6 +272,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "登录界面-登录请求发送失败，考虑网络问题。\n" + e);
                 verificationCallback.onFailed(e.toString());
             }
 
@@ -275,9 +287,10 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                         pref_user_phone_number = userObject.getString("username");
                         pref_user_token = userObject.getString("token");
                         verificationCallback.onSuccess();
+                        Log.d(TAG, "登录界面-服务器验证登录信息成功!");
                     } catch (JSONException e) {
 //                        throw new RuntimeException(e);
-                        Log.e(TAG, "json解析失败！" + e);
+                        Log.e(TAG, "登录界面-服务器验证登录信息成功，但返回json数据解析失败！\n" + e);
                         // 添加错误处理代码
                         verificationCallback.onFailed("服务器返回的数据格式错误，请稍后再试");
                     }
@@ -297,7 +310,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                                 message = sb.toString();
                             } catch (JSONException e) {
 //                            throw new RuntimeException(e);
-                                Log.e(TAG, "json解析失败！" + e);
+                                Log.e(TAG, "登录界面-服务器验证登录信息失败后，解析返回json中失败原因内容发送错误！\n" + e);
                                 // 添加错误处理代码
                                 runOnUiThread(() -> {
                                     Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
@@ -339,12 +352,13 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                             @Override
                             public void getCode(String code) {
                                 captchaCode = code;
-                                Log.d(TAG, "用户已输入数字验证码：" + code);
+                                Log.d(TAG, "登录界面-用户已输入数字验证码：" + code);
                                 try {
                                     // 在服务器校验登录信息
                                     serverVerification(new ServerLoginVerificationCallback() {
                                         @Override
                                         public void onSuccess() {
+                                            Log.d(TAG, "登录界面-用户登录成功！");
                                             // 登录成功，保存账号密码token，跳转到主页面
                                             SharedPreferences sharedPreferences = context.getSharedPreferences("default", Context.MODE_PRIVATE);
                                             SharedPreferences.Editor edit = sharedPreferences.edit();
@@ -353,11 +367,13 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                                             edit.putString(getString(R.string.pref_user_token), pref_user_token);
                                             edit.putString(getString(R.string.pref_user_ipAddress), pref_user_ipAddress);
                                             edit.apply();
-
+                                            Log.d(TAG, "登录界面-用户数据已经保存至SharedPreferences。");
                                             Intent i;
                                             if (isFirstTimeUse) {
+                                                Log.d(TAG, "登录界面-用户是第一次使用，跳转到IntroGuideActivity。");
                                                 i = new Intent(LoginActivity.this, IntroGuideActivity.class);
                                             } else {
+                                                Log.d(TAG, "登录界面-用户不是第一次使用，跳转到DeviceListActivity。");
                                                 i = new Intent(LoginActivity.this, DeviceListActivity.class);
                                             }
                                             startActivity(i);
@@ -395,6 +411,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             }
         } else if (view.getId() == R.id.register) {
             // 跳转到注册页面
+            Log.d(TAG, "登录界面-用户点击了“注册账号”，正在跳转activity。");
             Intent i = new Intent(LoginActivity.this, RegisterActivity.class);
             startActivity(i);
         } else if (view.getId() == R.id.forgot_password) {
@@ -411,46 +428,44 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-    // 用于获取IP地址
+    // 用于获取IPv4地址
     @SuppressLint("DefaultLocale")
-    public String getIpAddress(Context context) {
-        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
+    public void getIpAddress(IpAddressCallback callback) throws IOException {
+        Request request = new Request.Builder()
+                .url(IPIFY_URL)
+                .build();
 
-        if (activeNetwork != null && activeNetwork.isConnected()) {
-            if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
-                // Wi-Fi 连接
-                WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-                WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-                int ipAddress = wifiInfo.getIpAddress();
-                return String.format("%d.%d.%d.%d",
-                        (ipAddress & 0xff),
-                        (ipAddress >> 8 & 0xff),
-                        (ipAddress >> 16 & 0xff),
-                        (ipAddress >> 24 & 0xff));
-            } else if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE) {
-                // 移动数据连接
-                try {
-                    List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
-                    for (NetworkInterface intf : interfaces) {
-                        List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
-                        for (InetAddress addr : addrs) {
-                            if (!addr.isLoopbackAddress() && !addr.isLinkLocalAddress()) {
-                                return addr.getHostAddress();
-                            }
-                        }
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                if (callback != null) {
+                    callback.onFailure(e);
                 }
             }
-        }
-        return null;
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (!response.isSuccessful() && callback != null) {
+                    callback.onFailure(new IOException("Unexpected code " + response));
+                    return;
+                }
+
+                if (callback != null) {
+                    callback.onSuccess(response.body().string());
+                }
+            }
+        });
     }
 
     public interface ServerLoginVerificationCallback {
         void onSuccess();
 
         void onFailed(String msg);
+    }
+
+    public interface IpAddressCallback {
+        void onSuccess(String ipAddress);
+
+        void onFailure(Exception e);
     }
 }

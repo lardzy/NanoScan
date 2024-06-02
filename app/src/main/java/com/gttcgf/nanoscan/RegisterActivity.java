@@ -184,7 +184,6 @@ public class RegisterActivity extends AppCompatActivity {
                 Toast.makeText(RegisterActivity.this, "请输入正确的手机号", Toast.LENGTH_SHORT).show();
                 return;
             }
-            // todo:临时设定的回调函数，实际上线替换为获取验证码
             DialogFragment df = VerificationCodeDialogFragment.newInstance(phone_number.getText().toString(), new VerificationCodeDialogFragment.GetCaptchaCodeCallback() {
                 @Override
                 public void getCode(String code) {

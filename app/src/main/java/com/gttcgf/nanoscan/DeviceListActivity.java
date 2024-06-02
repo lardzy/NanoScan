@@ -77,7 +77,7 @@ public class DeviceListActivity extends AppCompatActivity {
 
     private void initializeData() {
         itemList = new ArrayList<>();
-        // todo:获取本地的序列化数据
+        // 获取本地的序列化数据
         loadItemListFromFile();
 //        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪"));
     }

@@ -178,7 +178,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
         }
     }
 
-    // todo:需要联网验证设备是否合法
+    // 显示弹窗并验证
     public void confirmationDialog(String mac, final String name) {
         Bundle bundle = new Bundle();
         bundle.putString("username", pref_user_phone_number);

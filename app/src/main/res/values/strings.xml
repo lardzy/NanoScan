@@ -103,7 +103,7 @@
     <string name="device_information_dialog_device_name_hint">设备名称最长不超过10个字</string>
     <string name="device_information_dialog_device_info">设备信息：</string>
     <string name="device_information_dialog_device_type">设备类型：</string>
-    <string name="device_details_connecting_device">点击连接设备</string>
+    <string name="device_details_connecting_device">点击更新数据</string>
     <string name="battery_level">N/A</string>
     <string name="light_usage_duration">*hr *min *sec</string>
     <string name="light_usage">光源通电时长：</string>
