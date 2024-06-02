@@ -15,6 +15,7 @@ public class DeviceItem implements Serializable {
         this.deviceName = deviceName;
         this.deviceType = deviceType;
         this.deviceMac = deviceMac;
+        this.deviceToken = deviceToken;
     }
 
     public int getImageResource() {
@@ -47,5 +48,24 @@ public class DeviceItem implements Serializable {
 
     public void setDeviceMac(String deviceMac) {
         this.deviceMac = deviceMac;
+    }
+
+    public String getDeviceToken() {
+        return deviceToken;
+    }
+
+    public void setDeviceToken(String deviceToken) {
+        this.deviceToken = deviceToken;
+    }
+
+    @Override
+    public String toString() {
+        return "DeviceItem{" +
+                "ImageResource=" + ImageResource +
+                ", deviceName='" + deviceName + '\'' +
+                ", deviceType='" + deviceType + '\'' +
+                ", deviceMac='" + deviceMac + '\'' +
+                ", deviceToken='" + deviceToken + '\'' +
+                '}';
     }
 }

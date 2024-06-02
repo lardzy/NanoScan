@@ -100,7 +100,7 @@ public class DeviceListActivity extends AppCompatActivity {
             public void OnItemClick(int position) {
                 // 点击设备列表中的设备，跳转到设备详情页面
                 Intent i = new Intent(DeviceListActivity.this, DeviceDetailsActivity.class);
-                i.putExtra("device_name", itemList.get(position).getDeviceName());
+                i.putExtra("deviceItem", itemList.get(position));
                 startActivity(i);
             }
 

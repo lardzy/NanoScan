@@ -47,8 +47,9 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     private static final String serverUrl = "https://newnirtechnolgy.top/api";
     private static final String IPIFY_URL = "https://api.ipify.org";
     private static final String TAG = "LoginActivity";
+    public static Boolean userLoggedIn = false;
     // todo: 调试用
-    Button btn_debug;
+    Button btn_debug, btn_debug_1;
     private EditText phone_number, password;
     private TextView forgot_password, register;
     private Button login_button;
@@ -99,8 +100,9 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         forgot_password = findViewById(R.id.forgot_password); // 获取忘记密码按钮
         register = findViewById(R.id.register); // 获取注册按钮
         login_button = findViewById(R.id.login_button);
-
+        // todo:按钮为测试用，用完删除
         btn_debug = findViewById(R.id.btn_debug);
+        btn_debug_1 = findViewById(R.id.btn_debug_1);
 
         // 设置手机号输入框的输入限制
         phone_number.addTextChangedListener(new CustomTextWatcher(phone_number,
@@ -168,6 +170,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         // 点击登录按钮后
         login_button.setOnClickListener(this);
         btn_debug.setOnClickListener(this);
+        btn_debug_1.setOnClickListener(this);
     }
 
     // 初始化用户数据
@@ -367,14 +370,17 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                                             edit.putString(getString(R.string.pref_user_token), pref_user_token);
                                             edit.putString(getString(R.string.pref_user_ipAddress), pref_user_ipAddress);
                                             edit.apply();
+                                            userLoggedIn = true;
                                             Log.d(TAG, "登录界面-用户数据已经保存至SharedPreferences。");
                                             Intent i;
+                                            
+                                            // todo:后续修改为当用户设备列表为空时，才直接跳转到设备添加界面，否则跳转到主界面。
                                             if (isFirstTimeUse) {
                                                 Log.d(TAG, "登录界面-用户是第一次使用，跳转到IntroGuideActivity。");
                                                 i = new Intent(LoginActivity.this, IntroGuideActivity.class);
                                             } else {
-                                                Log.d(TAG, "登录界面-用户不是第一次使用，跳转到DeviceListActivity。");
-                                                i = new Intent(LoginActivity.this, DeviceListActivity.class);
+                                                Log.d(TAG, "登录界面-用户不是第一次使用，跳转到MainActivity。");
+                                                i = new Intent(LoginActivity.this, MainActivity.class);
                                             }
                                             startActivity(i);
                                             finish();
@@ -422,6 +428,16 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                 i = new Intent(LoginActivity.this, IntroGuideActivity.class);
             } else {
                 i = new Intent(LoginActivity.this, DeviceListActivity.class);
+            }
+            startActivity(i);
+            finish();
+        } else if (view.getId() == R.id.btn_debug_1) {
+            Intent i;
+            if (isFirstTimeUse) {
+                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
+            } else {
+                userLoggedIn = true;
+                i = new Intent(LoginActivity.this, MainActivity.class);
             }
             startActivity(i);
             finish();

@@ -36,13 +36,17 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         holder.card_title_1.setText(currentItem.getDeviceType());
         holder.card_id.setText(String.valueOf(position + 1));
 
-        holder.itemView.setOnClickListener(view -> {
-            myItemClickListener.OnItemClick(position);
-        });
-        holder.itemView.setOnLongClickListener(view -> {
-            myItemClickListener.OnItemLongClick(position);
-            return true; // 返回true表示这个事件已经被处理，不会再传递给其他的监听器
-        });
+        int currentPosition = holder.getAdapterPosition();
+
+        if (currentPosition != RecyclerView.NO_POSITION) {
+            holder.itemView.setOnClickListener(view -> {
+                myItemClickListener.OnItemClick(holder.getAdapterPosition());
+            });
+            holder.itemView.setOnLongClickListener(view -> {
+                myItemClickListener.OnItemLongClick(holder.getAdapterPosition());
+                return true; // 返回true表示这个事件已经被处理，不会再传递给其他的监听器
+            });
+        }
     }
 
     // 返回RecyclerView子项的数目

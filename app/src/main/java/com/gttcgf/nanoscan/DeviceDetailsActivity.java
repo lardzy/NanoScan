@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import androidx.activity.EdgeToEdge;
@@ -20,10 +21,12 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 public class DeviceDetailsActivity extends AppCompatActivity implements View.OnClickListener {
+    private static final String TAG = "DeviceDetailsActivity";
     private ToggleButton not_preheat_toggle;
     private ImageButton scan, imageButton_back, imageButton_menu;
     private ConstraintLayout device_connection_layout;
-    private TextView light_usage_duration, temperature_value, humidity_value, battery_level;
+    private DeviceItem deviceItem;
+    private TextView light_usage_duration, temperature_value, humidity_value, battery_level, tv_device_mac, tv_device_name;
     private ProgressBar scan_progressbar, progressBar;
 
     @Override
@@ -31,10 +34,11 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_device_details);
+        // 初始化数据
+        initialData();
         // 初始化组件
         initialComponent();
-        // 初始化数据
-        initialData(savedInstanceState);
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -55,7 +59,11 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         progressBar = findViewById(R.id.progressBar);
         imageButton_back = findViewById(R.id.imageButton_back);
         imageButton_menu = findViewById(R.id.imageButton_menu);
+        tv_device_mac = findViewById(R.id.tv_device_mac);
+        tv_device_name = findViewById(R.id.tv_device_name);
 
+        tv_device_mac.setText(deviceItem.getDeviceMac());
+        tv_device_name.setText(deviceItem.getDeviceName());
         // 设置按钮点击事件
         scan.setOnClickListener(this);
         device_connection_layout.setOnClickListener(this);
@@ -82,9 +90,16 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
 
     }
 
-    private void initialData(Bundle savedInstanceState) {
+    private void initialData() {
         // 初始化数据
-        
+        deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
+        if (deviceItem != null) {
+            Log.d(TAG, "设备详情页-获取到传入的设备对象：" + deviceItem.toString());
+        } else {
+            Log.e(TAG, "设备详情页-获取到传入的设备对象为NULL！");
+            Toast.makeText(this, "无法获得设备信息，软件发生异常！", Toast.LENGTH_LONG).show();
+            finish();
+        }
     }
 
     @Override
