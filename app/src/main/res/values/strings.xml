@@ -121,4 +121,10 @@
     <string name="ok">确定</string>
     <string name="device_list_empty">设备列表为空</string>
     <string name="verification_dialog_title">请输入数字验证码</string>
+    <string name="search">Search</string>
+    <string name="main_ic_add_device">添加设备</string>
+    <string name="main_tv_title">近期使用</string>
+    <string name="main_tv_ad">最新消息</string>
+    <string name="tv_devices_list">最近未使用任何设备</string>
+    <string name="tv_nes_empty">暂无信息</string>
 </resources>
