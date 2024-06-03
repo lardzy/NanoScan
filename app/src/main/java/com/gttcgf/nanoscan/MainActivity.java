@@ -7,11 +7,14 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -27,7 +30,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private ImageButton ib_shutdown, ib_account, ib_add_device;
@@ -35,8 +42,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private RecyclerView rv_devices_list;
     private ProgressBar pb_devices_list, pb_news;
     private TextView tv_devices_list_empty, tv_nes_empty;
-    private List<DeviceItem> deviceItem;
+    private List<DeviceItem> deviceItem, newDeviceItemList;
     private static final String TAG = "MainActivity";
+    private MainActivityDeviceListAdapter deviceListAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,20 +65,46 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         checkFirstRunOrUserAgreement();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "主界面-onResume called!");
+        // 更新列表数据和UI
+        updateData();
+    }
+
+    private void updateData() {
+        Log.d(TAG, "主界面-正在尝试更新数据到newDeviceItemList...");
+        newDeviceItemList = loadDataFromFiles();
+        if (newDeviceItemList != null) {
+            Log.d(TAG, "主界面-新数据不为null，正在更新到设备列表Adapter；newDeviceItemList size：" + newDeviceItemList.size());
+            deviceListAdapter.updateDeviceList(newDeviceItemList);
+            this.deviceItem = newDeviceItemList;
+        } else {
+            Log.e(TAG, "主界面-newDeviceItemList为null?检查本地文件完整性！");
+        }
+        updateEmptyState();
+    }
+
     private void initializeData() {
-        deviceItem = new ArrayList<>();
-        loadDataFromFiles();
+        this.deviceItem = loadDataFromFiles();
+        Log.d(TAG, "主界面-设备列表文件读取长度为：" + deviceItem.size());
+        updateEmptyState();
+
         // todo:增加获取消息列表的功能
     }
 
-    private void loadDataFromFiles() {
+    // 从本地序列化文件读取设备集合对象
+    private List<DeviceItem> loadDataFromFiles() {
         try (FileInputStream fis = openFileInput("deviceItem.ser");
              ObjectInputStream ois = new ObjectInputStream(fis)) {
-            deviceItem = (List<DeviceItem>) ois.readObject();
-            Log.d(TAG, "主界面-设备列表文件读取成功！列表长度：" + deviceItem.size());
+            Log.d(TAG, "主界面-设备列表文件读取成功！");
+            return (List<DeviceItem>) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
             Log.e(TAG, "主界面-设备列表文件不存在或读取失败！");
         }
+        List<DeviceItem> itemList = new ArrayList<>();
+        return itemList;
     }
 
     private void initComponent() {
@@ -88,14 +122,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ib_shutdown.setOnClickListener(this);
         ib_add_device.setOnClickListener(this);
 
-        if (deviceItem.isEmpty()) {
-            tv_nes_empty.setVisibility(View.VISIBLE);
-        }
         pb_devices_list.setVisibility(View.INVISIBLE);
         pb_news.setVisibility(View.INVISIBLE);
         tv_nes_empty.setVisibility(View.VISIBLE);
         rv_devices_list.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        MainActivityDeviceListAdapter deviceListAdapter = new MainActivityDeviceListAdapter(deviceItem);
+        deviceListAdapter = new MainActivityDeviceListAdapter(deviceItem);
         rv_devices_list.setAdapter(deviceListAdapter);
         deviceListAdapter.setOnItemClickListener(new MainActivityDeviceListAdapter.OnItemClickListener() {
             @Override
@@ -133,6 +164,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.d(TAG, "主界面-用户已登录！");
         }
 
+    }
+
+    private void updateEmptyState() {
+        Log.d(TAG, "主界面-尝试更新列表是否为空的文本");
+        if (tv_devices_list_empty != null) {
+            if (deviceItem.isEmpty()) {
+                tv_devices_list_empty.setVisibility(View.VISIBLE);
+            } else {
+                tv_devices_list_empty.setVisibility(View.INVISIBLE);
+            }
+        } else {
+            Log.e(TAG, "主界面-tv_devices_list_empty为null!");
+        }
     }
 
     @Override

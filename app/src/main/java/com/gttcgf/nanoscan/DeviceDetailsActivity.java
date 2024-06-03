@@ -118,4 +118,25 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
             Log.d("DeviceDetailsActivity", "点击了菜单按钮");
         }
     }
+    public static String GetLampTimeString(long lamptime)
+    {
+        String lampusage = "";
+        if (lamptime / 86400 != 0)
+        {
+            lampusage += lamptime / 86400 + "day ";
+            lamptime -= 86400 * (lamptime / 86400);
+        }
+        if (lamptime / 3600 != 0)
+        {
+            lampusage += lamptime / 3600 + "hr ";
+            lamptime -= 3600 * (lamptime / 3600);
+        }
+        if (lamptime / 60 != 0)
+        {
+            lampusage += lamptime / 60 + "min ";
+            lamptime -= 60 * (lamptime / 60);
+        }
+        lampusage += lamptime + "sec ";
+        return lampusage;
+    }
 }

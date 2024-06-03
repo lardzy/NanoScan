@@ -33,7 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DeviceListActivity extends AppCompatActivity {
-    private List<DeviceItem> itemList;
+    private  List<DeviceItem> itemList;
     private Button button_add_device;
     private ImageButton imageButton_search, imageButton_back;
     private View.OnClickListener onClickListener;
@@ -211,7 +211,4 @@ public class DeviceListActivity extends AppCompatActivity {
             Log.e(TAG, "设备列表文件读取失败");
         }
     }
-//    public interface addDeviceCallback{
-//        void addDevice(String name, String type, String mac);
-//    }
 }

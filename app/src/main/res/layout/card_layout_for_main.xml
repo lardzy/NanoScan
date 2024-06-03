@@ -45,7 +45,7 @@
 
     <TextView
         android:id="@+id/tv_main_nano_name"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         android:gravity="center"
         android:maxWidth="180dp"

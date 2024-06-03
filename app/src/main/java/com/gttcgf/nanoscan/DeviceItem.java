@@ -1,6 +1,7 @@
 package com.gttcgf.nanoscan;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 public class DeviceItem implements Serializable {
     private int ImageResource;
@@ -67,5 +68,18 @@ public class DeviceItem implements Serializable {
                 ", deviceMac='" + deviceMac + '\'' +
                 ", deviceToken='" + deviceToken + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DeviceItem that = (DeviceItem) o;
+        return Objects.equals(deviceName, that.deviceName) && Objects.equals(deviceMac, that.deviceMac);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(deviceName, deviceMac);
     }
 }

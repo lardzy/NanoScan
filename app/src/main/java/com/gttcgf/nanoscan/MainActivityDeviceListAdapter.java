@@ -1,16 +1,20 @@
 package com.gttcgf.nanoscan;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
+import java.util.Objects;
 
 public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActivityDeviceListAdapter.MainActivityDeviceViewHolder> {
+    private static final String TAG = "MainActivityDeviceListA";
     private List<DeviceItem> deviceItemList;
     private OnItemClickListener onItemClickListener;
 
@@ -44,9 +48,44 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
         });
     }
 
+    public void updateDeviceList(List<DeviceItem> newDeviceList) {
+        Log.d(TAG, "主界面设备列表adapter-updateDeviceList被调用，正在尝试更新列表！");
+
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+            @Override
+            public int getOldListSize() {
+                return deviceItemList.size();
+            }
+
+            @Override
+            public int getNewListSize() {
+                return newDeviceList.size();
+            }
+
+            @Override
+            public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+                return Objects.equals(deviceItemList.get(oldItemPosition).getDeviceMac(), newDeviceList.get(newItemPosition).getDeviceMac());
+            }
+
+            @Override
+            public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+                return deviceItemList.get(oldItemPosition).equals(newDeviceList.get(newItemPosition));
+            }
+        });
+
+        Log.d(TAG, "主界面设备列表adapter-updateDeviceList更新deviceItemList！");
+        // 更新数据
+        deviceItemList.clear();
+        deviceItemList.addAll(newDeviceList);
+        Log.d(TAG, "主界面设备列表adapter-updateDeviceList分发事件更新！");
+        // 分发更新事件
+        diffResult.dispatchUpdatesTo(this);
+    }
+
     public void setOnItemClickListener(OnItemClickListener onItemClickListener) {
         this.onItemClickListener = onItemClickListener;
     }
+
 
     @Override
     public int getItemCount() {

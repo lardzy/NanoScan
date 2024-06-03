@@ -142,9 +142,11 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
             public void onScanResult(int callbackType, ScanResult result) {
                 super.onScanResult(callbackType, result);
                 BluetoothDevice device = result.getDevice();
+                // 如果扫描到的设备名称不为null，且名称中包含设定的名称前缀，且getScanRecord对象不为null!
                 @SuppressLint("MissingPermission") String name = device.getName();
                 if (name != null && name.contains(DEVICE_NAME) && result.getScanRecord() != null) {
                     Boolean isDeviceInList = false;
+                    // 新建ISCNIRScanSDK.NanoDevice对象
                     ISCNIRScanSDK.NanoDevice nanoDevice = new ISCNIRScanSDK.NanoDevice(device, result.getRssi(), result.getScanRecord().getBytes());
                     // 判断设备是否已在列表中，如果已经在，就该设备更新信号强度。
                     for (ISCNIRScanSDK.NanoDevice d : nanoDeviceList) {
@@ -192,7 +194,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
             public void onSuccess(String token) {
                 if (!token.isEmpty()) {
                     final String deviceMac = mac;
-                    // 存储选中的设备信息，包括设备mac和名称
+                    // 使用SDK中的方法，存储选中的设备信息，包括设备mac和名称
                     storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceMac);
                     storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, name);
                     Intent i = new Intent();

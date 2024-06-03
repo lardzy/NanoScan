@@ -266,6 +266,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         jsonObject.put("user", userObject);
 
         String json = jsonObject.toString();
+        Log.d(TAG, "登录界面-请求体已构建完成：\nbody:" + json);
         RequestBody body = RequestBody.create(json, JSON);
         Request request = new Request.Builder()
                 .url(uri)
