@@ -312,6 +312,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                                     sb.append(jsonArray.getString(i));
                                 }
                                 message = sb.toString();
+                                Log.e(TAG, "登录界面-服务器验证登录信息失败，错误信息：" + string);
                             } catch (JSONException e) {
 //                            throw new RuntimeException(e);
                                 Log.e(TAG, "登录界面-服务器验证登录信息失败后，解析返回json中失败原因内容发送错误！\n" + e);

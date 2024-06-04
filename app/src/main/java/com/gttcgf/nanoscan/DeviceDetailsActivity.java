@@ -29,6 +29,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
     private TextView light_usage_duration, temperature_value, humidity_value, battery_level, tv_device_mac, tv_device_name;
     private ProgressBar scan_progressbar, progressBar;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

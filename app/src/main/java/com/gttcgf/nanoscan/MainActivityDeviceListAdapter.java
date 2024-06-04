@@ -17,6 +17,7 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
     private static final String TAG = "MainActivityDeviceListA";
     private List<DeviceItem> deviceItemList;
     private OnItemClickListener onItemClickListener;
+    private boolean isClickable = true;
 
     public MainActivityDeviceListAdapter(List<DeviceItem> deviceItemList) {
         this.deviceItemList = deviceItemList;
@@ -41,7 +42,7 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
             @Override
             public void onClick(View view) {
                 int currentPosition = holder.getAdapterPosition();
-                if (currentPosition != RecyclerView.NO_POSITION) {
+                if (currentPosition != RecyclerView.NO_POSITION && isClickable) {
                     onItemClickListener.OnItemClick(holder.getAdapterPosition());
                 }
             }
@@ -107,5 +108,9 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
 
     interface OnItemClickListener {
         void OnItemClick(int position);
+    }
+
+    public void setClickable(boolean clickable) {
+        isClickable = clickable;
     }
 }

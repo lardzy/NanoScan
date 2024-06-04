@@ -3,6 +3,8 @@ package com.gttcgf.nanoscan;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -58,14 +60,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        setTheme(R.style.Theme_NanoScan);
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate called!");
+        Log.e(TAG, "主界面-onCreate called");
+
         EdgeToEdge.enable(this);
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         setContentView(R.layout.activity_main);
 
-        client = new OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
+        client = new OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
                 .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
                 .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
                 .build();
@@ -74,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         initializeData();
         initComponent();
+        checkFirstRunOrUserAgreement();
 
         // 应用窗口边缘到边缘的设置
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -81,17 +85,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        // 检查是否是第一次运行、是否已经登录
-        checkFirstRunOrUserAgreement();
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "主界面-onResume called!");
+        Log.e(TAG, "主界面-onResume called!");
         // 更新列表数据和UI
         updateData();
     }
+
 
     private void updateData() {
         Log.d(TAG, "主界面-正在尝试更新数据到newDeviceItemList...");
@@ -107,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void initializeData() {
-
+        Log.e(TAG, "主界面-initializeData called");
 
         this.deviceItem = loadDataFromFiles();
         Log.d(TAG, "主界面-设备列表文件读取长度为：" + deviceItem.size());
@@ -118,8 +122,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     // 从本地序列化文件读取设备集合对象
     private List<DeviceItem> loadDataFromFiles() {
-        try (FileInputStream fis = openFileInput("deviceItem.ser");
-             ObjectInputStream ois = new ObjectInputStream(fis)) {
+        try (FileInputStream fis = openFileInput("deviceItem.ser"); ObjectInputStream ois = new ObjectInputStream(fis)) {
             Log.d(TAG, "主界面-设备列表文件读取成功！");
             return (List<DeviceItem>) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
@@ -130,6 +133,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void initComponent() {
+        Log.e(TAG, "主界面-initComponent called!");
+
         ib_shutdown = findViewById(R.id.ib_shutdown);
         ib_account = findViewById(R.id.ib_account);
         ib_add_device = findViewById(R.id.ib_add_device);
@@ -144,25 +149,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ib_shutdown.setOnClickListener(this);
         ib_add_device.setOnClickListener(this);
 
-        pb_devices_list.setVisibility(View.INVISIBLE);
         pb_news.setVisibility(View.INVISIBLE);
         tv_nes_empty.setVisibility(View.VISIBLE);
         rv_devices_list.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         deviceListAdapter = new MainActivityDeviceListAdapter(deviceItem);
         rv_devices_list.setAdapter(deviceListAdapter);
-        deviceListAdapter.setOnItemClickListener(new MainActivityDeviceListAdapter.OnItemClickListener() {
-            @Override
-            public void OnItemClick(int position) {
-                // 点击设备列表中的设备，跳转到设备详情页面
-                Intent i = new Intent(MainActivity.this, DeviceDetailsActivity.class);
-                i.putExtra("deviceItem", deviceItem.get(position));
-                startActivity(i);
-            }
+        deviceListAdapter.setOnItemClickListener(position -> {
+            // 点击设备列表中的设备，跳转到设备详情页面
+            Intent i = new Intent(MainActivity.this, DeviceDetailsActivity.class);
+            i.putExtra("deviceItem", deviceItem.get(position));
+            startActivity(i);
         });
+        // 初始化完成后，先禁用所有组件，避免误触。
+        enableAllComponent(false);
     }
 
     private void checkFirstRunOrUserAgreement() {
-        Log.d(TAG, "主界面-检查是否是第一次启动checkFirstRunOrUserAgreement called");
+        Log.e(TAG, "主界面-检查是否是第一次启动checkFirstRunOrUserAgreement called");
         // 禁用所有组件，避免误触
         enableAllComponent(false);
         // 显示加载进度条
@@ -174,8 +177,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         loginToken = sharedPreferences.getString(getString(R.string.pref_user_token), "");
 
         // todo:如果pref_user_token不为空，则尝试直接登录，期间禁用UI，登录成功则启用UI，失败则跳转登录界面
-        Log.d(TAG, "主界面-checkFirstRunOrUserAgreement读取到本地文件：isFirstRun:" + isFirstRun +"\nuserAgreed:"
-        + userAgreed + "\nloginToken:" + loginToken);
+        Log.d(TAG, "主界面-checkFirstRunOrUserAgreement读取到本地文件：isFirstRun:" + isFirstRun + "\nuserAgreed:" + userAgreed + "\nloginToken:" + loginToken);
 
         if (isFirstRun && !userAgreed) {
             // UserAgreementActivity 是用户协议界面的Activity
@@ -184,7 +186,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             startActivity(intent);
             finish(); // 关闭当前活动，以防用户返回到这个界面
         } else if (!LoginActivity.userLoggedIn || loginToken.isEmpty()) {
-            Log.d(TAG, "主界面-用户登录标志为false或loginToken为空！");
+            Log.d(TAG, "主界面-用户登录标志为false或loginToken为空！开始服务器验证登录权限。");
             // 当登录标志为否，或本地未存储登录token时，重新验证登录
             // todo:增加判断是否登录的逻辑。
             serverVerificationLoginToken(new CheckLoginStatueCallback() {
@@ -193,10 +195,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     SharedPreferences.Editor editor = sharedPreferences.edit();
                     editor.putString(getString(R.string.pref_user_token), newToken);
                     editor.apply();
-                    Log.d(TAG, "主界面-用户不是第一次使用，已同意用户协议，使用TOKEN登录成功！newToken：" + newToken);
+                    Log.d(TAG, "主界面-用户不是第一次使用，已同意用户协议，使用TOKEN登录成功并已保存！newToken：" + newToken);
                     // 启用所有组件，并隐藏进度条
-                    enableAllComponent(true);
-                    pb_devices_list.setVisibility(View.INVISIBLE);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // 确认登录成功后，启用所有组件，用户可以交互。
+                            Log.d(TAG, "主界面-用户使用TOKEN登录成功！启用所有组件");
+                            LoginActivity.userLoggedIn = true;
+                            enableAllComponent(true);
+                            pb_devices_list.setVisibility(View.INVISIBLE);
+                        }
+                    });
+
                 }
 
                 @Override
@@ -215,9 +226,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }, loginToken);
         } else {
             Log.d(TAG, "主界面-用户已登录！");
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "主界面-用户已经是登录状态！启用所有组件");
+                    enableAllComponent(true);
+                    pb_devices_list.setVisibility(View.INVISIBLE);
+                }
+            });
 
-            enableAllComponent(true);
-            pb_devices_list.setVisibility(View.INVISIBLE);
         }
 
     }
@@ -229,11 +246,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         RequestBody body = RequestBody.create(new byte[0], null);
 
-        Request request = new Request.Builder()
-                .url(uri)
-                .addHeader("Authorization", token)
-                .post(body)
-                .build();
+        Request request = new Request.Builder().url(uri).addHeader("Authorization", token).post(body).build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
@@ -280,7 +293,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 message = sb.toString();
                                 Log.e(TAG, "主界面-onResponse-TOKEN登录请求失败！" + "响应体已经解析:" + message);
                             } catch (JSONException e) {
-//                            throw new RuntimeException(e);
                                 Log.e(TAG, "主界面-onResponse-TOKEN登录请求失败服务器响应体json解析失败！" + e);
                                 // 添加错误处理代码
                                 runOnUiThread(() -> {
@@ -298,7 +310,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void updateEmptyState() {
         Log.d(TAG, "主界面-尝试更新列表是否为空的文本");
-        if (tv_devices_list_empty != null) {
+        if (tv_devices_list_empty != null && deviceItem != null) {
             if (deviceItem.isEmpty()) {
                 tv_devices_list_empty.setVisibility(View.VISIBLE);
             } else {
@@ -314,7 +326,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ib_account.setEnabled(enable);
         ib_add_device.setEnabled(enable);
         et_search.setEnabled(enable);
-        rv_devices_list.setEnabled(false);
+        rv_devices_list.setEnabled(enable);
+        deviceListAdapter.setClickable(enable);
     }
 
     @Override
@@ -324,6 +337,37 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         } else if (view.getId() == R.id.ib_add_device) {
             Intent i = new Intent(MainActivity.this, DeviceListActivity.class);
             startActivity(i);
+        }
+    }
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.e(TAG, "主界面-onPause called!");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.e(TAG, "主界面-onStop called!");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.e(TAG, "主界面-onDestroy called!");
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        Log.e(TAG, "主界面-onConfigurationChanged called。newConfig:" + newConfig.orientation);
+        // 处理配置变化
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            // 横屏时的处理
+        } else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            // 竖屏时的处理
         }
     }
 

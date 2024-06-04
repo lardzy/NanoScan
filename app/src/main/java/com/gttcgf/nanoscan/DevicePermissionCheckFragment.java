@@ -153,6 +153,7 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
             devicePermission.onFailed();
             return;
         }
+
         // 授权码格式正确，继续进行服务器授权验证
 
         String url = serverUrl + "/add_machine";
@@ -315,7 +316,7 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
                 WindowManager.LayoutParams params = window.getAttributes();
                 // 设置宽度和高度为屏幕的70%
                 params.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.8);
-                params.height = (int) (getResources().getDisplayMetrics().heightPixels * 0.3);
+                params.height = (int) (getResources().getDisplayMetrics().heightPixels * 0.4);
                 // 将设置好的参数应用到窗口
                 window.setAttributes(params);
             }

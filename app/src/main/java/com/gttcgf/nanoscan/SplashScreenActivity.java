@@ -41,6 +41,7 @@ public class SplashScreenActivity extends AppCompatActivity {
 
             @Override
             public void onAnimationEnd(Animation animation) {
+                Log.d(TAG, "onAnimationEnd called");
                 Intent intent = new Intent(SplashScreenActivity.this, MainActivity.class);
                 startActivity(intent);
                 finish();
@@ -51,7 +52,6 @@ public class SplashScreenActivity extends AppCompatActivity {
             }
         });
     }
-
 
     @Override
     protected void onDestroy() {
