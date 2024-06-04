@@ -207,7 +207,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
         Log.d(TAG, "登录界面-从sharedPreferences中读取到：pref_user_phone_number: " + pref_user_phone_number);
         Log.d(TAG, "登录界面-从sharedPreferences中读取到：pref_user_password: " + pref_user_password);
-        Log.d(TAG, "登录界面-从sharedPreferences中读取到：pref_user_token: " + pref_user_password);
+        Log.d(TAG, "登录界面-从sharedPreferences中读取到：pref_user_token: " + pref_user_token);
 
         // 如果用户没有保存手机号或密码，则直接返回
         if (pref_user_phone_number.isEmpty() || pref_user_password.isEmpty()) {
@@ -366,15 +366,16 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                                             // 登录成功，保存账号密码token，跳转到主页面
                                             SharedPreferences sharedPreferences = context.getSharedPreferences("default", Context.MODE_PRIVATE);
                                             SharedPreferences.Editor edit = sharedPreferences.edit();
+
                                             edit.putString(getString(R.string.pref_user_phone_number), phone_number.getText().toString());
                                             edit.putString(getString(R.string.pref_user_password), password.getText().toString());
                                             edit.putString(getString(R.string.pref_user_token), pref_user_token);
                                             edit.putString(getString(R.string.pref_user_ipAddress), pref_user_ipAddress);
                                             edit.apply();
                                             userLoggedIn = true;
-                                            Log.d(TAG, "登录界面-用户数据已经保存至SharedPreferences。");
+                                            Log.d(TAG, "登录界面-用户数据phone_number、password、pref_user_token、pref_user_ipAddress已经保存至SharedPreferences。");
+
                                             Intent i;
-                                            
                                             // todo:后续修改为当用户设备列表为空时，才直接跳转到设备添加界面，否则跳转到主界面。
                                             if (isFirstTimeUse) {
                                                 Log.d(TAG, "登录界面-用户是第一次使用，跳转到IntroGuideActivity。");

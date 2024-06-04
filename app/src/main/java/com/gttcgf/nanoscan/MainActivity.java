@@ -3,21 +3,7 @@ package com.gttcgf.nanoscan;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-
-import androidx.activity.EdgeToEdge;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.recyclerview.widget.DiffUtil;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -26,32 +12,65 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
-import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+    private static final String TAG = "MainActivity";
+    private static final String serverUrl = "https://newnirtechnolgy.top/api";
     private ImageButton ib_shutdown, ib_account, ib_add_device;
     private EditText et_search;
     private RecyclerView rv_devices_list;
     private ProgressBar pb_devices_list, pb_news;
     private TextView tv_devices_list_empty, tv_nes_empty;
     private List<DeviceItem> deviceItem, newDeviceItemList;
-    private static final String TAG = "MainActivity";
     private MainActivityDeviceListAdapter deviceListAdapter;
+    private OkHttpClient client;
+    private Context mcontext;
+    private String username, loginToken;
+    private SharedPreferences sharedPreferences;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate called!");
         EdgeToEdge.enable(this);
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         setContentView(R.layout.activity_main);
+
+        client = new OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
+                .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
+                .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
+                .build();
+
+        mcontext = this;
 
         initializeData();
         initComponent();
@@ -62,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+        // 检查是否是第一次运行、是否已经登录
         checkFirstRunOrUserAgreement();
     }
 
@@ -87,6 +107,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void initializeData() {
+
+
         this.deviceItem = loadDataFromFiles();
         Log.d(TAG, "主界面-设备列表文件读取长度为：" + deviceItem.size());
         updateEmptyState();
@@ -140,30 +162,138 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void checkFirstRunOrUserAgreement() {
-        Log.d(TAG, "主界面-checkFirstRunOrUserAgreement called");
+        Log.d(TAG, "主界面-检查是否是第一次启动checkFirstRunOrUserAgreement called");
+        // 禁用所有组件，避免误触
+        enableAllComponent(false);
+        // 显示加载进度条
+        pb_devices_list.setVisibility(View.VISIBLE);
+        // 读取本地文件
+        sharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
+        boolean isFirstRun = sharedPreferences.getBoolean(getString(R.string.pref_first_run), true);
+        boolean userAgreed = sharedPreferences.getBoolean(getString(R.string.pref_user_agreed), false);
+        loginToken = sharedPreferences.getString(getString(R.string.pref_user_token), "");
 
-        SharedPreferences prefs = this.getSharedPreferences("default", Context.MODE_PRIVATE);
-        boolean isFirstRun = prefs.getBoolean(getString(R.string.pref_first_run), true);
-        boolean userAgreed = prefs.getBoolean(getString(R.string.pref_user_agreed), false);
+        // todo:如果pref_user_token不为空，则尝试直接登录，期间禁用UI，登录成功则启用UI，失败则跳转登录界面
+        Log.d(TAG, "主界面-checkFirstRunOrUserAgreement读取到本地文件：isFirstRun:" + isFirstRun +"\nuserAgreed:"
+        + userAgreed + "\nloginToken:" + loginToken);
 
-        Intent intent;
         if (isFirstRun && !userAgreed) {
             // UserAgreementActivity 是用户协议界面的Activity
-            Log.d(TAG, "主界面-用户是第一次使用，并未同意用户协议！");
-            intent = new Intent(this, UserAgreementActivity.class);
+            Log.d(TAG, "主界面-用户是第一次使用（从未登录过），且并未同意用户协议！");
+            Intent intent = new Intent(this, UserAgreementActivity.class);
             startActivity(intent);
             finish(); // 关闭当前活动，以防用户返回到这个界面
-        } else if (!LoginActivity.userLoggedIn) {
-            // LoginActivity 是登录界面的Activity
+        } else if (!LoginActivity.userLoggedIn || loginToken.isEmpty()) {
+            Log.d(TAG, "主界面-用户登录标志为false或loginToken为空！");
+            // 当登录标志为否，或本地未存储登录token时，重新验证登录
             // todo:增加判断是否登录的逻辑。
-            Log.d(TAG, "主界面-用户不是第一次使用，已同意用户协议，但是登录TOKEN不存在或过期！");
-            intent = new Intent(this, LoginActivity.class);
-            startActivity(intent);
-            finish(); // 关闭当前活动，以防用户返回到这个界面
+            serverVerificationLoginToken(new CheckLoginStatueCallback() {
+                @Override
+                public void onSuccess(String newToken) {
+                    SharedPreferences.Editor editor = sharedPreferences.edit();
+                    editor.putString(getString(R.string.pref_user_token), newToken);
+                    editor.apply();
+                    Log.d(TAG, "主界面-用户不是第一次使用，已同意用户协议，使用TOKEN登录成功！newToken：" + newToken);
+                    // 启用所有组件，并隐藏进度条
+                    enableAllComponent(true);
+                    pb_devices_list.setVisibility(View.INVISIBLE);
+                }
+
+                @Override
+                public void onFailed() {
+                    Log.e(TAG, "主界面-用户不是第一次使用，已同意用户协议，但是登录TOKEN不存在或过期！");
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "用户未登录！", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                    startActivity(intent);
+                    finish(); // 关闭当前活动，以防用户返回到这个界面
+                }
+            }, loginToken);
         } else {
             Log.d(TAG, "主界面-用户已登录！");
+
+            enableAllComponent(true);
+            pb_devices_list.setVisibility(View.INVISIBLE);
         }
 
+    }
+
+    private void serverVerificationLoginToken(CheckLoginStatueCallback checkLoginStatueCallback, String token) {
+        Log.d(TAG, "主界面-serverVerificationLoginToken called");
+
+        String uri = serverUrl + "/users/login";
+
+        RequestBody body = RequestBody.create(new byte[0], null);
+
+        Request request = new Request.Builder()
+                .url(uri)
+                .addHeader("Authorization", token)
+                .post(body)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "主界面-TOKEN登录失败，client-onFailure called!");
+                checkLoginStatueCallback.onFailed();
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
+                    String newToken = "";
+                    Log.d(TAG, "主界面-TOKEN登录成功，response.code() == 200");
+                    try {
+                        JSONObject jsonObject = new JSONObject(response.body().string());
+                        JSONObject userObject = jsonObject.getJSONObject("user");
+                        username = userObject.getString("username");
+                        newToken = userObject.getString("token");
+
+                        Log.d(TAG, "主界面-TOKEN登录返回体解析成功！newToken: " + newToken);
+
+                        checkLoginStatueCallback.onSuccess(newToken);
+                    } catch (JSONException e) {
+                        Log.e(TAG, "主界面-TOKEN登录请求成功，但是返回值解析失败！");
+                        runOnUiThread(() -> {
+                            Toast.makeText(MainActivity.this, "登录失败，服务器返回数据格式错误，请稍后再试！", Toast.LENGTH_SHORT).show();
+                            checkLoginStatueCallback.onFailed();
+                        });
+                    }
+                } else {
+                    Log.e(TAG, "主界面-onResponse-TOKEN登录请求失败！响应代码已获得：code:" + response.code());
+                    String message = "";
+                    if (response.body() != null) {
+
+                        String string = response.body().string();
+                        if (!string.isEmpty()) {
+                            try {
+                                JSONObject jsonObject1 = new JSONObject(string);
+                                JSONArray jsonArray = jsonObject1.getJSONArray("errors");
+                                StringBuilder sb = new StringBuilder(message);
+                                for (int i = 0; i < jsonArray.length(); i++) {
+                                    sb.append(jsonArray.getString(i));
+                                }
+                                message = sb.toString();
+                                Log.e(TAG, "主界面-onResponse-TOKEN登录请求失败！" + "响应体已经解析:" + message);
+                            } catch (JSONException e) {
+//                            throw new RuntimeException(e);
+                                Log.e(TAG, "主界面-onResponse-TOKEN登录请求失败服务器响应体json解析失败！" + e);
+                                // 添加错误处理代码
+                                runOnUiThread(() -> {
+                                    Toast.makeText(MainActivity.this, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
+                                });
+                            }
+                        }
+                    }
+                    checkLoginStatueCallback.onFailed();
+                }
+
+            }
+        });
     }
 
     private void updateEmptyState() {
@@ -179,6 +309,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private void enableAllComponent(boolean enable) {
+        ib_shutdown.setEnabled(enable);
+        ib_account.setEnabled(enable);
+        ib_add_device.setEnabled(enable);
+        et_search.setEnabled(enable);
+        rv_devices_list.setEnabled(false);
+    }
+
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.ib_shutdown) {
@@ -187,5 +325,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Intent i = new Intent(MainActivity.this, DeviceListActivity.class);
             startActivity(i);
         }
+    }
+
+    private interface CheckLoginStatueCallback {
+        void onSuccess(String newToken);
+
+        void onFailed();
     }
 }
