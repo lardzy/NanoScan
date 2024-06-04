@@ -2,9 +2,18 @@ package com.gttcgf.nanoscan;
 
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
@@ -20,6 +29,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.ISCSDK.ISCNIRScanSDK;
+
 public class DeviceDetailsActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "DeviceDetailsActivity";
     private ToggleButton not_preheat_toggle;
@@ -28,7 +39,28 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
     private DeviceItem deviceItem;
     private TextView light_usage_duration, temperature_value, humidity_value, battery_level, tv_device_mac, tv_device_name;
     private ProgressBar scan_progressbar, progressBar;
+    private ISCNIRScanSDK mNanoBLEService;
+    private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothLeScanner mBluetoothLeScanner;
+    private Handler mHandle;
 
+    public static String GetLampTimeString(long lamptime) {
+        String lampusage = "";
+        if (lamptime / 86400 != 0) {
+            lampusage += lamptime / 86400 + "day ";
+            lamptime -= 86400 * (lamptime / 86400);
+        }
+        if (lamptime / 3600 != 0) {
+            lampusage += lamptime / 3600 + "hr ";
+            lamptime -= 3600 * (lamptime / 3600);
+        }
+        if (lamptime / 60 != 0) {
+            lampusage += lamptime / 60 + "min ";
+            lamptime -= 60 * (lamptime / 60);
+        }
+        lampusage += lamptime + "sec ";
+        return lampusage;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +71,36 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         initialData();
         // 初始化组件
         initialComponent();
+
+        Intent gattServiceIntent = new Intent(this, ISCNIRScanSDK.class);
+
+        ServiceConnection serviceConnection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+
+                mNanoBLEService = ((ISCNIRScanSDK.LocalBinder) iBinder).getService();
+                //初始化 bluetooth, 如果 BLE 不可用, 则 finish
+                if (!mNanoBLEService.initialize()) {
+                    finish();
+                }
+
+                BluetoothManager bluetoothManager =
+                        (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+                mBluetoothAdapter = bluetoothManager.getAdapter();
+                mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+                if (mBluetoothLeScanner == null) {
+                    finish();
+                    Toast.makeText(DeviceDetailsActivity.this, "请确保蓝牙已经打开！", Toast.LENGTH_SHORT).show();
+                }
+                mHandle = new Handler();
+
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName componentName) {
+
+            }
+        };
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -118,26 +180,5 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
             // 点击了菜单按钮
             Log.d("DeviceDetailsActivity", "点击了菜单按钮");
         }
-    }
-    public static String GetLampTimeString(long lamptime)
-    {
-        String lampusage = "";
-        if (lamptime / 86400 != 0)
-        {
-            lampusage += lamptime / 86400 + "day ";
-            lamptime -= 86400 * (lamptime / 86400);
-        }
-        if (lamptime / 3600 != 0)
-        {
-            lampusage += lamptime / 3600 + "hr ";
-            lamptime -= 3600 * (lamptime / 3600);
-        }
-        if (lamptime / 60 != 0)
-        {
-            lampusage += lamptime / 60 + "min ";
-            lamptime -= 60 * (lamptime / 60);
-        }
-        lampusage += lamptime + "sec ";
-        return lampusage;
     }
 }

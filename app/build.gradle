@@ -37,6 +37,7 @@ android {
 }
 
 
+
 dependencies {
     implementation libs.appcompat
     implementation libs.material
@@ -48,6 +49,7 @@ dependencies {
     implementation libs.navigation.fragment
     implementation libs.navigation.ui
     implementation files('libs/ISCSDK-release.aar')
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
 //    implementation(name:'ISCSDK-release', ext:'aar')
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit

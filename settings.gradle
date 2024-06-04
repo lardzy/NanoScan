@@ -5,11 +5,11 @@ pluginManagement {
         }
         maven {
             allowInsecureProtocol = true
-            url 'http://maven.aliyun.com/nexus/content/groups/public/' }
+            url 'http://maven.aliyun.com/nexus/content/groups/public/'
+        }
         maven { url 'https://maven.aliyun.com/repository/jcenter' }
         maven { url 'https://maven.aliyun.com/repository/google' }
 
-//        maven { url "https://maven.google.com"}
         mavenCentral()
         google {
             content {
@@ -29,11 +29,11 @@ dependencyResolutionManagement {
         }
         maven {
             allowInsecureProtocol = true
-            url 'http://maven.aliyun.com/nexus/content/groups/public/' }
+            url 'http://maven.aliyun.com/nexus/content/groups/public/'
+        }
         maven { url 'https://maven.aliyun.com/repository/jcenter' }
         maven { url 'https://maven.aliyun.com/repository/google' }
-
-//        maven { url "https://maven.google.com"}
+        maven { url 'https://jitpack.io' }
         mavenCentral()
         google()
     }
