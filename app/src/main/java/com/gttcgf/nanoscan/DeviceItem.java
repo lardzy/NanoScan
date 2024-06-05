@@ -6,10 +6,9 @@ import java.util.Objects;
 public class DeviceItem implements Serializable {
     private int ImageResource;
     private static final long serialVersionUID = 1L;
+    // deviceName默认是设备蓝牙的名称，deviceType是设备类型，deviceMac是设备MAC地址，deviceToken是设备验证token。
     private String deviceName, deviceType, deviceMac, deviceToken;
-
-    public DeviceItem() {
-    }
+    private final String deviceBluetoothName;
 
     public DeviceItem(int imageResource, String deviceName, String deviceType, String deviceMac, String deviceToken) {
         ImageResource = imageResource;
@@ -17,6 +16,7 @@ public class DeviceItem implements Serializable {
         this.deviceType = deviceType;
         this.deviceMac = deviceMac;
         this.deviceToken = deviceToken;
+        this.deviceBluetoothName = deviceName;
     }
 
     public int getImageResource() {
@@ -57,6 +57,10 @@ public class DeviceItem implements Serializable {
 
     public void setDeviceToken(String deviceToken) {
         this.deviceToken = deviceToken;
+    }
+
+    public String getDeviceBluetoothName() {
+        return deviceBluetoothName;
     }
 
     @Override

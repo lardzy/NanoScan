@@ -1,7 +1,11 @@
 package com.gttcgf.nanoscan;
 
+import static com.ISCSDK.ISCNIRScanSDK.getStringPref;
+import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
+
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -42,7 +46,9 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
     private ISCNIRScanSDK mNanoBLEService;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
-    private Handler mHandle;
+    private Handler mHandler;
+    //Get the device name you want to connect from the Settings page
+    private String preferredDevice;
 
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
@@ -74,41 +80,45 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
 
         Intent gattServiceIntent = new Intent(this, ISCNIRScanSDK.class);
 
-        ServiceConnection serviceConnection = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-
-                mNanoBLEService = ((ISCNIRScanSDK.LocalBinder) iBinder).getService();
-                //初始化 bluetooth, 如果 BLE 不可用, 则 finish
-                if (!mNanoBLEService.initialize()) {
-                    finish();
-                }
-
-                BluetoothManager bluetoothManager =
-                        (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-                mBluetoothAdapter = bluetoothManager.getAdapter();
-                mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
-                if (mBluetoothLeScanner == null) {
-                    finish();
-                    Toast.makeText(DeviceDetailsActivity.this, "请确保蓝牙已经打开！", Toast.LENGTH_SHORT).show();
-                }
-                mHandle = new Handler();
-
-            }
-
-            @Override
-            public void onServiceDisconnected(ComponentName componentName) {
-
-            }
-        };
-
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
     }
+    ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            // 获得ISCNIRScanSDK服务对象
+            mNanoBLEService = ((ISCNIRScanSDK.LocalBinder) iBinder).getService();
+            //初始化 bluetooth, 如果 BLE 不可用, 则 finish
+            if (!mNanoBLEService.initialize()) {
+                finish();
+            }
 
+            BluetoothManager bluetoothManager =
+                    (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+            mBluetoothAdapter = bluetoothManager.getAdapter();
+            mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+            if (mBluetoothLeScanner == null) {
+                finish();
+                Toast.makeText(DeviceDetailsActivity.this, "请确保蓝牙已经打开！", Toast.LENGTH_SHORT).show();
+            }
+            mHandler = new Handler();
+            // 如果存储的设备MAC不为空
+            String deviceMac = getStringPref(DeviceDetailsActivity.this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, null);
+            if (deviceMac != null) {
+                preferredDevice = deviceMac;
+
+            } else {
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+    };
     private void initialComponent() {
         // 实例化组件
         not_preheat_toggle = findViewById(R.id.not_preheat_toggle);
@@ -149,8 +159,6 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
                 not_preheat_toggle.setTextColor(Color.GRAY);
             }
         });
-
-
     }
 
     private void initialData() {
@@ -158,6 +166,10 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
         if (deviceItem != null) {
             Log.d(TAG, "设备详情页-获取到传入的设备对象：" + deviceItem.toString());
+            // 使用SDK中的方法，存储选中的设备信息，包括设备mac和名称
+            storeStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceItem.getDeviceMac());
+            storeStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, deviceItem.getDeviceName());
+
         } else {
             Log.e(TAG, "设备详情页-获取到传入的设备对象为NULL！");
             Toast.makeText(this, "无法获得设备信息，软件发生异常！", Toast.LENGTH_LONG).show();
@@ -181,4 +193,5 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
             Log.d("DeviceDetailsActivity", "点击了菜单按钮");
         }
     }
+
 }

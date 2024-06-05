@@ -42,6 +42,7 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
             @Override
             public void onClick(View view) {
                 int currentPosition = holder.getAdapterPosition();
+                // 当项目条在视野内，并且isClickable为true时，绑定点击事件
                 if (currentPosition != RecyclerView.NO_POSITION && isClickable) {
                     onItemClickListener.OnItemClick(holder.getAdapterPosition());
                 }
@@ -49,6 +50,7 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
         });
     }
 
+    // 对比列表对象与传入列表对象之间是否有差异，有差异则更新列表。
     public void updateDeviceList(List<DeviceItem> newDeviceList) {
         Log.d(TAG, "主界面设备列表adapter-updateDeviceList被调用，正在尝试更新列表！");
 

@@ -152,11 +152,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         pb_news.setVisibility(View.INVISIBLE);
         tv_nes_empty.setVisibility(View.VISIBLE);
         rv_devices_list.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        // 设置RecycleView的适配器
         deviceListAdapter = new MainActivityDeviceListAdapter(deviceItem);
         rv_devices_list.setAdapter(deviceListAdapter);
         deviceListAdapter.setOnItemClickListener(position -> {
             // 点击设备列表中的设备，跳转到设备详情页面
             Intent i = new Intent(MainActivity.this, DeviceDetailsActivity.class);
+            // 将序列化的对象DeviceItem直接传入intent
             i.putExtra("deviceItem", deviceItem.get(position));
             startActivity(i);
         });
@@ -164,6 +166,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         enableAllComponent(false);
     }
 
+    // 检查用户是否是第一次使用、检查用户是否已登录
     private void checkFirstRunOrUserAgreement() {
         Log.e(TAG, "主界面-检查是否是第一次启动checkFirstRunOrUserAgreement called");
         // 禁用所有组件，避免误触
@@ -239,6 +242,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    // 通过服务器校验用户登录状态
     private void serverVerificationLoginToken(CheckLoginStatueCallback checkLoginStatueCallback, String token) {
         Log.d(TAG, "主界面-serverVerificationLoginToken called");
 
@@ -308,6 +312,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    // 更新界面列表为空时显示的文字
     private void updateEmptyState() {
         Log.d(TAG, "主界面-尝试更新列表是否为空的文本");
         if (tv_devices_list_empty != null && deviceItem != null) {
@@ -321,6 +326,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    // 启用或停用所有设备
     private void enableAllComponent(boolean enable) {
         ib_shutdown.setEnabled(enable);
         ib_account.setEnabled(enable);
@@ -330,6 +336,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         deviceListAdapter.setClickable(enable);
     }
 
+    // 响应界面组件点击事件
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.ib_shutdown) {
@@ -359,6 +366,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.e(TAG, "主界面-onDestroy called!");
     }
 
+    // 当用户系统设置改变时，系统回调此函数（例如修改夜间模式等）
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);

@@ -49,7 +49,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class DevicePermissionCheckFragment extends DialogFragment implements View.OnClickListener {
+public class DevicePermissionCheckFragment extends DialogFragment implements View.OnClickListener {  // 选择蓝牙设备时，弹出的验证弹窗
     private static final String TAG = "DevicePermissionCheckFr";
     private Context context;
     private Handler handler;
@@ -257,7 +257,9 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
                     public void onSuccess() {
                         Log.d(TAG, "添加设备授权弹窗-设备授权码验证成功！");
                         permissionCallback.onSuccess(deviceToken);
-                        dismiss();
+                        if (isResumed()) {
+                            dismiss();
+                        }
                     }
 
                     @Override
@@ -336,6 +338,16 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
         initialData();
     }
 
+    @Override
+    public void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+    }
+
     private void initialData() {
         Bundle bundle = getArguments();
         if (bundle != null) {
@@ -359,6 +371,7 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
 
         void onFailed();
     }
+
 
     public interface VerifyDevicePermissionCallback {
         void onSuccess(String token);

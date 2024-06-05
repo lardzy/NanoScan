@@ -39,7 +39,7 @@ import com.ISCSDK.ISCNIRScanSDK;
 
 import java.util.ArrayList;
 
-public class SelectDeviceViewActivity extends AppCompatActivity implements View.OnClickListener {
+public class SelectDeviceViewActivity extends AppCompatActivity implements View.OnClickListener { // 选择蓝牙设备界面
     private static final int REQUEST_CODE_PERMISSIONS = 101;
     private static final String[] REQUIRED_PERMISSIONS = getRequiredPermissions();
     private static String DEVICE_NAME = "NIR";
@@ -66,7 +66,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION
             };
-        } else { // Android 6.0 to Android 11
+        } else { // Android 6.0 到 Android 11
             return new String[]{
                     Manifest.permission.BLUETOOTH,
                     Manifest.permission.BLUETOOTH_ADMIN,
@@ -142,8 +142,10 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
             public void onScanResult(int callbackType, ScanResult result) {
                 super.onScanResult(callbackType, result);
                 BluetoothDevice device = result.getDevice();
+
                 // 如果扫描到的设备名称不为null，且名称中包含设定的名称前缀，且getScanRecord对象不为null!
-                @SuppressLint("MissingPermission") String name = device.getName();
+                @SuppressLint("MissingPermission")
+                String name = device.getName();
                 if (name != null && name.contains(DEVICE_NAME) && result.getScanRecord() != null) {
                     Boolean isDeviceInList = false;
                     // 新建ISCNIRScanSDK.NanoDevice对象

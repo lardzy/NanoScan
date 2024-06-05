@@ -33,7 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DeviceListActivity extends AppCompatActivity {
-    private  List<DeviceItem> itemList;
+    private List<DeviceItem> itemList;
     private Button button_add_device;
     private ImageButton imageButton_search, imageButton_back;
     private View.OnClickListener onClickListener;
@@ -114,7 +114,6 @@ public class DeviceListActivity extends AppCompatActivity {
             if (view.getId() == R.id.button_add_device) {
                 // 添加新设备
                 Intent intent = new Intent(DeviceListActivity.this, SelectDeviceViewActivity.class);
-//                startActivity(intent);
                 activityResultLauncher.launch(intent);
 
             } else if (view.getId() == R.id.imageButton_back) {
@@ -172,6 +171,7 @@ public class DeviceListActivity extends AppCompatActivity {
 
     // 添加设备，更新列表和本地配置文件
     private void addDevice(DeviceItem newItem) {
+        // 检查列表中是否有重复设备，使用mac地址校验。
         for (DeviceItem deviceItem : itemList) {
             if (deviceItem.getDeviceMac().equals(newItem.getDeviceMac())) {
                 Toast.makeText(this, "设备已在列表中！", Toast.LENGTH_SHORT).show();
@@ -193,6 +193,7 @@ public class DeviceListActivity extends AppCompatActivity {
         }
     }
 
+    // 将设备列表List对象保存至本地。
     private void itemListChangedToFile() {
         try (FileOutputStream fos = openFileOutput("deviceItem.ser", MODE_PRIVATE);
              ObjectOutputStream oos = new ObjectOutputStream(fos)) {
@@ -202,7 +203,7 @@ public class DeviceListActivity extends AppCompatActivity {
             Toast.makeText(this, "配置信息写入失败，请检查设备存储空间！", Toast.LENGTH_SHORT).show();
         }
     }
-
+    // 将本地设备列表List对象读取至对象。
     private void loadItemListFromFile() {
         try (FileInputStream fis = openFileInput("deviceItem.ser");
              ObjectInputStream ois = new ObjectInputStream(fis)) {
