@@ -27,7 +27,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         return new DeviceViewHolder(v);
     }
 
-    // 用于对子项数据进行赋值，当子项进入屏幕内时执行。
+    // 用于对子项数据进行赋值，当子项进入屏幕内时被调用。
     @Override
     public void onBindViewHolder(@NonNull DeviceViewHolder holder, int position) {
         DeviceItem currentItem = deviceItems.get(position);

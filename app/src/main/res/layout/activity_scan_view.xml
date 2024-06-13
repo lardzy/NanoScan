@@ -199,12 +199,11 @@
             android:layout_marginTop="12dp"
             android:layout_marginEnd="18dp"
             android:layout_marginBottom="12dp"
-            android:text="@string/new_scan_title"
-            android:textSize="18sp"
-            android:textStyle="bold"
             android:layout_weight="0.1"
             android:backgroundTint="@color/accept_button"
-            />
+            android:text="@string/new_scan_title"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
