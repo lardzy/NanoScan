@@ -13,9 +13,11 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -36,8 +38,11 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.ISCSDK.ISCNIRScanSDK;
+
+import java.util.Arrays;
 
 public class DeviceDetailsActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "DeviceDetailsActivity";
@@ -54,6 +59,21 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
     private Handler mHandler;
     // 用户当前选择的设备的MAC地址
     private String preferredDevice;
+    // region GetDeviceStatusReceiver使用的变量、常量。
+    private String battery = "";
+    private String TotalLampTime = "";
+    private byte[] devbyte;
+    private byte[] errbyte;
+    private float temprature;
+    private float humidity;
+    // endregion
+    //region broadcast 接收器
+    private final BroadcastReceiver GetDeviceStatusReceiver = new GetDeviceStatusReceiver();
+    private final BroadcastReceiver RefCoeffDataProgressReceiver = new RefCoeffDataProgressReceiver();
+    private final IntentFilter requestCalCoeffFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_COEFF);
+
+    // endregion
+
     ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
@@ -141,6 +161,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         }
     };
 
+
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
         if (lamptime / 86400 != 0) {
@@ -174,7 +195,11 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         bindService(gattServiceIntent, serviceConnection, BIND_AUTO_CREATE);
         Log.d(TAG, "设备详情页-ISCNIRScanSDK服务已绑定!");
         //todo: region 注册广播接收器
-
+        //region Register all needed broadcast receivers
+        Log.d(TAG, "设备详情页-开始注册广播。");
+        LocalBroadcastManager.getInstance(this).registerReceiver(GetDeviceStatusReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_STATUS));
+        LocalBroadcastManager.getInstance(this).registerReceiver(RefCoeffDataProgressReceiver, requestCalCoeffFilter);
+        // endregion
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -190,8 +215,8 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         scan = findViewById(R.id.scan);
         device_connection_layout = findViewById(R.id.device_connection_layout);
         light_usage_duration = findViewById(R.id.light_usage_duration);
-        temperature_value = findViewById(R.id.temperature_value);
-        humidity_value = findViewById(R.id.humidity_value);
+        temperature_value = findViewById(R.id.spectral_reference_update_date_value);
+        humidity_value = findViewById(R.id.number_of_spectra_collected_value);
         battery_level = findViewById(R.id.battery_level);
         scan_progressbar = findViewById(R.id.scan_progressbar);
         progressBar = findViewById(R.id.progressBar);
@@ -337,13 +362,50 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
             alertDialog.dismiss();
             finish();
         });
+        // 确保此时用户没有退出当前Activity
+        if (!isFinishing() && !isDestroyed()) {
+            runOnUiThread(() -> {
+                if (!isFinishing() && !isDestroyed()) {
+                    alertDialog = alertDialogBuilder.create();
+                    alertDialog.show();
+                }
+            });
 
-        alertDialog = alertDialogBuilder.create();
-        alertDialog.show();
-
+        }
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(serviceConnection);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(GetDeviceStatusReceiver);
+    }
 
+    public class GetDeviceStatusReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "设备详情页-GetDeviceStatusReceiver接收到广播！");
+            battery = Integer.toString(intent.getIntExtra(ISCNIRScanSDK.EXTRA_BATT, 0));
+            long lamptime = intent.getLongExtra(ISCNIRScanSDK.EXTRA_LAMPTIME, 0);
+            TotalLampTime = GetLampTimeString(lamptime);
+            devbyte = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DEV_STATUS_BYTE);
+            Log.e(TAG, "battery:" + battery + "TotalLampTime:" + TotalLampTime + "devbyte:" + Arrays.toString(devbyte));
+        }
+    }
 
+    public class RefCoeffDataProgressReceiver extends BroadcastReceiver{
 
+        @Override
+        public void onReceive(Context context, Intent intent) {
+//            int intExtra = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+            Boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE_PACKET, false);
+            if (size) {
+                Log.e(TAG, "设备详情页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为true");
+            } else {
+//                barProgressDialog.setProgress(barProgressDialog.getProgress() + intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0));
+                int intExtra1 = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+                Log.e(TAG, "设备详情页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为false，其中EXTRA_REF_CAL_COEFF_SIZE为：" + intExtra1);
+            }
+        }
+    }
 }

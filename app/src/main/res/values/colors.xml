@@ -7,6 +7,7 @@
     <color name="background">#F0F4F2</color>
     <color name="statusBarColor">#F0F4F2</color>
     <color name="forgetPassword">#257ef4</color>
+    <color name="main_color">#257ef4</color>
     <color name="register">#257ef4</color>
     <color name="signup">#50d2c9</color>
     <color name="login_in">#50d2c9</color>

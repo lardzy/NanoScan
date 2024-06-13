@@ -186,12 +186,12 @@
             app:layout_constraintTop_toBottomOf="@+id/device_connection_layout" />
 
         <TextView
-            android:id="@+id/temperature_text"
+            android:id="@+id/spectral_reference_update_date_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="6dp"
-            android:text="@string/temperature_text"
+            android:text="@string/spectral_reference_update_date"
             android:textColor="@color/gray"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -199,43 +199,43 @@
             app:layout_constraintTop_toBottomOf="@+id/light_usage" />
 
         <TextView
-            android:id="@+id/temperature_value"
+            android:id="@+id/spectral_reference_update_date_value"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:layout_marginTop="7dp"
-            android:text="@string/temperature_value"
+            android:text="@string/spectral_reference_update_date_value"
             android:textColor="@color/gray"
             android:textSize="14sp"
             android:textStyle="bold"
-            app:layout_constraintStart_toEndOf="@+id/light_usage"
+            app:layout_constraintStart_toEndOf="@+id/spectral_reference_update_date_text"
             app:layout_constraintTop_toBottomOf="@+id/light_usage_duration" />
 
         <TextView
-            android:id="@+id/humidity_text"
+            android:id="@+id/number_of_spectra_collected_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="6dp"
-            android:text="@string/humidity_text"
+            android:text="@string/number_of_spectra_collected"
             android:textColor="@color/gray"
             android:textSize="14sp"
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/temperature_text" />
+            app:layout_constraintTop_toBottomOf="@+id/spectral_reference_update_date_text" />
 
         <TextView
-            android:id="@+id/humidity_value"
+            android:id="@+id/number_of_spectra_collected_value"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:layout_marginTop="7dp"
-            android:text="@string/humidity_value"
+            android:text="@string/number_of_spectra_collected_value"
             android:textColor="@color/gray"
             android:textSize="14sp"
             android:textStyle="bold"
-            app:layout_constraintStart_toEndOf="@+id/light_usage"
-            app:layout_constraintTop_toBottomOf="@+id/temperature_value" />
+            app:layout_constraintStart_toEndOf="@+id/number_of_spectra_collected_text"
+            app:layout_constraintTop_toBottomOf="@+id/spectral_reference_update_date_value" />
 
         <View
             android:id="@+id/view"
@@ -248,7 +248,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/humidity_text" />
+            app:layout_constraintTop_toBottomOf="@+id/number_of_spectra_collected_text" />
 
         <ImageButton
             android:id="@+id/scan"

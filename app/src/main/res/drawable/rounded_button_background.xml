@@ -1,0 +1,9 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="16dp" /> <!-- 设置四个角的圆角半径 -->
+    <solid android:color="@color/accept_button" /> <!-- 设置按钮的背景颜色 -->
+    <padding
+        android:left="16dp"
+        android:top="8dp"
+        android:right="16dp"
+        android:bottom="8dp" /> <!-- 设置按钮的内边距 -->
+</shape>

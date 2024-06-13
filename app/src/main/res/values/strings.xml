@@ -62,6 +62,7 @@
     <string name="device_type_nir">近红外光谱仪</string>
     <string name="device_title">设备列表</string>
     <string name="add_device">添加设备</string>
+    <string name="new_scan_title">新的扫描</string>
     <string name="select_device">选择设备</string>
     <string name="signal_strength">-99</string>
     <string name="mac_address">11:22:33:44:55:66</string>
@@ -103,14 +104,17 @@
     <string name="device_information_dialog_device_name_hint">设备名称最长不超过10个字</string>
     <string name="device_information_dialog_device_info">设备信息：</string>
     <string name="device_information_dialog_device_type">设备类型：</string>
-    <string name="device_details_connecting_device">点击更新数据</string>
+    <string name="device_details_connecting_device">点击更新光谱数据</string>
     <string name="battery_level">N/A</string>
     <string name="light_usage_duration">*hr *min *sec</string>
     <string name="light_usage">光源通电时长：</string>
-    <string name="temperature_text">设备温度：</string>
-    <string name="temperature_value">N/A °C</string>
-    <string name="humidity_text">设备湿度：</string>
-    <string name="humidity_value">N/A</string>
+    <string name="remaining_battery_level">剩余电量</string>
+    <string name="spectral_reference_update_date">光谱参比更新日期：</string>
+    <string name="spectral_reference_update_time">参比更新时间</string>
+    <string name="spectral_reference_update_date_value">N/A</string>
+    <string name="spectral_reference_update_time_value">N/A</string>
+    <string name="number_of_spectra_collected">设备已采集光谱数量：</string>
+    <string name="number_of_spectra_collected_value">N/A</string>
     <string name="preheat_light_source_switch">是否预热光源</string>
     <string name="preheat_toggle">预热光源</string>
     <string name="not_preheat_toggle">不预热光源</string>
@@ -129,4 +133,6 @@
     <string name="tv_nes_empty">暂无信息</string>
     <string name="not_connected_title">未连接</string>
     <string name="not_connected_message">请你确保手机的蓝牙已经打开，然后重新选择列表中的设备进行连接！</string>
+    <string name="division_line">纵向分割线</string>
+    <string name="back_button">返回按钮</string>
 </resources>
