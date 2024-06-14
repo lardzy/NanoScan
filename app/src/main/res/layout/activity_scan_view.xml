@@ -48,6 +48,7 @@
         android:layout_marginEnd="24dp"
         android:background="@drawable/rounded_rectangle_for_devices_card"
         android:orientation="horizontal"
+        android:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHeight_default="percent"
         app:layout_constraintHeight_percent="0.12"
@@ -183,6 +184,7 @@
         app:layout_constraintTop_toBottomOf="@+id/ll_top_components">
 
         <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/chart"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="0.5" />
@@ -193,6 +195,7 @@
             android:layout_weight="0.25" />
 
         <Button
+            android:id="@+id/start_scan_button"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginStart="18dp"
@@ -201,7 +204,7 @@
             android:layout_marginBottom="12dp"
             android:layout_weight="0.1"
             android:backgroundTint="@color/accept_button"
-            android:text="@string/new_scan_title"
+            android:text="@string/start_scan_button"
             android:textSize="18sp"
             android:textStyle="bold" />
 

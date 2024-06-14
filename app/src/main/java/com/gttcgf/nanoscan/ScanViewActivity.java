@@ -1,6 +1,7 @@
 package com.gttcgf.nanoscan;
 
 import static com.ISCSDK.ISCNIRScanSDK.getStringPref;
+import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -20,6 +21,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -27,26 +31,27 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.ISCSDK.ISCNIRScanSDK;
 
 import java.util.Arrays;
 
-public class ScanViewActivity extends AppCompatActivity {
+public class ScanViewActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "ScanViewActivity";
     private static String DEVICE_NAME = "NIR";
+    // region UI组件
+    private FrameLayout view_back;
+    private Button start_scan_button;
     // endregion
-    //region broadcast 接收器
-    private final BroadcastReceiver GetDeviceStatusReceiver = new GetDeviceStatusReceiver();
-    private final BroadcastReceiver RefCoeffDataProgressReceiver = new RefCoeffDataProgressReceiver();
-    private final IntentFilter requestCalCoeffFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_COEFF);
     private DeviceItem deviceItem;
     private ISCNIRScanSDK mNanoBLEService;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
+    // 当前选择的设备的MAC地址
     private String preferredDevice;
     private Handler mHandler;
-    private AlertDialog alertDialog;    // endregion
+    private AlertDialog alertDialog;
     // 设备是否已经连接上
     private boolean connected;
     // region GetDeviceStatusReceiver使用的变量、常量。
@@ -56,7 +61,14 @@ public class ScanViewActivity extends AppCompatActivity {
     private byte[] errbyte;
     private float temprature;
     private float humidity;
+    // endregion
+    //region broadcast 接收器、过滤器
+    private final BroadcastReceiver GetDeviceStatusReceiver = new GetDeviceStatusReceiver();
+    private final BroadcastReceiver RefCoeffDataProgressReceiver = new RefCoeffDataProgressReceiver();
+    private final BroadcastReceiver NotifyCompleteReceiver = new NotifyCompleteReceiver();
+    private final IntentFilter requestCalCoeffFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_COEFF);
 
+    // endregion
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
         if (lamptime / 86400 != 0) {
@@ -85,6 +97,48 @@ public class ScanViewActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        initialData();
+        initialComponent();
+        // 绑定服务
+        Intent intent = new Intent(this, ISCNIRScanSDK.class);
+        bindService(intent, serviceConnection, BIND_AUTO_CREATE);
+        Log.d(TAG, "设备详情页-ISCNIRScanSDK服务已绑定!");
+        //todo: region 注册广播接收器
+        //region Register all needed broadcast receivers
+        Log.d(TAG, "设备详情页-开始注册广播。");
+        LocalBroadcastManager.getInstance(this).registerReceiver(GetDeviceStatusReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_STATUS));
+        LocalBroadcastManager.getInstance(this).registerReceiver(RefCoeffDataProgressReceiver, requestCalCoeffFilter);
+        // endregion
+    }
+
+    private void initialComponent() {
+        view_back = findViewById(R.id.view_back);
+        start_scan_button = findViewById(R.id.start_scan_button);
+
+        start_scan_button.setEnabled(false);
+    }
+
+    private void initialData() {
+        deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
+        if (deviceItem != null) {
+            Log.d(TAG, "设备详情页-获取到传入的设备对象：" + deviceItem.toString());
+            // 使用SDK中的方法，存储选中的设备信息，包括设备mac和名称
+            storeStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceItem.getDeviceMac());
+            storeStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, deviceItem.getDeviceName());
+        } else {
+            Log.e(TAG, "设备详情页-获取到传入的设备对象为NULL！");
+            Toast.makeText(this, "无法获得设备信息，软件发生异常！", Toast.LENGTH_LONG).show();
+            finish();
+        }
+    }
+
+    @Override
+    public void onClick(View view) {
+        if (view.getId() == R.id.view_back) {
+            finish();
+            return;
+        }
     }
 
     // 开始优先扫描用户选择的蓝牙设备
@@ -176,34 +230,6 @@ public class ScanViewActivity extends AppCompatActivity {
         }
     }
 
-    public class GetDeviceStatusReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.d(TAG, "设备详情页-GetDeviceStatusReceiver接收到广播！");
-            battery = Integer.toString(intent.getIntExtra(ISCNIRScanSDK.EXTRA_BATT, 0));
-            long lamptime = intent.getLongExtra(ISCNIRScanSDK.EXTRA_LAMPTIME, 0);
-            TotalLampTime = GetLampTimeString(lamptime);
-            devbyte = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DEV_STATUS_BYTE);
-            Log.e(TAG, "battery:" + battery + "TotalLampTime:" + TotalLampTime + "devbyte:" + Arrays.toString(devbyte));
-        }
-    }
-
-    public class RefCoeffDataProgressReceiver extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-//            int intExtra = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
-            Boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE_PACKET, false);
-            if (size) {
-                Log.e(TAG, "设备详情页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为true");
-            } else {
-//                barProgressDialog.setProgress(barProgressDialog.getProgress() + intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0));
-                int intExtra1 = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
-                Log.e(TAG, "设备详情页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为false，其中EXTRA_REF_CAL_COEFF_SIZE为：" + intExtra1);
-            }
-        }
-    }
-
     ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
@@ -215,15 +241,18 @@ public class ScanViewActivity extends AppCompatActivity {
                 Log.e(TAG, "设备详情页-BLE 不可用，活动结束！");
                 finish();
             }
-
+            // 蓝牙管理
             BluetoothManager bluetoothManager =
                     (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+            // 蓝牙适配器
             mBluetoothAdapter = bluetoothManager.getAdapter();
+            // 蓝牙Scanner
             mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
             if (mBluetoothLeScanner == null) {
                 Log.e(TAG, "设备详情页-BluetoothLeScanner 不可用，活动结束！");
                 finish();
                 Toast.makeText(ScanViewActivity.this, "请确保蓝牙已经打开！", Toast.LENGTH_SHORT).show();
+                return;
             }
             mHandler = new Handler();
             // 如果存储的设备MAC不为空
@@ -231,6 +260,7 @@ public class ScanViewActivity extends AppCompatActivity {
             if (deviceMac != null) {
                 preferredDevice = deviceMac;
                 Log.d(TAG, "设备详情页-获取到存储的设备MAC！mac:" + deviceMac);
+                // 开始扫描附加是否有选择的
                 scanPreferredLeDevice(true);
             } else {  // 如果存储的设备MAC为空
                 Log.e(TAG, "设备详情页-存储的设备MAC为空!");
@@ -291,6 +321,42 @@ public class ScanViewActivity extends AppCompatActivity {
             }
         }
     };
+
+
+    public class GetDeviceStatusReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "设备详情页-GetDeviceStatusReceiver接收到广播！");
+            battery = Integer.toString(intent.getIntExtra(ISCNIRScanSDK.EXTRA_BATT, 0));
+            long lamptime = intent.getLongExtra(ISCNIRScanSDK.EXTRA_LAMPTIME, 0);
+            TotalLampTime = GetLampTimeString(lamptime);
+            devbyte = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DEV_STATUS_BYTE);
+            Log.e(TAG, "battery:" + battery + "TotalLampTime:" + TotalLampTime + "devbyte:" + Arrays.toString(devbyte));
+        }
+    }
+
+    public class RefCoeffDataProgressReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+//            int intExtra = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+            Boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE_PACKET, false);
+            if (size) {
+                Log.e(TAG, "设备详情页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为true");
+            } else {
+//                barProgressDialog.setProgress(barProgressDialog.getProgress() + intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0));
+                int intExtra1 = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+                Log.e(TAG, "设备详情页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为false，其中EXTRA_REF_CAL_COEFF_SIZE为：" + intExtra1);
+            }
+        }
+    }
+
+    public class NotifyCompleteReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+        }
+    }
 
 
 }

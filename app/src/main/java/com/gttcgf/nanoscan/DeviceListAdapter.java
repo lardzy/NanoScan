@@ -31,7 +31,9 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
     @Override
     public void onBindViewHolder(@NonNull DeviceViewHolder holder, int position) {
         DeviceItem currentItem = deviceItems.get(position);
-        holder.card_image.setImageResource(currentItem.getImageResource());
+        // 设备只有一种时，为避免ImageResource为动态值而导致图像显示错误，先不进行图片id的更新。
+        // todo:不使用动态的资源id，避免图像显示错误
+//        holder.card_image.setImageResource(currentItem.getImageResource());
         holder.card_title.setText(currentItem.getDeviceName());
         holder.card_title_1.setText(currentItem.getDeviceType());
         holder.card_id.setText(String.valueOf(position + 1));

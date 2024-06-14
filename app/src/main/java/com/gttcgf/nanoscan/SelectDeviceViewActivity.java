@@ -174,7 +174,11 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
             Toast.makeText(this, "蓝牙未启用！", Toast.LENGTH_SHORT);
         } else {
             if (enable) {
-                handler.postDelayed(() -> mBluetoothLeScanner.stopScan(scannerCallback), ISCNIRScanSDK.SCAN_PERIOD);  // 6000L
+                handler.postDelayed(() -> {
+                    mBluetoothLeScanner.stopScan(scannerCallback);
+                    Toast.makeText(this, "扫描已停止", Toast.LENGTH_SHORT).show();
+                }, ISCNIRScanSDK.SCAN_PERIOD);  // 6000L
+                Toast.makeText(this, "扫描蓝牙设备中...", Toast.LENGTH_LONG).show();
                 mBluetoothLeScanner.startScan(scannerCallback);
             } else {
                 mBluetoothLeScanner.startScan(scannerCallback);

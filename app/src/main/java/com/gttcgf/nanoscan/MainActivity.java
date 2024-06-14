@@ -77,7 +77,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         initializeData();
         initComponent();
-        checkFirstRunOrUserAgreement();
+        checkFirstRunOrUserAgreement();   // 检查用户是否是第一次使用、检查用户是否已登录
 
         // 应用窗口边缘到边缘的设置
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -158,7 +158,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         deviceListAdapter.setOnItemClickListener(position -> {
             // 点击设备列表中的设备，跳转到设备详情页面
             Intent i = new Intent(MainActivity.this, DeviceDetailsActivity.class);
-            // 将序列化的对象DeviceItem直接传入intent
+            // 将可序列化的对象DeviceItem直接传入intent
             i.putExtra("deviceItem", deviceItem.get(position));
             startActivity(i);
         });
@@ -371,7 +371,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         Log.e(TAG, "主界面-onConfigurationChanged called。newConfig:" + newConfig.orientation);
-        // 处理配置变化
+        // todo:处理配置变化
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             // 横屏时的处理
         } else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {
