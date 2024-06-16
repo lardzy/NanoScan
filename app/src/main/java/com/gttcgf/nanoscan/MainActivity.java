@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Context mcontext;
     private String username, loginToken;
     private SharedPreferences sharedPreferences;
-
+    public static StoreCalibration storeCalibration = new StoreCalibration();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -383,5 +383,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         void onSuccess(String newToken);
 
         void onFailed();
+    }
+
+    public static class StoreCalibration {
+        String device;
+        byte[] storrefCoeff;
+        byte[] storerefMatrix;
     }
 }

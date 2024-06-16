@@ -137,4 +137,5 @@
     <string name="division_line">纵向分割线</string>
     <string name="back_button">返回按钮</string>
     <string name="tv_scan_function_mode">采集模式</string>
+    <string name="tv_scan_function_1">采集并扫描</string>
 </resources>

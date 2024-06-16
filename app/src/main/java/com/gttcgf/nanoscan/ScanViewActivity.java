@@ -35,19 +35,29 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.ISCSDK.ISCNIRScanSDK;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class ScanViewActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "ScanViewActivity";
     private static String DEVICE_NAME = "NIR";
+    private Context mContext;
     // endregion
     //region broadcast 接收器、过滤器
     private final BroadcastReceiver GetDeviceStatusReceiver = new GetDeviceStatusReceiver();
     private final BroadcastReceiver RefCoeffDataProgressReceiver = new RefCoeffDataProgressReceiver();
+    private final BroadcastReceiver RefDataReadyReceiver = new RefDataReadyReceiver();
+    private final BroadcastReceiver CalMatrixDataProgressReceiver = new CalMatrixDataProgressReceiver();
     private final BroadcastReceiver NotifyCompleteReceiver = new NotifyCompleteReceiver();
+    private final BroadcastReceiver ReturnSetLampReceiver = new ReturnSetLampReceiver();
     private final IntentFilter requestCalCoeffFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_COEFF);
+    private final IntentFilter refReadyFilter = new IntentFilter(ISCNIRScanSDK.REF_CONF_DATA);
+    private final IntentFilter notifyCompleteFilter = new IntentFilter(ISCNIRScanSDK.ACTION_NOTIFY_DONE);
+    private final IntentFilter requestCalMatrixFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_MATRIX);
     private boolean warmUp = false;
     private LampInfo lampInfo = LampInfo.ManualLamp;
+    int ActiveConfigindex;  // 扫描配置列表
+    private ArrayList<ISCNIRScanSDK.ScanConfiguration> ScanConfigList = new ArrayList<>();
     // region UI组件
     private FrameLayout view_back;
     private Button start_scan_button;
@@ -60,6 +70,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private String preferredDevice;
     private Handler mHandler;
     private AlertDialog alertDialog;
+    // 设备的校准系数和矩阵
+    private byte[] refCoeff;
+    private byte[] refMatrix;
     // 设备是否已经连接上
     private boolean connected;
     // region GetDeviceStatusReceiver使用的变量、常量。
@@ -92,8 +105,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.e(TAG, "扫描页-onCreate called.");
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_scan_view);
+        mContext = this;
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -111,6 +126,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         Log.d(TAG, "扫描页-开始注册广播。");
         LocalBroadcastManager.getInstance(this).registerReceiver(GetDeviceStatusReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_STATUS));
         LocalBroadcastManager.getInstance(this).registerReceiver(RefCoeffDataProgressReceiver, requestCalCoeffFilter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(NotifyCompleteReceiver, notifyCompleteFilter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(CalMatrixDataProgressReceiver, requestCalMatrixFilter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(RefDataReadyReceiver, refReadyFilter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(ReturnSetLampReceiver, new IntentFilter(ISCNIRScanSDK.SET_LAMPSTATE_COMPLETE));
         // endregion
     }
 
@@ -120,7 +139,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         start_scan_button.setEnabled(false);
     }
 
+    // 初始化各类数据
     private void initialData() {
+        // 获取传入的设备对象deviceItem
         deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
         warmUp = getIntent().getBooleanExtra("warmUp", false);
         Log.d(TAG, "扫描页-获取到deviceItem：" + deviceItem + "\n" + "获取到warmUp：" + warmUp);
@@ -140,7 +161,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     public void onClick(View view) {
         if (view.getId() == R.id.view_back) {
             finish();
-            return;
         } else if (view.getId() == R.id.start_scan_button) {
             Toast.makeText(this, "点击了扫描按钮", Toast.LENGTH_SHORT).show();
         }
@@ -239,6 +259,74 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         WarmDevice, ManualLamp, CloseWarmUpLampInScan
     }
 
+    // 灯源设置完成会发送对应广播，接收器根据灯源状态进行进一步的操作
+    public class ReturnSetLampReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //Complete set lamp on,off,auto
+            switch (lampInfo) {
+                case ManualLamp:
+                    break;
+                case WarmDevice:
+                    // 设备预热完成，将 Lamp_Info 设置为 ManualLamp，然后继续后续操作
+                    lampInfo = LampInfo.ManualLamp;
+
+                    // 当更新过设备出厂参比，则将存储的ReferenceScan改回"Not"。
+                    if (getStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.ReferenceScan, "Not").equals("ReferenceScan"))
+                        storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.ReferenceScan, "Not");
+
+                    //Synchronize time and download calibration coefficient and calibration matrix
+                    ISCNIRScanSDK.SetCurrentTime();
+                    break;
+                case CloseWarmUpLampInScan:
+                    warmUp = false;
+                    ISCNIRScanSDK.GetDeviceStatus();
+                    break;
+            }
+        }
+    }
+
+    public class NotifyCompleteReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // todo:如果用户本次连接已经存储过校准系数，则再次进入此界面时，不需要重新再获取校准系数和矩阵
+            //  （ ISCNIRScanSDK.ShouldDownloadCoefficient = false）。
+            Log.d(TAG, "扫描页-NotifyCompleteReceiver called.\nwarmUp:" + warmUp);
+            // 如果用户选择了预热设备
+            if (warmUp) {
+                ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.ON);
+                lampInfo = LampInfo.WarmDevice;
+                // 注册ReturnSetLampReceiver以执行下一步
+            } else {
+                // 判断当前用户是不是刚刚替换了“出厂参比”，如果替换了，则确保用户不会跳过获取校准矩阵、校准参数的步骤
+                boolean reference = false;
+                if (getStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.ReferenceScan, "Not").equals("ReferenceScan")) {
+                    Log.e(TAG, "扫描页-NotifyCompleteReceiver用户替换设备出厂参比后重新进入扫描页");
+                    reference = true;
+                }
+                // 当软件本次启动期间，已经存储过校准系数和矩阵，则跳过校准并将ISCNIRScanSDK.ShouldDownloadCoefficient设置为false。
+                if (preferredDevice.equals(MainActivity.storeCalibration.device) && !reference) {
+                    Log.d(TAG, "扫描页-NotifyCompleteReceiver用户在本地已经存储校准参数");
+                    refCoeff = MainActivity.storeCalibration.storrefCoeff;
+                    refMatrix = MainActivity.storeCalibration.storerefMatrix;
+                    ArrayList<ISCNIRScanSDK.ReferenceCalibration> refCal = new ArrayList<>();
+                    refCal.add(new ISCNIRScanSDK.ReferenceCalibration(refCoeff, refMatrix));
+                    ISCNIRScanSDK.ReferenceCalibration.writeRefCalFile(mContext, refCal);
+                    // todo:此处可以初始化进度条
+                    //获取 active config ，同步时间。
+                    ISCNIRScanSDK.ShouldDownloadCoefficient = false;  // 确保SDK不会下载校准数据，直接进入下一步
+                    ISCNIRScanSDK.SetCurrentTime();
+                } else {
+                    // 本次启动没有存储校准参数，同步时间并下载校准系数和校准矩阵
+                    ISCNIRScanSDK.ShouldDownloadCoefficient = true;
+                    ISCNIRScanSDK.SetCurrentTime();
+                    Log.d(TAG, "扫描页-NotifyCompleteReceiver本地未找到校准数据，NotifyCompleteReceiver SetCurrentTime() called.");
+                }
+
+            }
+        }
+    }
+
     public class GetDeviceStatusReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -251,36 +339,89 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
-    public class RefCoeffDataProgressReceiver extends BroadcastReceiver {
+    // 此广播接收器可以查看校准矩阵的接收进度
+    public class CalMatrixDataProgressReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-//            int intExtra = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
-            Boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE_PACKET, false);
+            Log.d(TAG, "扫描页-CalMatrixDataProgressReceiver-onReceive called，获取校准矩阵的接收进度。");
+            intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_MATRIX_SIZE, 0);
+            // 标记是否是第一个数据包，便于初始化进度条。
+            boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_MATRIX_SIZE_PACKET, false);
             if (size) {
-                Log.e(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为true");
+                // todo:此处初始化进度条，获得进度条总长度
             } else {
-//                barProgressDialog.setProgress(barProgressDialog.getProgress() + intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0));
-                int intExtra1 = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
-                Log.e(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为false，其中EXTRA_REF_CAL_COEFF_SIZE为：" + intExtra1);
+                // todo:此处更新进度
             }
         }
     }
 
-    public class NotifyCompleteReceiver extends BroadcastReceiver {
+    // 此广播接收器可以查看校准系数的接收进度，ACTION_REQ_CAL_COEFF
+    public class RefCoeffDataProgressReceiver extends BroadcastReceiver {
+
         @Override
         public void onReceive(Context context, Intent intent) {
-            // 如果用户选择了预热设备
-            if (warmUp) {
-                ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.ON);
-                lampInfo = LampInfo.WarmDevice;
+            Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver called,获取校准系数读取进度。");
+            // 获取总大小
+            int intExtra = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+//            Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver-onReceive-intExtra，接受到EXTRA_REF_CAL_COEFF_SIZE为：" + intExtra);
+            //  Boolean size代表是否是第一个数据包
+            boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE_PACKET, false);
+            if (size) {
+                // 是第一个数据包,此处初始化进度条
+                // todo:此处初始化进度条，获得进度条总长度
+                int totalSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+//                Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为true，当前为第一个数据包。");
+//                Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中接收到数据包总大小为：" + totalSize);
             } else {
-//                if (!getStringPref(ScanViewActivity.this, ISCNIRScanSDK.SharedPreferencesKeys.ReferenceScan, "Not").equals("ReferenceScan")
-//                && preferredDevice.equals(HomeViewActivity.storeCalibration.device)) {
-//
-//                }
+                // 不是第一个数据包，更新进度条
+                // todo:此处更新进度
+//                barProgressDialog.setProgress(barProgressDialog.getProgress() + intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0));
+                int currentSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+//                Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为false，当前数据包大小为：" + currentSize);
             }
         }
+    }
+
+    // 此广播接收器可以获取校准系数和校准矩阵具体的数值，REF_CONF_DATA
+    public class RefDataReadyReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "扫描页-RefDataReadyReceiver called,获取校准系数和校准矩阵具体的数值.");
+            refCoeff = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_REF_COEF_DATA);
+            refMatrix = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_REF_MATRIX_DATA);
+            ArrayList<ISCNIRScanSDK.ReferenceCalibration> refCal = new ArrayList<>();
+            refCal.add(new ISCNIRScanSDK.ReferenceCalibration(refCoeff, refMatrix));
+            ISCNIRScanSDK.ReferenceCalibration.writeRefCalFile(mContext, refCal);
+            // 将获取到的校准系数，存储到MainActivity中的静态内部类的成员变量中。
+            MainActivity.storeCalibration.device = preferredDevice;  // 用户选中的设备的mac
+            MainActivity.storeCalibration.storrefCoeff = refCoeff;
+            MainActivity.storeCalibration.storerefMatrix = refMatrix;
+
+            Log.d(TAG, "扫描页-RefDataReadyReceiver完成-refCoeff:" + Arrays.toString(refCoeff) + "\n-refMatrix:" +
+                    Arrays.toString(refMatrix));
+        }
+    }
+
+    //    用于获取设备的活动扫描配置。当设备下载完校准矩阵数据后，会发送 GET_ACTIVE_CONF 广播
+    private class GetActiveScanConfReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            ActiveConfigindex = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_ACTIVE_CONF)[0];
+            if (!ScanConfigList.isEmpty()) {
+//                GetActiveConfigOnResume();
+            } else {
+                // 如果 ScanConfigList 为空，说明尚未获取设备中的扫描配置列表。
+                // 调用 ISCNIRScanSDK.GetScanConfig() 函数来请求设备发送扫描配置列表。
+                ISCNIRScanSDK.GetScanConfig();
+            }
+
+        }
+    }
+
+    private void GetActiveConfigOnResume() {
+
     }
 
     ServiceConnection serviceConnection = new ServiceConnection() {
@@ -311,6 +452,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             // 如果存储的设备MAC不为空
             String deviceMac = getStringPref(ScanViewActivity.this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, null);
             if (deviceMac != null) {
+                // 将成员变量preferredDevice进行赋值。
                 preferredDevice = deviceMac;
                 Log.d(TAG, "扫描页-获取到存储的设备MAC！mac:" + deviceMac);
                 // 开始扫描附加是否有选择的
@@ -323,6 +465,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
+            // 当服务断连
             mNanoBLEService = null;
         }
     };
@@ -375,5 +518,41 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     };
 
+    private void ChangeLampState() {
+        if (warmUp) {
+            ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.AUTO);
+            warmUp = false;
+        }
+//        if (Current_Scan_Method == ScanMethod.Manual && toggle_button_manual_scan_mode.isChecked())//Manual->Normal,Quickset,Maintain
+//        {
+//            if (toggle_button_manual_lamp.getText().toString().toUpperCase().equals("ON")) {
+//                toggle_button_manual_lamp.setChecked(false);//close lamp
+//            }
+//            ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.AUTO);
+//        }
+    }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.e(TAG, "扫描页-onPause called");
+        // todo:按照SDK中的建议，如果onPause不是为了跳转其他界面，则应该finish()当前Activity。
+
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.e(TAG, "扫描页-onDestroy called");
+        // 改变光源状态，避免退出后光源常亮
+        ChangeLampState();
+        // todo:解绑服务、取消广播接收器的注册
+        unbindService(serviceConnection);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(GetDeviceStatusReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(RefCoeffDataProgressReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(NotifyCompleteReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(CalMatrixDataProgressReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(RefDataReadyReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(ReturnSetLampReceiver);
+    }
 }
