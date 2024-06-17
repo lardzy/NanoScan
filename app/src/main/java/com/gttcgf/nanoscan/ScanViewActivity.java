@@ -393,6 +393,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             ArrayList<ISCNIRScanSDK.ReferenceCalibration> refCal = new ArrayList<>();
             refCal.add(new ISCNIRScanSDK.ReferenceCalibration(refCoeff, refMatrix));
             ISCNIRScanSDK.ReferenceCalibration.writeRefCalFile(mContext, refCal);
+
             // 将获取到的校准系数，存储到MainActivity中的静态内部类的成员变量中。
             MainActivity.storeCalibration.device = preferredDevice;  // 用户选中的设备的mac
             MainActivity.storeCalibration.storrefCoeff = refCoeff;
