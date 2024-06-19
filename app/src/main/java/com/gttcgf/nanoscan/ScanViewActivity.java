@@ -24,6 +24,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -32,18 +34,22 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.ISCSDK.ISCNIRScanSDK;
+import com.github.mikephil.charting.charts.LineChart;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class ScanViewActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "ScanViewActivity";
     private static String DEVICE_NAME = "NIR";
     private Context mContext;
-    // endregion
-    //region broadcast 接收器、过滤器
+
+    // region broadcast 接收器、过滤器
     private final BroadcastReceiver GetDeviceStatusReceiver = new GetDeviceStatusReceiver();
     private final BroadcastReceiver RefCoeffDataProgressReceiver = new RefCoeffDataProgressReceiver();
     private final BroadcastReceiver RefDataReadyReceiver = new RefDataReadyReceiver();
@@ -54,6 +60,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private final IntentFilter refReadyFilter = new IntentFilter(ISCNIRScanSDK.REF_CONF_DATA);
     private final IntentFilter notifyCompleteFilter = new IntentFilter(ISCNIRScanSDK.ACTION_NOTIFY_DONE);
     private final IntentFilter requestCalMatrixFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_MATRIX);
+    // endregion
     private boolean warmUp = false;
     private LampInfo lampInfo = LampInfo.ManualLamp;
     int ActiveConfigindex;  // 扫描配置列表
@@ -61,6 +68,12 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // region UI组件
     private FrameLayout view_back;
     private Button start_scan_button;
+    private ProgressBar pb_load_calibration;
+    private TextView tv_load_calibration;
+    private LineChart chart;
+    private RecyclerView rv_function_list;
+    private FunctionListAdapter functionListAdapter;
+    private List<FunctionItem> functionList = new ArrayList<>();
     // endregion
     private DeviceItem deviceItem;
     private ISCNIRScanSDK mNanoBLEService;
@@ -82,8 +95,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private byte[] errbyte;
     private float temprature;
     private float humidity;
-
     // endregion
+
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
         if (lamptime / 86400 != 0) {
@@ -136,11 +149,30 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private void initialComponent() {
         view_back = findViewById(R.id.view_back);
         start_scan_button = findViewById(R.id.start_scan_button);
+        pb_load_calibration = findViewById(R.id.pb_load_calibration);
+        tv_load_calibration = findViewById(R.id.tv_load_calibration);
+        rv_function_list = findViewById(R.id.rv_function_list);
+
         start_scan_button.setEnabled(false);
+
+        // 初始化功能列表
+        rv_function_list.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+
+        functionListAdapter = new FunctionListAdapter(this, functionList);
+        rv_function_list.setAdapter(functionListAdapter);
     }
 
     // 初始化各类数据
     private void initialData() {
+        // 初始化功能列表
+        FunctionItem functionItem_1 = new FunctionItem("采集模式", "采集并扫描", R.drawable.baseline_auto_graph_24, true);
+        functionItem_1.setSelected(true);
+        functionList.add(functionItem_1);
+        functionList.add(new FunctionItem("采集模式", "仅采集光谱", R.drawable.baseline_stacked_line_chart_24, true));
+        functionList.add(new FunctionItem("设备功能", "更新参比", R.drawable.baseline_switch_access_shortcut_24, true));
+        // 使用出厂参比可以与其他选项共存
+        functionList.add(new FunctionItem("设备功能", "使用出厂参比", R.drawable.baseline_factory_24, false));
+
         // 获取传入的设备对象deviceItem
         deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
         warmUp = getIntent().getBooleanExtra("warmUp", false);
@@ -241,7 +273,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         // 用户点击确认后，结束当前activity
         alertDialogBuilder.setPositiveButton(getResources().getString(R.string.ok), (arg0, arg1) -> {
             alertDialog.dismiss();
-            finish();
+            // todo: 调试期间注释finish
+//            finish();
         });
         // 确保此时用户没有退出当前Activity
         if (!isFinishing() && !isDestroyed()) {
