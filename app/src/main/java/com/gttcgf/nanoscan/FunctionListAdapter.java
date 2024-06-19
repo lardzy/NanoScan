@@ -2,7 +2,6 @@ package com.gttcgf.nanoscan;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,7 +15,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class FunctionListAdapter extends RecyclerView.Adapter<FunctionListAdapter.FunctionListViewHolder> {
     private List<FunctionItem> functionList = new ArrayList<>();

@@ -5,8 +5,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
-import com.gttcgf.nanoscan.R;
-
 public class GuideStepAdapter extends FragmentStateAdapter {
 
     public GuideStepAdapter(FragmentActivity fragment) {
