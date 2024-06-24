@@ -51,7 +51,7 @@
         android:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHeight_default="percent"
-        app:layout_constraintHeight_percent="0.12"
+        app:layout_constraintHeight_percent="0.09"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/device_title">
 
@@ -84,7 +84,7 @@
                         android:layout_marginStart="18dp"
                         android:text="@string/remaining_battery_level"
                         android:textColor="@color/gray"
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:textStyle="bold"
                         app:layout_constraintBottom_toTopOf="@+id/tv_battery_level_value"
                         app:layout_constraintStart_toStartOf="parent"
@@ -148,7 +148,7 @@
                         android:layout_marginStart="18dp"
                         android:text="@string/spectral_reference_update_time"
                         android:textColor="@color/gray"
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:textStyle="bold"
                         app:layout_constraintBottom_toTopOf="@+id/tv_update_time"
                         app:layout_constraintStart_toStartOf="parent"
@@ -175,7 +175,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="12dp"
         android:background="@drawable/rounded_top_corners"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -194,7 +194,7 @@
             android:id="@+id/rv_function_list"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="0.25" />
+            android:layout_weight="0.2" />
 
         <Button
             android:id="@+id/start_scan_button"

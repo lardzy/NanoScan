@@ -22,6 +22,8 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
@@ -63,7 +65,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // endregion
     private boolean warmUp = false;
     private LampInfo lampInfo = LampInfo.ManualLamp;
-    int ActiveConfigindex;  // 扫描配置列表
     private ArrayList<ISCNIRScanSDK.ScanConfiguration> ScanConfigList = new ArrayList<>();
     // region UI组件
     private FrameLayout view_back;
@@ -74,6 +75,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private RecyclerView rv_function_list;
     private FunctionListAdapter functionListAdapter;
     private List<FunctionItem> functionList = new ArrayList<>();
+    private Animation fadeIn, fadeOut;
     // endregion
     private DeviceItem deviceItem;
     private ISCNIRScanSDK mNanoBLEService;
@@ -88,6 +90,21 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private byte[] refMatrix;
     // 设备是否已经连接上
     private boolean connected;
+    // region 设备配置文件
+    // 存储设备配置文件数量
+    private int storedConfSize;
+    // 记录已经接收到的配置文件内容数量
+    private int receivedConfSize = 0;
+    // 记录扫描配置字节列表
+    private ArrayList<byte[]> ScanConfig_Byte_List = new ArrayList<>();
+    // 从 scan configuration page 页面获取的记录扫描配置字节列表
+    private ArrayList<byte[]> ScanConfig_Byte_List_from_ScanConfiuration = new ArrayList<>();
+    private int ActiveConfigIndex;
+    // 设备当前活动的扫描配置
+    private ISCNIRScanSDK.ScanConfiguration activeConf;
+    // 存储当前活动配置的字节数组
+    private byte[] ActiveConfigByte;
+    // endregion
     // region GetDeviceStatusReceiver使用的变量、常量。
     private String battery = "";
     private String TotalLampTime = "";
@@ -152,18 +169,19 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         pb_load_calibration = findViewById(R.id.pb_load_calibration);
         tv_load_calibration = findViewById(R.id.tv_load_calibration);
         rv_function_list = findViewById(R.id.rv_function_list);
-
+        fadeIn = AnimationUtils.loadAnimation(this, R.anim.fade_in);
+        fadeOut = AnimationUtils.loadAnimation(this, R.anim.fade_out);
         start_scan_button.setEnabled(false);
 
         // 初始化功能列表
         rv_function_list.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-
         functionListAdapter = new FunctionListAdapter(this, functionList);
         rv_function_list.setAdapter(functionListAdapter);
     }
 
     // 初始化各类数据
     private void initialData() {
+        // todo: 后续根据是否存储了参比数据判断要不要默认选择使用出厂参比
         // 初始化功能列表
         FunctionItem functionItem_1 = new FunctionItem("采集模式", "采集并扫描", R.drawable.baseline_auto_graph_24, true);
         functionItem_1.setSelected(true);
@@ -171,7 +189,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         functionList.add(new FunctionItem("采集模式", "仅采集光谱", R.drawable.baseline_stacked_line_chart_24, true));
         functionList.add(new FunctionItem("设备功能", "更新参比", R.drawable.baseline_switch_access_shortcut_24, true));
         // 使用出厂参比可以与其他选项共存
-        functionList.add(new FunctionItem("设备功能", "使用出厂参比", R.drawable.baseline_factory_24, false));
+        FunctionItem functionItem_2 = new FunctionItem("设备功能", "使用出厂参比", R.drawable.baseline_factory_24, false);
+        functionItem_2.setSelected(true);
+        functionList.add(functionItem_2);
 
         // 获取传入的设备对象deviceItem
         deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
@@ -372,7 +392,35 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
-    // 此广播接收器可以查看校准矩阵的接收进度
+    // 此广播接收器可以查看校准系数的接收进度，ACTION_REQ_CAL_COEFF(ISCNIRScanSDK.SetCurrentTime()must be called)
+    public class RefCoeffDataProgressReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // 获取总大小
+            int intExtra = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+            Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver-onReceive-intExtra，接受到EXTRA_REF_CAL_COEFF_SIZE为：" + intExtra);
+            //  Boolean size代表是否是第一个数据包、且ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE是否是代表总大小
+            boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE_PACKET, false);
+            if (size) {
+                // 是第一个数据包,此处初始化进度条
+                // todo:此处初始化进度条，获得进度条总长度
+                int totalSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+                Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为true，当前为第一个数据包。");
+                Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中接收到数据包总大小为：" + totalSize);
+            } else {
+                // 不是第一个数据包，ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE代表当前数据包大小，更新进度条
+                // todo:此处更新进度
+//                barProgressDialog.setProgress(barProgressDialog.getProgress() + intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0));
+                int currentSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
+                Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为false，当前数据包大小为：" + currentSize);
+            }
+            // 当接收完毕后，调用 ISCNIRScanSDK.GetActiveConfig();，SDK将发送broadcast GET_ACTIVE_CONF。
+
+        }
+    }
+
+    // 此广播接收器可以查看校准矩阵的接收进度，ACTION_REQ_CAL_MATRIX(ISCNIRScanSDK.SetCurrentTime()must be called)
     public class CalMatrixDataProgressReceiver extends BroadcastReceiver {
 
         @Override
@@ -389,32 +437,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
-    // 此广播接收器可以查看校准系数的接收进度，ACTION_REQ_CAL_COEFF
-    public class RefCoeffDataProgressReceiver extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver called,获取校准系数读取进度。");
-            // 获取总大小
-            int intExtra = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
-//            Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver-onReceive-intExtra，接受到EXTRA_REF_CAL_COEFF_SIZE为：" + intExtra);
-            //  Boolean size代表是否是第一个数据包
-            boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE_PACKET, false);
-            if (size) {
-                // 是第一个数据包,此处初始化进度条
-                // todo:此处初始化进度条，获得进度条总长度
-                int totalSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
-//                Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为true，当前为第一个数据包。");
-//                Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中接收到数据包总大小为：" + totalSize);
-            } else {
-                // 不是第一个数据包，更新进度条
-                // todo:此处更新进度
-//                barProgressDialog.setProgress(barProgressDialog.getProgress() + intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0));
-                int currentSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
-//                Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为false，当前数据包大小为：" + currentSize);
-            }
-        }
-    }
 
     // 此广播接收器可以获取校准系数和校准矩阵具体的数值，REF_CONF_DATA
     public class RefDataReadyReceiver extends BroadcastReceiver {
@@ -437,13 +459,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
-    //    用于获取设备的活动扫描配置。当设备下载完校准矩阵数据后，会发送 GET_ACTIVE_CONF 广播
+    //    用于获取设备的活动扫描配置的索引。当设备下载完校准矩阵数据后，会发送 GET_ACTIVE_CONF 广播
     private class GetActiveScanConfReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            ActiveConfigindex = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_ACTIVE_CONF)[0];
+            // 获取活动配置索引
+            ActiveConfigIndex = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_ACTIVE_CONF)[0];
             if (!ScanConfigList.isEmpty()) {
+                // todo:实现本地读取扫描配置
 //                GetActiveConfigOnResume();
             } else {
                 // 如果 ScanConfigList 为空，说明尚未获取设备中的扫描配置列表。
@@ -454,8 +478,41 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
+    // todo:完成GetActiveConfigOnResume的逻辑
     private void GetActiveConfigOnResume() {
 
+    }
+
+    // 获取设备的扫描配置文件数量
+    public class ScanConfSizeReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            storedConfSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_CONF_SIZE, 0);
+            Log.d(TAG, "扫描页-ScanConfSizeReceiver被调用，storedConfSize：" + storedConfSize);
+        }
+    }
+
+    // 获取设备的扫描配置文件
+    public class ScanConfReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+//            ISCNIRScanSDK.GetScanConfig();
+            receivedConfSize++;
+            ScanConfig_Byte_List.add(intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DATA));
+            ScanConfigList.add(ISCNIRScanSDK.scanConf);
+            // 配置文件接收完成
+            if (receivedConfSize == storedConfSize) {
+                // 从ScanConfigList和ScanConfig_Byte_List中根据活动配置ActiveConfigIndex取出配置信息
+                for (int i = 0; i < ScanConfigList.size(); i++) {
+                    int ScanConfigIndexToByte = ScanConfigList.get(i).getScanConfigIndex();
+                    if (ActiveConfigIndex == ScanConfigIndexToByte) {
+                        activeConf = ScanConfigList.get(i);
+                        ActiveConfigByte = ScanConfig_Byte_List.get(i);
+                    }
+                }
+            }
+        }
     }
 
     ServiceConnection serviceConnection = new ServiceConnection() {
@@ -552,6 +609,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     };
 
+    // 改变灯状态
     private void ChangeLampState() {
         if (warmUp) {
             ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.AUTO);
