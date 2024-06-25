@@ -139,4 +139,12 @@
     <string name="tv_scan_function_mode">采集模式</string>
     <string name="tv_scan_function_1">采集并扫描</string>
     <string name="please_wait">请稍候…</string>
+    
+    <string name="connected_to_the_device">已连接到设备…开始同步数据</string>
+    <string name="calibration_coefficient_receiving">校准系数接收中…%1$s/%2$s</string>
+    <string name="calibration_matrix_receiving">校准矩阵接收中…%1$s/%2$s</string>
+    <string name="calibration_coefficient_and_matrix_read_from_local">校准系数和矩阵已从本地获取</string>
+    <string name="calibration_coefficient_received">校准系数接收完成</string>
+    <string name="calibration_matrix_received">校准矩阵接收完成</string>
+
 </resources>
