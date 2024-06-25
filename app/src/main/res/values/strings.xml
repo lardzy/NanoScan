@@ -146,5 +146,6 @@
     <string name="calibration_coefficient_and_matrix_read_from_local">校准系数和矩阵已从本地获取</string>
     <string name="calibration_coefficient_received">校准系数接收完成</string>
     <string name="calibration_matrix_received">校准矩阵接收完成</string>
+    <string name="active_scan_config_receiving">活动扫描配置接收中…</string>
 
 </resources>

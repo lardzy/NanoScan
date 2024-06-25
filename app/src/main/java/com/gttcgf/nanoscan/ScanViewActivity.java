@@ -60,15 +60,19 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private final BroadcastReceiver NotifyCompleteReceiver = new NotifyCompleteReceiver();
     private final BroadcastReceiver ReturnSetLampReceiver = new ReturnSetLampReceiver();
     private final BroadcastReceiver GetActiveScanConfReceiver = new GetActiveScanConfReceiver();
+    private final BroadcastReceiver ScanConfSizeReceiver = new ScanConfSizeReceiver();
+    private final BroadcastReceiver ScanConfReceiver = new ScanConfReceiver();
+
     private final IntentFilter requestCalCoeffFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_COEFF);
     private final IntentFilter refReadyFilter = new IntentFilter(ISCNIRScanSDK.REF_CONF_DATA);
     private final IntentFilter notifyCompleteFilter = new IntentFilter(ISCNIRScanSDK.ACTION_NOTIFY_DONE);
     private final IntentFilter requestCalMatrixFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_MATRIX);
+    private final IntentFilter scanConfFilter = new IntentFilter(ISCNIRScanSDK.SCAN_CONF_DATA);
 
     // endregion
     private boolean warmUp = false;
     private LampInfo lampInfo = LampInfo.ManualLamp;
-    private ArrayList<ISCNIRScanSDK.ScanConfiguration> ScanConfigList = new ArrayList<>();
+    private ArrayList<ISCNIRScanSDK.ScanConfiguration> scanConfigList = new ArrayList<>();
     // region UI组件
     private FrameLayout view_back;
     private Button start_scan_button;
@@ -102,18 +106,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // 记录已经接收到的配置文件内容数量
     private int receivedConfSize = 0;
     // 记录扫描配置字节列表
-    private ArrayList<byte[]> ScanConfig_Byte_List = new ArrayList<>();
-    // 从 scan configuration page 页面获取的记录扫描配置字节列表
-    private ArrayList<byte[]> ScanConfig_Byte_List_from_ScanConfiuration = new ArrayList<>();
-    private int ActiveConfigIndex;
+    private ArrayList<byte[]> scanConfigByteList = new ArrayList<>();
+    // 从设备获取的活动配置索引
+    private int activeConfigIndex;
     // 设备当前活动的扫描配置
     private ISCNIRScanSDK.ScanConfiguration activeConf;
     // 存储当前活动配置的字节数组
-    private byte[] ActiveConfigByte;
+    private byte[] activeConfigByte;
     // endregion
     // region GetDeviceStatusReceiver使用的变量、常量。
     private String battery = "";
-    private String TotalLampTime = "";
+    private String totalLampTime = "";
     private byte[] devbyte;
     private byte[] errbyte;
     private float temprature;
@@ -167,6 +170,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         LocalBroadcastManager.getInstance(this).registerReceiver(RefDataReadyReceiver, refReadyFilter);
         LocalBroadcastManager.getInstance(this).registerReceiver(ReturnSetLampReceiver, new IntentFilter(ISCNIRScanSDK.SET_LAMPSTATE_COMPLETE));
         LocalBroadcastManager.getInstance(this).registerReceiver(GetActiveScanConfReceiver, new IntentFilter(ISCNIRScanSDK.SEND_ACTIVE_CONF));
+        LocalBroadcastManager.getInstance(this).registerReceiver(ScanConfSizeReceiver, new IntentFilter(ISCNIRScanSDK.SCAN_CONF_SIZE));
+        LocalBroadcastManager.getInstance(this).registerReceiver(ScanConfReceiver, scanConfFilter);
+
         // endregion
     }
 
@@ -395,9 +401,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Log.d(TAG, "扫描页-GetDeviceStatusReceiver接收到广播！");
             battery = Integer.toString(intent.getIntExtra(ISCNIRScanSDK.EXTRA_BATT, 0));
             long lamptime = intent.getLongExtra(ISCNIRScanSDK.EXTRA_LAMPTIME, 0);
-            TotalLampTime = GetLampTimeString(lamptime);
+            totalLampTime = GetLampTimeString(lamptime);
             devbyte = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DEV_STATUS_BYTE);
-            Log.e(TAG, "battery:" + battery + "TotalLampTime:" + TotalLampTime + "devbyte:" + Arrays.toString(devbyte));
+            Log.e(TAG, "battery:" + battery + "TotalLampTime:" + totalLampTime + "devbyte:" + Arrays.toString(devbyte));
         }
     }
 
@@ -421,7 +427,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             } else {
                 // 不是第一个数据包，ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE代表当前数据包大小，更新进度条
                 // todo:此处更新进度
-//                barProgressDialog.setProgress(barProgressDialog.getProgress() + intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0));
                 int currentSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
                 refCoeffDataProgressCurrentProgress += currentSize;
                 String receivingProgress = getString(R.string.calibration_coefficient_receiving, String.valueOf(refCoeffDataProgressCurrentProgress), String.valueOf(refCoeffDataProgressTotalSize));
@@ -498,14 +503,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         @Override
         public void onReceive(Context context, Intent intent) {
             // 获取活动配置索引
-            ActiveConfigIndex = Objects.requireNonNull(intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_ACTIVE_CONF))[0];
-            if (!ScanConfigList.isEmpty()) {
+            activeConfigIndex = Objects.requireNonNull(intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_ACTIVE_CONF))[0];
+            if (!scanConfigList.isEmpty()) {
                 // todo:实现本地读取扫描配置
-//                GetActiveConfigOnResume();
+                GetActiveConfigOnResume();
+                Log.d(TAG, "扫描页-GetActiveScanConfReceiver中scanConfigList不为空，从本地回去扫描配置。scanConfigList.size = " + scanConfigList.size());
             } else {
                 // 如果 ScanConfigList 为空，说明尚未获取设备中的扫描配置列表。
                 // 调用 ISCNIRScanSDK.GetScanConfig() 函数来请求设备发送扫描配置列表。
                 ISCNIRScanSDK.GetScanConfig();
+                Log.d(TAG, "扫描页-GetActiveScanConfReceiver中scanConfigList长度为0，" +
+                        "调用APIISCNIRScanSDK.GetScanConfig();");
             }
 
         }
@@ -513,10 +521,18 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
     // todo:完成GetActiveConfigOnResume的逻辑
     private void GetActiveConfigOnResume() {
-
+        for (int i = 0; i < scanConfigList.size(); i++) {
+            int scanConfigIndexToByte = scanConfigList.get(i).getScanConfigIndex();
+            if (activeConfigIndex == scanConfigIndexToByte) {
+                activeConf = scanConfigList.get(i);
+                activeConfigByte = scanConfigByteList.get(i);
+                Log.d(TAG, "扫描页-GetActiveConfigOnResume中activeConfigByte:" + Arrays.toString(activeConfigByte) + "\n" +
+                        "activeConfigIndex:" + activeConfigIndex + "\nscanConfigIndexToByte:" + scanConfigIndexToByte);
+            }
+        }
     }
 
-    // 获取设备的扫描配置文件数量
+    // 获取设备内部存储的扫描配置文件数量
     public class ScanConfSizeReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -531,16 +547,21 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         @Override
         public void onReceive(Context context, Intent intent) {
             receivedConfSize++;
-            ScanConfig_Byte_List.add(intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DATA));
-            ScanConfigList.add(ISCNIRScanSDK.scanConf);
+            scanConfigByteList.add(intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DATA));
+            scanConfigList.add(ISCNIRScanSDK.scanConf);
+            Log.d(TAG, "扫描页-ScanConfReceiver获取到扫描配置：receivedConfSize:" + receivedConfSize + "\n" +
+                    "scanConfigByteList.size:" + scanConfigByteList.size() + "\nscanConfigList.size:" + scanConfigList.size() + "\n" +
+                    "storedConfSize:" + storedConfSize);
             // 配置文件接收完成
             if (receivedConfSize == storedConfSize) {
                 // 从ScanConfigList和ScanConfig_Byte_List中根据活动配置ActiveConfigIndex取出配置信息
-                for (int i = 0; i < ScanConfigList.size(); i++) {
-                    int ScanConfigIndexToByte = ScanConfigList.get(i).getScanConfigIndex();
-                    if (ActiveConfigIndex == ScanConfigIndexToByte) {
-                        activeConf = ScanConfigList.get(i);
-                        ActiveConfigByte = ScanConfig_Byte_List.get(i);
+                for (int i = 0; i < scanConfigList.size(); i++) {
+                    Log.d(TAG, "扫描页-ScanConfReceiver扫描配置获取完成。");
+                    int ScanConfigIndexToByte = scanConfigList.get(i).getScanConfigIndex();
+                    // 应用已经激活的配置
+                    if (activeConfigIndex == ScanConfigIndexToByte) {
+                        activeConf = scanConfigList.get(i);
+                        activeConfigByte = scanConfigByteList.get(i);
                     }
                 }
             }
@@ -681,5 +702,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         LocalBroadcastManager.getInstance(this).unregisterReceiver(RefDataReadyReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(ReturnSetLampReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(GetActiveScanConfReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(ScanConfSizeReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(ScanConfReceiver);
     }
 }
