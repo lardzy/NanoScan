@@ -62,12 +62,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private final BroadcastReceiver GetActiveScanConfReceiver = new GetActiveScanConfReceiver();
     private final BroadcastReceiver ScanConfSizeReceiver = new ScanConfSizeReceiver();
     private final BroadcastReceiver ScanConfReceiver = new ScanConfReceiver();
+    private final BroadcastReceiver SpectrumCalCoefficientsReadyReceiver = new SpectrumCalCoefficientsReadyReceiver();
+    private final BroadcastReceiver DeviceInfoReceiver = new SpectrumCalCoefficientsReadyReceiver();
 
     private final IntentFilter requestCalCoeffFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_COEFF);
     private final IntentFilter refReadyFilter = new IntentFilter(ISCNIRScanSDK.REF_CONF_DATA);
     private final IntentFilter notifyCompleteFilter = new IntentFilter(ISCNIRScanSDK.ACTION_NOTIFY_DONE);
     private final IntentFilter requestCalMatrixFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_MATRIX);
     private final IntentFilter scanConfFilter = new IntentFilter(ISCNIRScanSDK.SCAN_CONF_DATA);
+    private final IntentFilter SpectrumCalCoefficientsReadyFilter = new IntentFilter(ISCNIRScanSDK.SPEC_CONF_DATA);
 
     // endregion
     private boolean warmUp = false;
@@ -95,8 +98,16 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // region 设备的校准系数和矩阵
     private byte[] refCoeff;
     private byte[] refMatrix;
-    int refCoeffDataProgressTotalSize = 0;
-    int refCoeffDataProgressCurrentProgress = 0;
+    private int refCoeffDataProgressTotalSize = 0;
+    private int refCoeffDataProgressCurrentProgress = 0;
+    private int calMatrixDataProgressTotalSize = 0;
+    private int calMatrixDataProgressCurrentProgress = 0;
+    // 记录光谱校准系数
+    private byte[] spectrumCalCoefficients = new byte[144];
+    //允许 AddScanConfigViewActivity 获得光谱校准系数，以计算 max pattern
+    public static byte[] passSpectrumCalCoefficients = new byte[144];
+    // 检查是否已接收到光谱校准系数
+    private Boolean downloadSpecFlag = false;
     // endregion
     // 设备是否已经连接上
     private boolean connected;
@@ -121,6 +132,13 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private byte[] errbyte;
     private float temprature;
     private float humidity;
+    // endregion
+    // region DeviceInfoReceiver使用的变量、常量。
+    private String model_name = "";
+    private String serial_num = "";
+    private String HWrev = "";
+    private String Tivarev = "";
+    private String Specrev = "";
     // endregion
 
     public static String GetLampTimeString(long lamptime) {
@@ -172,6 +190,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         LocalBroadcastManager.getInstance(this).registerReceiver(GetActiveScanConfReceiver, new IntentFilter(ISCNIRScanSDK.SEND_ACTIVE_CONF));
         LocalBroadcastManager.getInstance(this).registerReceiver(ScanConfSizeReceiver, new IntentFilter(ISCNIRScanSDK.SCAN_CONF_SIZE));
         LocalBroadcastManager.getInstance(this).registerReceiver(ScanConfReceiver, scanConfFilter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(SpectrumCalCoefficientsReadyReceiver, SpectrumCalCoefficientsReadyFilter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(DeviceInfoReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_INFO));
+
 
         // endregion
     }
@@ -182,6 +203,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         pb_load_calibration = findViewById(R.id.pb_load_calibration);
         tv_load_calibration = findViewById(R.id.tv_load_calibration);
         rv_function_list = findViewById(R.id.rv_function_list);
+
+        view_back.setOnClickListener(this);
+
         fadeIn = AnimationUtils.loadAnimation(this, R.anim.fade_in);
         fadeOut = AnimationUtils.loadAnimation(this, R.anim.fade_out);
         start_scan_button.setEnabled(false);
@@ -216,7 +240,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             storeStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceItem.getDeviceMac());
             storeStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, deviceItem.getDeviceName());
         } else {
-            Log.e(TAG, "扫描页-获取到传入的设备对象为NULL！");
+            Log.e(TAG, "扫描页-获取到传入的设备对象deviceItem为NULL！");
             Toast.makeText(this, "无法获得设备信息，软件发生异常！", Toast.LENGTH_LONG).show();
             finish();
         }
@@ -384,6 +408,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     ISCNIRScanSDK.ShouldDownloadCoefficient = false;  // 确保SDK不会下载校准数据，直接进入下一步
                     ISCNIRScanSDK.SetCurrentTime();
                     tv_load_calibration.setText(getString(R.string.calibration_coefficient_and_matrix_read_from_local));
+                    tv_load_calibration.setAnimation(fadeIn);
+                    tv_load_calibration.startAnimation(fadeIn);
                 } else {
                     // 本次启动没有存储校准参数，同步时间并下载校准系数和校准矩阵
                     ISCNIRScanSDK.ShouldDownloadCoefficient = true;
@@ -452,20 +478,20 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_MATRIX_SIZE_PACKET, false);
             if (size) {
                 // todo:此处初始化进度条，获得进度条总长度
-                refCoeffDataProgressTotalSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_MATRIX_SIZE, 0);
-                refCoeffDataProgressCurrentProgress = 0;
+                calMatrixDataProgressTotalSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_MATRIX_SIZE, 0);
+                calMatrixDataProgressCurrentProgress = 0;
                 Log.d(TAG, "扫描页-CalMatrixDataProgressReceiver中EXTRA_REF_CAL_MATRIX_SIZE_PACKET为true，当前为第一个数据包。");
-                Log.d(TAG, "扫描页-CalMatrixDataProgressReceiver中接收到数据包总大小为：" + refCoeffDataProgressTotalSize);
+                Log.d(TAG, "扫描页-CalMatrixDataProgressReceiver中接收到数据包总大小为：" + calMatrixDataProgressTotalSize);
             } else {
                 // todo:此处更新进度
                 int currentSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_MATRIX_SIZE, 0);
-                refCoeffDataProgressCurrentProgress += currentSize;
-                String receivingProgress = getString(R.string.calibration_matrix_receiving, String.valueOf(refCoeffDataProgressCurrentProgress), String.valueOf(refCoeffDataProgressTotalSize));
+                calMatrixDataProgressCurrentProgress += currentSize;
+                String receivingProgress = getString(R.string.calibration_matrix_receiving, String.valueOf(calMatrixDataProgressCurrentProgress), String.valueOf(calMatrixDataProgressTotalSize));
                 tv_load_calibration.setText(receivingProgress);
                 Log.d(TAG, "扫描页-CalMatrixDataProgressReceiver中EXTRA_REF_CAL_MATRIX_SIZE为false，当前数据包大小为：" + currentSize);
             }
 
-            if (refCoeffDataProgressCurrentProgress == refCoeffDataProgressTotalSize) {
+            if (calMatrixDataProgressCurrentProgress == calMatrixDataProgressTotalSize) {
                 tv_load_calibration.setText(getString(R.string.calibration_matrix_received));
                 tv_load_calibration.setAnimation(fadeIn);
                 tv_load_calibration.startAnimation(fadeIn);
@@ -504,6 +530,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         public void onReceive(Context context, Intent intent) {
             // 获取活动配置索引
             activeConfigIndex = Objects.requireNonNull(intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_ACTIVE_CONF))[0];
+            Log.d(TAG, "扫描页-GetActiveScanConfReceiver获取到活动扫描配置索引：activeConfigIndex：" + activeConfigIndex);
             if (!scanConfigList.isEmpty()) {
                 // todo:实现本地读取扫描配置
                 GetActiveConfigOnResume();
@@ -526,6 +553,11 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             if (activeConfigIndex == scanConfigIndexToByte) {
                 activeConf = scanConfigList.get(i);
                 activeConfigByte = scanConfigByteList.get(i);
+
+                tv_load_calibration.setText(getString(R.string.active_scan_config_read_from_local));
+                tv_load_calibration.setAnimation(fadeIn);
+                tv_load_calibration.startAnimation(fadeIn);
+
                 Log.d(TAG, "扫描页-GetActiveConfigOnResume中activeConfigByte:" + Arrays.toString(activeConfigByte) + "\n" +
                         "activeConfigIndex:" + activeConfigIndex + "\nscanConfigIndexToByte:" + scanConfigIndexToByte);
             }
@@ -549,12 +581,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             receivedConfSize++;
             scanConfigByteList.add(intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DATA));
             scanConfigList.add(ISCNIRScanSDK.scanConf);
+            tv_load_calibration.setText(getString(R.string.active_scan_config_receiving, String.valueOf(receivedConfSize), String.valueOf(storedConfSize)));
             Log.d(TAG, "扫描页-ScanConfReceiver获取到扫描配置：receivedConfSize:" + receivedConfSize + "\n" +
                     "scanConfigByteList.size:" + scanConfigByteList.size() + "\nscanConfigList.size:" + scanConfigList.size() + "\n" +
                     "storedConfSize:" + storedConfSize);
             // 配置文件接收完成
             if (receivedConfSize == storedConfSize) {
                 // 从ScanConfigList和ScanConfig_Byte_List中根据活动配置ActiveConfigIndex取出配置信息
+                tv_load_calibration.setText(getString(R.string.active_scan_config_received));
+                tv_load_calibration.setAnimation(fadeIn);
+                tv_load_calibration.startAnimation(fadeIn);
+
                 for (int i = 0; i < scanConfigList.size(); i++) {
                     Log.d(TAG, "扫描页-ScanConfReceiver扫描配置获取完成。");
                     int ScanConfigIndexToByte = scanConfigList.get(i).getScanConfigIndex();
@@ -564,7 +601,39 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                         activeConfigByte = scanConfigByteList.get(i);
                     }
                 }
+                if (!downloadSpecFlag) {
+                    // 请求获取光谱校准系数
+                    ISCNIRScanSDK.GetSpectrumCoef();
+                    downloadSpecFlag = true;
+                }
             }
+        }
+    }
+
+    // 获取光谱校准系数
+    public class SpectrumCalCoefficientsReadyReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "扫描页-SpectrumCalCoefficientsReadyReceiver called");
+            spectrumCalCoefficients = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_SPEC_COEF_DATA);
+            passSpectrumCalCoefficients = spectrumCalCoefficients;
+            // 请求获取设备信息
+            ISCNIRScanSDK.GetDeviceInfo();
+        }
+    }
+
+    public class DeviceInfoReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            model_name = intent.getStringExtra(ISCNIRScanSDK.EXTRA_MODEL_NUM);
+            serial_num = intent.getStringExtra(ISCNIRScanSDK.EXTRA_SERIAL_NUM);
+            HWrev = intent.getStringExtra(ISCNIRScanSDK.EXTRA_HW_REV);
+            Tivarev = intent.getStringExtra(ISCNIRScanSDK.EXTRA_TIVA_REV);
+            Specrev = intent.getStringExtra(ISCNIRScanSDK.EXTRA_SPECTRUM_REV);
+            Log.d(TAG, String.format("扫描页-DeviceInfoReceiver，model_name：%1$s，serial_num：%2$s, HWrev：%3$s，Tivarev：%4$s，Specrev：%5$s", model_name,
+                    serial_num, HWrev, Tivarev, Specrev));
         }
     }
 
@@ -704,5 +773,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         LocalBroadcastManager.getInstance(this).unregisterReceiver(GetActiveScanConfReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(ScanConfSizeReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(ScanConfReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(SpectrumCalCoefficientsReadyReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(DeviceInfoReceiver);
     }
 }

@@ -133,7 +133,7 @@
     <string name="tv_devices_list">最近未使用任何设备</string>
     <string name="tv_nes_empty">暂无信息</string>
     <string name="not_connected_title">未连接</string>
-    <string name="not_connected_message">请你确保设备的蓝牙已经打开，然后重新选择列表中的设备进行连接！</string>
+    <string name="not_connected_message">请你确保设备的蓝牙已经打开，然后重新尝试进行连接！</string>
     <string name="division_line">纵向分割线</string>
     <string name="back_button">返回按钮</string>
     <string name="tv_scan_function_mode">采集模式</string>
@@ -143,9 +143,11 @@
     <string name="connected_to_the_device">已连接到设备…开始同步数据</string>
     <string name="calibration_coefficient_receiving">校准系数接收中…%1$s/%2$s</string>
     <string name="calibration_matrix_receiving">校准矩阵接收中…%1$s/%2$s</string>
-    <string name="calibration_coefficient_and_matrix_read_from_local">校准系数和矩阵已从本地获取</string>
+    <string name="calibration_coefficient_and_matrix_read_from_local">校准系数和矩阵已从本地缓存获取</string>
     <string name="calibration_coefficient_received">校准系数接收完成</string>
     <string name="calibration_matrix_received">校准矩阵接收完成</string>
-    <string name="active_scan_config_receiving">活动扫描配置接收中…</string>
+    <string name="active_scan_config_receiving">活动扫描配置接收中…%1$s/%2$s</string>
+    <string name="active_scan_config_read_from_local">活动扫描配置已从本地缓存获取</string>
+    <string name="active_scan_config_received">活动扫描配置接收完成</string>
 
 </resources>
