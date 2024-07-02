@@ -150,6 +150,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
             Intent intent = new Intent(DeviceDetailsActivity.this, ScanViewActivity.class);
             intent.putExtra("deviceItem", deviceItem);
             intent.putExtra("warmUp", warmUp);
+            intent.putExtra("mainFlag", true);
             startActivity(intent);
         } else if (view.getId() == R.id.device_connection_layout) {
             // 点击了设备连接布局

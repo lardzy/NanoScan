@@ -149,5 +149,6 @@
     <string name="active_scan_config_receiving">活动扫描配置接收中…%1$s/%2$s</string>
     <string name="active_scan_config_read_from_local">活动扫描配置已从本地缓存获取</string>
     <string name="active_scan_config_received">活动扫描配置接收完成</string>
+    <string name="device_activated">设备激活成功</string>
 
 </resources>

@@ -1,6 +1,8 @@
 package com.gttcgf.nanoscan;
 
+import static com.ISCSDK.ISCNIRScanSDK.getBooleanPref;
 import static com.ISCSDK.ISCNIRScanSDK.getStringPref;
+import static com.ISCSDK.ISCNIRScanSDK.storeBooleanPref;
 import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
 
 import android.annotation.SuppressLint;
@@ -46,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 public class ScanViewActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "ScanViewActivity";
@@ -63,7 +66,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private final BroadcastReceiver ScanConfSizeReceiver = new ScanConfSizeReceiver();
     private final BroadcastReceiver ScanConfReceiver = new ScanConfReceiver();
     private final BroadcastReceiver SpectrumCalCoefficientsReadyReceiver = new SpectrumCalCoefficientsReadyReceiver();
-    private final BroadcastReceiver DeviceInfoReceiver = new SpectrumCalCoefficientsReadyReceiver();
+    private final BroadcastReceiver DeviceInfoReceiver = new DeviceInfoReceiver();
+    private final BroadcastReceiver ReturnMFGNumReceiver = new ReturnMFGNumReceiver();
+    private final BroadcastReceiver GetUUIDReceiver = new GetUUIDReceiver();
+    private final BroadcastReceiver ReturnReadActivateStatusReceiver = new ReturnReadActivateStatusReceiver();
 
     private final IntentFilter requestCalCoeffFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_COEFF);
     private final IntentFilter refReadyFilter = new IntentFilter(ISCNIRScanSDK.REF_CONF_DATA);
@@ -71,9 +77,12 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private final IntentFilter requestCalMatrixFilter = new IntentFilter(ISCNIRScanSDK.ACTION_REQ_CAL_MATRIX);
     private final IntentFilter scanConfFilter = new IntentFilter(ISCNIRScanSDK.SCAN_CONF_DATA);
     private final IntentFilter SpectrumCalCoefficientsReadyFilter = new IntentFilter(ISCNIRScanSDK.SPEC_CONF_DATA);
+    private final IntentFilter ReturnMFGNumFilter = new IntentFilter(ISCNIRScanSDK.ACTION_RETURN_MFGNUM);
+    private final IntentFilter ReturnReadActivateStatusFilter = new IntentFilter(ISCNIRScanSDK.ACTION_RETURN_READ_ACTIVATE_STATE);
 
     // endregion
     private boolean warmUp = false;
+    private boolean mainFlag = false;
     private LampInfo lampInfo = LampInfo.ManualLamp;
     private ArrayList<ISCNIRScanSDK.ScanConfiguration> scanConfigList = new ArrayList<>();
     // region UI组件
@@ -139,7 +148,32 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private String HWrev = "";
     private String Tivarev = "";
     private String Specrev = "";
+    // Tiva版本是否是标准波长、扩展波长、扩展plus波长
+    public static Boolean isExtendVer = false;
+    public static Boolean isExtendVer_PLUS = false;
+    //! Control FW level to implement function
+    public static ISCNIRScanSDK.FW_LEVEL_STANDARD fw_level_standard = ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_0;
+    public static ISCNIRScanSDK.FW_LEVEL_EXT fw_level_ext = ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_1;
+    public static ISCNIRScanSDK.FW_LEVEL_EXT_PLUS fw_level_ext_plus = ISCNIRScanSDK.FW_LEVEL_EXT_PLUS.LEVEL_EXT_PLUS_1;
     // endregion
+    private float minWavelength = 900;
+    private float maxWavelength = 1700;
+    private int MINWAV = 900;
+    private int MAXWAV = 1700;
+    private float minAbsorbance = 0;
+    private float maxAbsorbance = 2;
+    private float minReflectance = -2;
+    private float maxReflectance = 2;
+    private float minIntensity = -7000;
+    private float maxIntensity = 7000;
+    private float minReference = -7000;
+    private float maxReference = 7000;
+    private int numSections = 0;
+
+    private byte[] MFG_NUM;
+    private String HW_Model = "";
+    private String uuid = "";
+    private boolean isOldTiva = false;
 
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
@@ -179,7 +213,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         bindService(intent, serviceConnection, BIND_AUTO_CREATE);
         Log.d(TAG, "扫描页-ISCNIRScanSDK服务已绑定!");
         //todo: region 注册广播接收器
-        //region Register all needed broadcast receivers
+        //region 注册所有 broadcast receivers
         Log.d(TAG, "扫描页-开始注册广播。");
         LocalBroadcastManager.getInstance(this).registerReceiver(GetDeviceStatusReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_STATUS));
         LocalBroadcastManager.getInstance(this).registerReceiver(RefCoeffDataProgressReceiver, requestCalCoeffFilter);
@@ -192,8 +226,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         LocalBroadcastManager.getInstance(this).registerReceiver(ScanConfReceiver, scanConfFilter);
         LocalBroadcastManager.getInstance(this).registerReceiver(SpectrumCalCoefficientsReadyReceiver, SpectrumCalCoefficientsReadyFilter);
         LocalBroadcastManager.getInstance(this).registerReceiver(DeviceInfoReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_INFO));
-
-
+        LocalBroadcastManager.getInstance(this).registerReceiver(ReturnMFGNumReceiver, ReturnMFGNumFilter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(GetUUIDReceiver, new IntentFilter(ISCNIRScanSDK.SEND_DEVICE_UUID));
+        LocalBroadcastManager.getInstance(this).registerReceiver(ReturnReadActivateStatusReceiver, ReturnReadActivateStatusFilter);
         // endregion
     }
 
@@ -233,6 +268,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         // 获取传入的设备对象deviceItem
         deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
         warmUp = getIntent().getBooleanExtra("warmUp", false);
+        mainFlag = getIntent().getBooleanExtra("mainFlag", false);
         Log.d(TAG, "扫描页-获取到deviceItem：" + deviceItem + "\n" + "获取到warmUp：" + warmUp);
         if (deviceItem != null) {
             Log.d(TAG, "扫描页-获取到传入的设备对象，准备存储DeviceMac、DeviceName到SDK：" + deviceItem);
@@ -593,7 +629,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 tv_load_calibration.startAnimation(fadeIn);
 
                 for (int i = 0; i < scanConfigList.size(); i++) {
-                    Log.d(TAG, "扫描页-ScanConfReceiver扫描配置获取完成。");
+                    Log.d(TAG, "扫描页-ScanConfReceiver扫描配置获取完成。i:" + i);
                     int ScanConfigIndexToByte = scanConfigList.get(i).getScanConfigIndex();
                     // 应用已经激活的配置
                     if (activeConfigIndex == ScanConfigIndexToByte) {
@@ -615,14 +651,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.d(TAG, "扫描页-SpectrumCalCoefficientsReadyReceiver called");
             spectrumCalCoefficients = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_SPEC_COEF_DATA);
             passSpectrumCalCoefficients = spectrumCalCoefficients;
+            Log.d(TAG, "扫描页-SpectrumCalCoefficientsReadyReceiver called。光谱校准系数 spectrumCalCoefficients ：" + Arrays.toString(passSpectrumCalCoefficients));
             // 请求获取设备信息
             ISCNIRScanSDK.GetDeviceInfo();
         }
     }
 
+    // 获取设备信息
     public class DeviceInfoReceiver extends BroadcastReceiver {
 
         @Override
@@ -634,8 +671,268 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Specrev = intent.getStringExtra(ISCNIRScanSDK.EXTRA_SPECTRUM_REV);
             Log.d(TAG, String.format("扫描页-DeviceInfoReceiver，model_name：%1$s，serial_num：%2$s, HWrev：%3$s，Tivarev：%4$s，Specrev：%5$s", model_name,
                     serial_num, HWrev, Tivarev, Specrev));
+            if (Tivarev.charAt(0) == '5') {
+                isExtendVer_PLUS = true;
+                isExtendVer = false;
+            } else if (Tivarev.charAt(0) == '3' && (HWrev.charAt(0) == 'E' || HWrev.charAt(0) == 'O')) {
+                isExtendVer_PLUS = false;
+                isExtendVer = true;
+            } else {
+                isExtendVer_PLUS = false;
+                isExtendVer = false;
+            }
+            Log.d(TAG, "扫描页-DeviceInfoReceiver,isExtendVer_PLUS:" + isExtendVer_PLUS + ",isExtendVer:" + isExtendVer);
+            if ((isExtendVer || isExtendVer_PLUS) && serial_num.length() > 8)
+                serial_num = serial_num.substring(0, 8);
+            else if (!isExtendVer_PLUS && !isExtendVer && serial_num.length() > 7)
+                serial_num = serial_num.substring(0, 7);
+            Log.d(TAG, "扫描页-DeviceInfoReceiver，获取到serial_num前7位：" + serial_num);
+            if (HWrev.charAt(0) == 'N') {
+                notConnectedDialog();
+                Toast.makeText(mContext, "设备不支持！", Toast.LENGTH_LONG).show();
+            } else {
+                if (isExtendVer) {
+                    ISCNIRScanSDK.TIVAFW_EXT = GetFWLevelEXT(Tivarev);
+                } else if (isExtendVer_PLUS) {
+                    ISCNIRScanSDK.TIVAFW_EXT_PLUS = getFWLevelEXTPLUS(Tivarev);
+                } else {
+                    ISCNIRScanSDK.TIVAFW_STANDARD = getFWLevelStandard(Tivarev);
+                }
+                initParameter();
+                if (!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_0) == 0) {
+                    notConnectedDialog();
+                    Toast.makeText(mContext, "设备固件版本过低！最低 V2.4.4.，当前V" + Tivarev + ".。", Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "扫描页-DeviceInfoReceiver，设备固件版本过低！当前V" + Tivarev);
+                } else {
+                    // 当设备TIVA版本≥2.1.0.67，则继续请求获取设备制造序列号
+                    Log.d(TAG, "扫描页-DeviceInfoReceiver，设备TIVA版本≥2.1.0.67，继续后续步骤。");
+                    ISCNIRScanSDK.GetMFGNumber();
+                }
+            }
         }
     }
+
+    // 获取设备制造序列号
+    public class ReturnMFGNumReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            MFG_NUM = intent.getByteArrayExtra(ISCNIRScanSDK.MFGNUM_DATA);
+            Log.d(TAG, "扫描页-ReturnMFGNumReceiver called，MFG_NUM：" + Arrays.toString(MFG_NUM));
+            // 当Tiva为 2.5.x 时，调用GetHWModel。
+            if ((!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4) >= 0) || (isExtendVer && fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_3) >= 0)) {
+                Log.d(TAG, "扫描页-ReturnMFGNumReceiver，设备为标准光谱，fw_level_standardcompareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4)>=0，具体为:" + fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4));
+                ISCNIRScanSDK.GetHWModel();
+            } else {
+                Log.d(TAG, "扫描页-ReturnMFGNumReceiver，设备为标准光谱，fw_level_standardcompareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4)<0，具体为:" + fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4));
+
+                ISCNIRScanSDK.GetUUID();
+            }
+        }
+    }
+
+    public class GetUUIDReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            byte[] buf = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DEVICE_UUID);
+            StringBuilder uuidBuilder = new StringBuilder();
+            for (int i = 0; i < Objects.requireNonNull(buf).length; i++) {
+                uuidBuilder.append(Integer.toHexString(0xff & buf[i]));
+                if (i != buf.length - 1) {
+                    uuidBuilder.append(":");
+                }
+            }
+            uuid = uuidBuilder.toString();
+            Log.d(TAG, "扫描页-GetUUIDReceiver，获取到UUID:" + uuid);
+            checkIsOldTIVA();
+            if (!isOldTiva) { // 设备固件非旧版本Tiva≥2.4.4
+                // 调用以获取设备激活状态
+                ISCNIRScanSDK.ReadActivateState();
+            }
+            // todo: 未来有必要的前提下，实现旧版本兼容, 现有设备 Tivarev:2.4.7、fw_level_standard：LEVEL_3。
+
+            LocalBroadcastManager.getInstance(mContext).unregisterReceiver(DeviceInfoReceiver);
+            LocalBroadcastManager.getInstance(mContext).unregisterReceiver(GetUUIDReceiver);
+        }
+    }
+
+    // 获取设备是否激活
+    public class ReturnReadActivateStatusReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // 只有从 DeviceDetailsActivity 跳转过来时，才执行下面的代码。
+            if (mainFlag) {
+                // 设置活动扫描配置，防止设备使用 WPF 或 WinForm 本地配置
+                ISCNIRScanSDK.SetActiveConfig();
+                Log.d(TAG, "扫描页-ReturnReadActivateStatusReceiver，mainFlag为true，call ISCNIRScanSDK.SetActiveConfig()");
+                mainFlag = false;
+            }
+            byte[] state = intent.getByteArrayExtra(ISCNIRScanSDK.RETURN_READ_ACTIVATE_STATE);
+            if (Objects.requireNonNull(state)[0] == 1) {
+                new Handler().postDelayed(() -> {
+                    setDeviceButtonStatus();
+                    // todo:显示设备已激活
+                    tv_load_calibration.setText(getText(R.string.device_activated));
+                    tv_load_calibration.setAnimation(fadeIn);
+                    tv_load_calibration.startAnimation(fadeIn);
+                }, 300);
+                storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.Activacatestatus, "Activated.");
+            } else {
+                Toast.makeText(mContext, "设备激活失败！", Toast.LENGTH_LONG).show();
+                finish();
+            }
+//            else {
+//                // todo:检查本地是否有存储许可证
+//                String licenseKey = getStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.licensekey, null);
+//                if (licenseKey != null && !licenseKey.isEmpty()) {
+//
+//                }
+//            }
+
+        }
+    }
+
+    // 设定设备物理按钮状态
+    private void setDeviceButtonStatus() {
+        // 校验设备波长类型、fw_level
+        if (isExtendVer_PLUS || isExtendVer || fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_1) > 0) {
+            boolean isLockButton = getBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton, false);
+            //User open lock button on Configure page
+            if (isLockButton) {
+                ISCNIRScanSDK.ControlPhysicalButton(ISCNIRScanSDK.PhysicalButton.Lock);
+            } else {
+                ISCNIRScanSDK.ControlPhysicalButton(ISCNIRScanSDK.PhysicalButton.Unlock);
+            }
+        }
+    }
+
+    // 检查是否是低Tiva版本
+    private void checkIsOldTIVA() {
+        String[] TivaArray = Tivarev.split(Pattern.quote("."));
+
+        if (!isExtendVer_PLUS && !isExtendVer && (Integer.parseInt(TivaArray[1]) < 4 || Integer.parseInt(TivaArray[1]) < 4))//Tiva <2.4.4(the newest version)
+        {
+            isOldTiva = true;
+            // todo:提示用户固件版本过低
+            notConnectedDialog();
+            Toast.makeText(this, "设备固件版本过低！最低 V2.4.4.，当前V" + Tivarev + ".。", Toast.LENGTH_LONG).show();
+        } else {
+            isOldTiva = false;
+        }
+
+    }
+
+    //    region 根据Tiva版本获取 FW level
+    // 根据Tiva版本获取扩展波长FW level
+    private ISCNIRScanSDK.FW_LEVEL_EXT GetFWLevelEXT(String Tivarev) {
+        String[] TivaArray = Tivarev.split(Pattern.quote("."));
+        String[] split_hw = HWrev.split("\\.");
+        fw_level_ext = ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_1;
+        if (Integer.parseInt(TivaArray[1]) >= 5 && split_hw[0].equals("O")) {
+                 /*New Applications:
+                  1. Use new command to read ADC value and timestamp
+                 */
+            fw_level_ext = ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_4;//>=3.5.X and main board = "O"
+        } else if (Integer.parseInt(TivaArray[1]) >= 5) {
+                 /*New Applications:
+                  1. Support get pga
+                 */
+            fw_level_ext = ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_3;//>=3.5.X
+        } else if (Integer.parseInt(TivaArray[1]) >= 3 && split_hw[0].equals("O")) {
+                 /*New Applications:
+                  1. Support read ADC value
+                 */
+            fw_level_ext = ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_2;//>=3.3.0 and main board = "O"
+        } else if (Integer.parseInt(TivaArray[1]) >= 3) {
+                /*New Applications:
+                  1. Add Lock Button
+                 */
+            fw_level_ext = ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_1;//>=3.3.0
+        } else if (Integer.parseInt(TivaArray[1]) == 2 && Integer.parseInt(TivaArray[2]) == 1)
+            fw_level_ext = ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_1;//==3.2.1
+
+        return fw_level_ext;
+    }
+
+    // 根据Tiva版本获取标准波长plus FW level
+    private ISCNIRScanSDK.FW_LEVEL_EXT_PLUS getFWLevelEXTPLUS(String Tivarev) {
+//        String[] TivaArray = Tivarev.split(Pattern.quote("."));
+//        String split_hw[] = HWrev.split("\\.");
+        fw_level_ext_plus = ISCNIRScanSDK.FW_LEVEL_EXT_PLUS.LEVEL_EXT_PLUS_1;
+        return fw_level_ext_plus;
+    }
+
+    // 根据Tiva版本获取标准波长 FW level
+    private ISCNIRScanSDK.FW_LEVEL_STANDARD getFWLevelStandard(String Tivarev) {
+        Log.d(TAG, "扫描页-GetFWLevelStandard called. Tivarev:" + Tivarev);
+        String[] TivaArray = Tivarev.split(Pattern.quote("."));
+        String[] split_hw = HWrev.split("\\.");
+        fw_level_standard = ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_0;
+        if (Integer.parseInt(TivaArray[1]) >= 5 && split_hw[0].equals("F")) {
+                /*New Applications:
+                  1. Use new command to read ADC value and timestamp
+                 */
+            fw_level_standard = ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_5;//>=2.5.X and main board ="F"
+        } else if (Integer.parseInt(TivaArray[1]) >= 5) {
+                /*New Applications:
+                  1. Support get pga
+                 */
+            fw_level_standard = ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4;//>=2.5.X
+        } else if (Integer.parseInt(TivaArray[1]) >= 4 && Integer.parseInt(TivaArray[2]) >= 3 && split_hw[0].equals("F")) {
+                /*New Applications:
+                  1. Support read ADC value
+                 */
+            fw_level_standard = ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_3;//>=2.4.4 and main board ="F"
+        } else if ((Integer.parseInt(TivaArray[1]) >= 4 && Integer.parseInt(TivaArray[2]) >= 3) || Integer.parseInt(TivaArray[1]) >= 5) {
+                /*New Applications:
+                  1. Add Lock Button
+                 */
+            fw_level_standard = ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_2;//>=2.4.4
+        } else if ((TivaArray.length == 3 && Integer.parseInt(TivaArray[1]) >= 1) || (TivaArray.length == 4 && Integer.parseInt(TivaArray[3]) >= 67))//>=2.1.0.67
+        {
+            //New Applications:
+            // 1. Support activate state
+
+            fw_level_standard = ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_1;
+        } else {
+            fw_level_standard = ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_0;
+        }
+        Log.d(TAG, "扫描页-GetFWLevelStandard，fw_level_standard：" + fw_level_standard);
+        return fw_level_standard;
+    }
+
+    // 根据设备类型，初始化波长范围
+    private void initParameter() {
+        Log.d(TAG, "扫描页-InitParameter called.");
+
+        if (isExtendVer) {
+            minWavelength = 1350;
+            maxWavelength = 2150;
+            MINWAV = 1350;
+            MAXWAV = 2150;
+        } else if (isExtendVer_PLUS) {
+            minWavelength = 1600;
+            maxWavelength = 2400;
+            MINWAV = 1600;
+            MAXWAV = 2400;
+        } else {
+            minWavelength = 900;
+            maxWavelength = 1700;
+            MINWAV = 900;
+            MAXWAV = 1700;
+        }
+//        et_quickset_spec_start.setText(Integer.toString(MINWAV));
+//        et_quickset_spec_end.setText(Integer.toString(MAXWAV));
+//        quickset_init_start_nm = (Integer.parseInt(et_quickset_spec_start.getText().toString()));
+//        quickset_init_end_nm = (Integer.parseInt(et_quickset_spec_end.getText().toString()));
+        //不支持锁定按钮
+        if (!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_1) <= 0)
+            storeBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton, false);
+    }
+
+    // endregion
 
     ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
@@ -645,7 +942,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             mNanoBLEService = ((ISCNIRScanSDK.LocalBinder) iBinder).getService();
             //初始化 bluetooth, 如果 BLE 不可用, 则 finish
             if (!mNanoBLEService.initialize()) {
-                Log.e(TAG, "扫描页-BLE 不可用，活动结束！");
+                Log.e(TAG, "扫描页-BLE 不可用，Activity结束！");
                 finish();
             }
             // 蓝牙管理
@@ -734,7 +1031,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     };
 
     // 改变灯状态
-    private void ChangeLampState() {
+    private void changeLampState() {
         if (warmUp) {
             ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.AUTO);
             warmUp = false;
@@ -761,7 +1058,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         super.onDestroy();
         Log.e(TAG, "扫描页-onDestroy called");
         // 改变光源状态，避免软件退出后光源常亮
-        ChangeLampState();
+        changeLampState();
         // todo:解绑服务、取消广播接收器的注册
         unbindService(serviceConnection);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(GetDeviceStatusReceiver);
@@ -775,5 +1072,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         LocalBroadcastManager.getInstance(this).unregisterReceiver(ScanConfReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(SpectrumCalCoefficientsReadyReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(DeviceInfoReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(ReturnMFGNumReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(GetUUIDReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(ReturnReadActivateStatusReceiver);
     }
 }
