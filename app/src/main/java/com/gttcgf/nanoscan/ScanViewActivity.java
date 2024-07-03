@@ -271,6 +271,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         tv_update_time.setText(getText(R.string.not_available));
         tv_update_time.setAnimation(fadeIn);
 
+        initChart();
+    }
+
+    private void initChart() {
         chart.setBackgroundColor(Color.WHITE);
 
     }
@@ -279,7 +283,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private void initialData() {
         // todo: 后续根据是否存储了参比数据判断要不要默认选择使用出厂参比
         // 初始化功能列表
-        FunctionItem functionItem_1 = new FunctionItem("采集模式", "采集并扫描", R.drawable.baseline_auto_graph_24, true);
+        FunctionItem functionItem_1 = new FunctionItem("采集模式", "采集并预测", R.drawable.baseline_auto_graph_24, true);
         functionItem_1.setSelected(true);
         functionList.add(functionItem_1);
         functionList.add(new FunctionItem("采集模式", "仅采集光谱", R.drawable.baseline_stacked_line_chart_24, true));
@@ -312,8 +316,22 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         if (view.getId() == R.id.imageButton_back) {
             finish();
         } else if (view.getId() == R.id.start_scan_button) {
-            Toast.makeText(this, "点击了扫描按钮", Toast.LENGTH_SHORT).show();
+            PerformScan(300);
+            start_scan_button.setEnabled(false);
         }
+    }
+
+    private void PerformScan(long delaytime) {
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+
+            @Override
+            public void run() {
+                //Send broadcast START_SCAN will trigger to scan data
+                ISCNIRScanSDK.StartScan();
+                start_scan_button.setEnabled(true);
+            }
+        }, delaytime);
     }
 
     // 开始优先扫描用户选择的蓝牙设备
@@ -405,6 +423,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         }
     }
+
     private void enableAllComponent(boolean enable) {
         imageButton_back.setEnabled(enable);
         start_scan_button.setEnabled(enable);

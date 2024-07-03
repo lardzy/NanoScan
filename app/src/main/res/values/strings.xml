@@ -138,7 +138,7 @@
     <string name="division_line">纵向分割线</string>
     <string name="back_button">返回按钮</string>
     <string name="tv_scan_function_mode">采集模式</string>
-    <string name="tv_scan_function_1">采集并扫描</string>
+    <string name="tv_scan_function_1">采集并预测</string>
     <string name="please_wait">请稍候…</string>
     
     <string name="connected_to_the_device">已连接到设备…开始同步数据</string>
