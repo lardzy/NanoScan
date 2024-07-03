@@ -19,6 +19,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -28,6 +29,8 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -43,6 +46,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.ISCSDK.ISCNIRScanSDK;
 import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.Description;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,7 +60,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private Context mContext;
 
     // region broadcast 接收器、过滤器
-    private final BroadcastReceiver GetDeviceStatusReceiver = new GetDeviceStatusReceiver();
+    private final BroadcastReceiver StatusReceiver = new StatusReceiver();
     private final BroadcastReceiver RefCoeffDataProgressReceiver = new RefCoeffDataProgressReceiver();
     private final BroadcastReceiver RefDataReadyReceiver = new RefDataReadyReceiver();
     private final BroadcastReceiver CalMatrixDataProgressReceiver = new CalMatrixDataProgressReceiver();
@@ -86,15 +90,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private LampInfo lampInfo = LampInfo.ManualLamp;
     private ArrayList<ISCNIRScanSDK.ScanConfiguration> scanConfigList = new ArrayList<>();
     // region UI组件
-    private FrameLayout view_back;
+//    private FrameLayout view_back;
+    private ImageButton imageButton_back;
     private Button start_scan_button;
     private ProgressBar pb_load_calibration;
-    private TextView tv_load_calibration;
+    private TextView tv_load_calibration, tv_battery_level_value, tv_update_time;
     private LineChart chart;
     private RecyclerView rv_function_list;
     private FunctionListAdapter functionListAdapter;
     private List<FunctionItem> functionList = new ArrayList<>();
     private Animation fadeIn, fadeOut;
+    private ImageView iv_battery;
     // endregion
     private DeviceItem deviceItem;
     private ISCNIRScanSDK mNanoBLEService;
@@ -134,13 +140,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // 存储当前活动配置的字节数组
     private byte[] activeConfigByte;
     // endregion
-    // region GetDeviceStatusReceiver使用的变量、常量。
-    private String battery = "";
+    // region StatusReceiver使用的变量、常量。
+    private int battery;
     private String totalLampTime = "";
     private byte[] devbyte;
     private byte[] errbyte;
     private float temprature;
     private float humidity;
+    private String devStatus = "";
+    private String errorStatus = "";
     // endregion
     // region DeviceInfoReceiver使用的变量、常量。
     private String model_name = "";
@@ -174,6 +182,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private String HW_Model = "";
     private String uuid = "";
     private boolean isOldTiva = false;
+
+    // 用于更新UI时判断加载进度条是否需要显示
+    private boolean completeDeviceConnection = false;
 
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
@@ -215,7 +226,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         //todo: region 注册广播接收器
         //region 注册所有 broadcast receivers
         Log.d(TAG, "扫描页-开始注册广播。");
-        LocalBroadcastManager.getInstance(this).registerReceiver(GetDeviceStatusReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_STATUS));
+        LocalBroadcastManager.getInstance(this).registerReceiver(StatusReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_STATUS));
         LocalBroadcastManager.getInstance(this).registerReceiver(RefCoeffDataProgressReceiver, requestCalCoeffFilter);
         LocalBroadcastManager.getInstance(this).registerReceiver(NotifyCompleteReceiver, notifyCompleteFilter);
         LocalBroadcastManager.getInstance(this).registerReceiver(CalMatrixDataProgressReceiver, requestCalMatrixFilter);
@@ -233,13 +244,18 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     }
 
     private void initialComponent() {
-        view_back = findViewById(R.id.view_back);
+        imageButton_back = findViewById(R.id.imageButton_back);
         start_scan_button = findViewById(R.id.start_scan_button);
         pb_load_calibration = findViewById(R.id.pb_load_calibration);
         tv_load_calibration = findViewById(R.id.tv_load_calibration);
         rv_function_list = findViewById(R.id.rv_function_list);
+        tv_battery_level_value = findViewById(R.id.tv_battery_level_value);
+        tv_update_time = findViewById(R.id.tv_update_time);
+        iv_battery = findViewById(R.id.iv_battery);
+        chart = findViewById(R.id.chart);
 
-        view_back.setOnClickListener(this);
+        imageButton_back.setOnClickListener(this);
+        start_scan_button.setOnClickListener(this);
 
         fadeIn = AnimationUtils.loadAnimation(this, R.anim.fade_in);
         fadeOut = AnimationUtils.loadAnimation(this, R.anim.fade_out);
@@ -249,6 +265,14 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         rv_function_list.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         functionListAdapter = new FunctionListAdapter(this, functionList);
         rv_function_list.setAdapter(functionListAdapter);
+
+        tv_battery_level_value.setText(getText(R.string.not_available));
+        tv_battery_level_value.setAnimation(fadeIn);
+        tv_update_time.setText(getText(R.string.not_available));
+        tv_update_time.setAnimation(fadeIn);
+
+        chart.setBackgroundColor(Color.WHITE);
+
     }
 
     // 初始化各类数据
@@ -280,11 +304,12 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Toast.makeText(this, "无法获得设备信息，软件发生异常！", Toast.LENGTH_LONG).show();
             finish();
         }
+        completeDeviceConnection = false;
     }
 
     @Override
     public void onClick(View view) {
-        if (view.getId() == R.id.view_back) {
+        if (view.getId() == R.id.imageButton_back) {
             finish();
         } else if (view.getId() == R.id.start_scan_button) {
             Toast.makeText(this, "点击了扫描按钮", Toast.LENGTH_SHORT).show();
@@ -367,7 +392,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         alertDialogBuilder.setPositiveButton(getResources().getString(R.string.ok), (arg0, arg1) -> {
             alertDialog.dismiss();
             // todo: 调试期间注释finish
-//            finish();
+            finish();
         });
         // 确保此时用户没有退出当前Activity
         if (!isFinishing() && !isDestroyed()) {
@@ -379,6 +404,11 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             });
 
         }
+    }
+    private void enableAllComponent(boolean enable) {
+        imageButton_back.setEnabled(enable);
+        start_scan_button.setEnabled(enable);
+        chart.setVisibility(View.VISIBLE);
     }
 
     public enum LampInfo {
@@ -401,7 +431,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     if (getStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.ReferenceScan, "Not").equals("ReferenceScan"))
                         storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.ReferenceScan, "Not");
 
-                    //Synchronize time and download calibration coefficient and calibration matrix
+                    // 同步时间，以下载校准参数和矩阵。
                     ISCNIRScanSDK.SetCurrentTime();
                     break;
                 case CloseWarmUpLampInScan:
@@ -457,18 +487,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
-    public class GetDeviceStatusReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.d(TAG, "扫描页-GetDeviceStatusReceiver接收到广播！");
-            battery = Integer.toString(intent.getIntExtra(ISCNIRScanSDK.EXTRA_BATT, 0));
-            long lamptime = intent.getLongExtra(ISCNIRScanSDK.EXTRA_LAMPTIME, 0);
-            totalLampTime = GetLampTimeString(lamptime);
-            devbyte = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DEV_STATUS_BYTE);
-            Log.e(TAG, "battery:" + battery + "TotalLampTime:" + totalLampTime + "devbyte:" + Arrays.toString(devbyte));
-        }
-    }
-
     // 此广播接收器可以查看校准系数的接收进度，ACTION_REQ_CAL_COEFF(ISCNIRScanSDK.SetCurrentTime()must be called)
     public class RefCoeffDataProgressReceiver extends BroadcastReceiver {
         @Override
@@ -513,13 +531,13 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             // 标记是否是第一个数据包，便于初始化进度条。
             boolean size = intent.getBooleanExtra(ISCNIRScanSDK.EXTRA_REF_CAL_MATRIX_SIZE_PACKET, false);
             if (size) {
-                // todo:此处初始化进度条，获得进度条总长度
+                // 此处初始化进度条，获得进度条总长度
                 calMatrixDataProgressTotalSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_MATRIX_SIZE, 0);
                 calMatrixDataProgressCurrentProgress = 0;
                 Log.d(TAG, "扫描页-CalMatrixDataProgressReceiver中EXTRA_REF_CAL_MATRIX_SIZE_PACKET为true，当前为第一个数据包。");
                 Log.d(TAG, "扫描页-CalMatrixDataProgressReceiver中接收到数据包总大小为：" + calMatrixDataProgressTotalSize);
             } else {
-                // todo:此处更新进度
+                // 此处更新进度
                 int currentSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_MATRIX_SIZE, 0);
                 calMatrixDataProgressCurrentProgress += currentSize;
                 String receivingProgress = getString(R.string.calibration_matrix_receiving, String.valueOf(calMatrixDataProgressCurrentProgress), String.valueOf(calMatrixDataProgressTotalSize));
@@ -531,7 +549,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 tv_load_calibration.setText(getString(R.string.calibration_matrix_received));
                 tv_load_calibration.setAnimation(fadeIn);
                 tv_load_calibration.startAnimation(fadeIn);
-                // todo:当接收完毕后，调用 ISCNIRScanSDK.GetActiveConfig();，SDK将发送broadcast GET_ACTIVE_CONF，获取活动配置的索引。
+                // 当接收完毕后，调用 ISCNIRScanSDK.GetActiveConfig();，SDK将发送broadcast GET_ACTIVE_CONF，获取活动配置的索引。
                 ISCNIRScanSDK.GetActiveConfig();
             }
 
@@ -718,7 +736,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         @Override
         public void onReceive(Context context, Intent intent) {
             MFG_NUM = intent.getByteArrayExtra(ISCNIRScanSDK.MFGNUM_DATA);
-            Log.d(TAG, "扫描页-ReturnMFGNumReceiver called，MFG_NUM：" + Arrays.toString(MFG_NUM));
+            Log.d(TAG, "扫描页-ReturnMFGNumReceiver called，设备制造序列号MFG_NUM：" + Arrays.toString(MFG_NUM));
             // 当Tiva为 2.5.x 时，调用GetHWModel。
             if ((!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4) >= 0) || (isExtendVer && fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_3) >= 0)) {
                 Log.d(TAG, "扫描页-ReturnMFGNumReceiver，设备为标准光谱，fw_level_standardcompareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4)>=0，具体为:" + fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4));
@@ -750,7 +768,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 // 调用以获取设备激活状态
                 ISCNIRScanSDK.ReadActivateState();
             }
-            // todo: 未来有必要的前提下，实现旧版本兼容, 现有设备 Tivarev:2.4.7、fw_level_standard：LEVEL_3。
+            // todo: 未来有必要的前提下，实现旧版本兼容;现有设备 Tivarev:2.4.7、fw_level_standard：LEVEL_3。
 
             LocalBroadcastManager.getInstance(mContext).unregisterReceiver(DeviceInfoReceiver);
             LocalBroadcastManager.getInstance(mContext).unregisterReceiver(GetUUIDReceiver);
@@ -769,36 +787,95 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 Log.d(TAG, "扫描页-ReturnReadActivateStatusReceiver，mainFlag为true，call ISCNIRScanSDK.SetActiveConfig()");
                 mainFlag = false;
             }
+            // 判断设备是否已经激活
             byte[] state = intent.getByteArrayExtra(ISCNIRScanSDK.RETURN_READ_ACTIVATE_STATE);
             if (Objects.requireNonNull(state)[0] == 1) {
                 new Handler().postDelayed(() -> {
                     setDeviceButtonStatus();
                     // todo:显示设备已激活
+                    pb_load_calibration.setVisibility(View.GONE);
                     tv_load_calibration.setText(getText(R.string.device_activated));
                     tv_load_calibration.setAnimation(fadeIn);
                     tv_load_calibration.startAnimation(fadeIn);
                 }, 300);
                 storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.Activacatestatus, "Activated.");
+                Log.d(TAG, "扫描页-ReturnReadActivateStatusReceiver，设备激活状态已存储：Activated.");
+                // 尝试获取设备状态，延时3秒防止挂起
+                mHandler.postDelayed(() -> {
+                    tv_load_calibration.setVisibility(View.GONE);
+                    ISCNIRScanSDK.GetDeviceStatus();
+                    enableAllComponent(true);
+                }, 3000);
             } else {
                 Toast.makeText(mContext, "设备激活失败！", Toast.LENGTH_LONG).show();
                 finish();
             }
-//            else {
-//                // todo:检查本地是否有存储许可证
-//                String licenseKey = getStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.licensekey, null);
-//                if (licenseKey != null && !licenseKey.isEmpty()) {
-//
-//                }
-//            }
+            // todo:检查本地是否有存储许可证（密钥长度为24）
+        }
+    }
 
+    // 获取设备状态，包括电池容量、温度湿度等。
+    public class StatusReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "扫描页-StatusReceiver called");
+            battery = intent.getIntExtra(ISCNIRScanSDK.EXTRA_BATT, 0);
+            temprature = intent.getFloatExtra(ISCNIRScanSDK.EXTRA_TEMP, 0);
+            humidity = intent.getFloatExtra(ISCNIRScanSDK.EXTRA_HUMID, 0);
+            long lampTime = intent.getLongExtra(ISCNIRScanSDK.EXTRA_LAMPTIME, 0);
+            totalLampTime = GetLampTimeString(lampTime);
+
+            devStatus = intent.getStringExtra(ISCNIRScanSDK.EXTRA_DEV_STATUS);
+            errorStatus = intent.getStringExtra(ISCNIRScanSDK.EXTRA_ERR_STATUS);
+            devbyte = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DEV_STATUS_BYTE);
+            errbyte = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_ERR_BYTE);
+            Log.e(TAG, "battery:" + battery + "\nTotalLampTime:" + totalLampTime + "\ndevbyte:" + Arrays.toString(devbyte));
+
+            updateDeviceStatusUI();
+        }
+    }
+
+    private void updateDeviceStatusUI() {
+        tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
+        // todo:规范参比更新时间描述
+        tv_update_time.setText("-");
+        tv_battery_level_value.startAnimation(fadeIn);
+        tv_update_time.startAnimation(fadeIn);
+        // 更改电池图标
+        iv_battery.setImageResource(upDateBatteryIcon(battery));
+
+    }
+
+    private int upDateBatteryIcon(int battery) {
+        if (battery >= 0 && battery <= 12) {
+            return R.drawable.baseline_battery_0_bar_24; // 0% - 12%
+        } else if (battery >= 13 && battery <= 25) {
+            return R.drawable.baseline_battery_1_bar_24; // 13% - 25%
+        } else if (battery >= 26 && battery <= 37) {
+            return R.drawable.baseline_battery_2_bar_24; // 26% - 37%
+        } else if (battery >= 38 && battery <= 50) {
+            return R.drawable.baseline_battery_3_bar_24; // 38% - 50%
+        } else if (battery >= 51 && battery <= 62) {
+            return R.drawable.baseline_battery_4_bar_24; // 51% - 62%
+        } else if (battery >= 63 && battery <= 75) {
+            return R.drawable.baseline_battery_5_bar_24; // 63% - 75%
+        } else if (battery >= 76 && battery <= 87) {
+            return R.drawable.baseline_battery_6_bar_24; // 76% - 87%
+        } else if (battery >= 88 && battery <= 100) {
+            return R.drawable.baseline_battery_full_24; // 88% - 100%
+        } else {
+            return R.drawable.baseline_battery_charging_full_24;
         }
     }
 
     // 设定设备物理按钮状态
     private void setDeviceButtonStatus() {
+        Log.d(TAG, "扫描页-setDeviceButtonStatus called");
         // 校验设备波长类型、fw_level
         if (isExtendVer_PLUS || isExtendVer || fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_1) > 0) {
             boolean isLockButton = getBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton, false);
+            Log.d(TAG, "扫描页-setDeviceButtonStatus，isLockButton：" + isLockButton);
             //User open lock button on Configure page
             if (isLockButton) {
                 ISCNIRScanSDK.ControlPhysicalButton(ISCNIRScanSDK.PhysicalButton.Lock);
@@ -824,7 +901,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
     }
 
-    //    region 根据Tiva版本获取 FW level
+    // region 根据Tiva版本获取 FW level
     // 根据Tiva版本获取扩展波长FW level
     private ISCNIRScanSDK.FW_LEVEL_EXT GetFWLevelEXT(String Tivarev) {
         String[] TivaArray = Tivarev.split(Pattern.quote("."));
@@ -958,7 +1035,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 Toast.makeText(ScanViewActivity.this, "请确保蓝牙已经打开！", Toast.LENGTH_SHORT).show();
                 return;
             }
-            mHandler = new Handler();
+            mHandler = new Handler(getMainLooper());
             // 如果存储的设备MAC不为空
             String deviceMac = getStringPref(ScanViewActivity.this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, null);
             if (deviceMac != null) {
@@ -1036,13 +1113,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.AUTO);
             warmUp = false;
         }
-//        if (Current_Scan_Method == ScanMethod.Manual && toggle_button_manual_scan_mode.isChecked())//Manual->Normal,Quickset,Maintain
-//        {
-//            if (toggle_button_manual_lamp.getText().toString().toUpperCase().equals("ON")) {
-//                toggle_button_manual_lamp.setChecked(false);//close lamp
-//            }
-//            ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.AUTO);
-//        }
     }
 
     @Override
@@ -1061,7 +1131,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         changeLampState();
         // todo:解绑服务、取消广播接收器的注册
         unbindService(serviceConnection);
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(GetDeviceStatusReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(StatusReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(RefCoeffDataProgressReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(NotifyCompleteReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(CalMatrixDataProgressReceiver);

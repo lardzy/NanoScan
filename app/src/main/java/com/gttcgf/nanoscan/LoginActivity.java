@@ -49,7 +49,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     private static final String TAG = "LoginActivity";
     public static Boolean userLoggedIn = false;
     // todo: 调试用
-    Button btn_debug, btn_debug_1;
+//    Button btn_debug, btn_debug_1;
     private EditText phone_number, password;
     private TextView forgot_password, register;
     private Button login_button;
@@ -101,8 +101,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         register = findViewById(R.id.register); // 获取注册按钮
         login_button = findViewById(R.id.login_button);
         // todo:按钮为测试用，用完删除
-        btn_debug = findViewById(R.id.btn_debug);
-        btn_debug_1 = findViewById(R.id.btn_debug_1);
+//        btn_debug = findViewById(R.id.btn_debug);
+//        btn_debug_1 = findViewById(R.id.btn_debug_1);
 
         // 设置手机号输入框的输入限制
         phone_number.addTextChangedListener(new CustomTextWatcher(phone_number,
@@ -169,8 +169,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         register.setOnClickListener(this);
         // 点击登录按钮后
         login_button.setOnClickListener(this);
-        btn_debug.setOnClickListener(this);
-        btn_debug_1.setOnClickListener(this);
+//        btn_debug.setOnClickListener(this);
+//        btn_debug_1.setOnClickListener(this);
     }
 
     // 初始化用户数据
@@ -425,26 +425,27 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             startActivity(i);
         } else if (view.getId() == R.id.forgot_password) {
             Toast.makeText(LoginActivity.this, "功能开发中...", Toast.LENGTH_SHORT).show();
-        } else if (view.getId() == R.id.btn_debug) {
-            Intent i;
-            if (isFirstTimeUse) {
-                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
-            } else {
-                i = new Intent(LoginActivity.this, DeviceListActivity.class);
-            }
-            startActivity(i);
-            finish();
-        } else if (view.getId() == R.id.btn_debug_1) {
-            Intent i;
-            if (isFirstTimeUse) {
-                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
-            } else {
-                userLoggedIn = true;
-                i = new Intent(LoginActivity.this, MainActivity.class);
-            }
-            startActivity(i);
-            finish();
         }
+//        else if (view.getId() == R.id.btn_debug) {
+//            Intent i;
+//            if (isFirstTimeUse) {
+//                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
+//            } else {
+//                i = new Intent(LoginActivity.this, DeviceListActivity.class);
+//            }
+//            startActivity(i);
+//            finish();
+//        } else if (view.getId() == R.id.btn_debug_1) {
+//            Intent i;
+//            if (isFirstTimeUse) {
+//                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
+//            } else {
+//                userLoggedIn = true;
+//                i = new Intent(LoginActivity.this, MainActivity.class);
+//            }
+//            startActivity(i);
+//            finish();
+//        }
     }
 
     // 用于获取IPv4地址

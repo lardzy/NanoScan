@@ -106,14 +106,15 @@
     <string name="device_information_dialog_device_info">设备信息：</string>
     <string name="device_information_dialog_device_type">设备类型：</string>
     <string name="device_details_connecting_device">点击更新光谱数据</string>
-    <string name="battery_level">N/A</string>
+    <string name="battery_level">%s</string>
+    <string name="not_available">N/A</string>
     <string name="light_usage_duration">*hr *min *sec</string>
     <string name="light_usage">光源通电时长：</string>
     <string name="remaining_battery_level">剩余电量</string>
     <string name="spectral_reference_update_date">光谱参比更新日期：</string>
     <string name="spectral_reference_update_time">参比更新时间</string>
     <string name="spectral_reference_update_date_value">N/A</string>
-    <string name="spectral_reference_update_time_value">N/A</string>
+    <string name="spectral_reference_update_time_value">%s</string>
     <string name="number_of_spectra_collected">设备已采集光谱数量：</string>
     <string name="number_of_spectra_collected_value">N/A</string>
     <string name="preheat_light_source_switch">是否预热光源</string>
