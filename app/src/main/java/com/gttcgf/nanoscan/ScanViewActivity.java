@@ -182,7 +182,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private String HW_Model = "";
     private String uuid = "";
     private boolean isOldTiva = false;
-
+    private byte[] Lamp_RAMPUP_ADC_DATA;
+    private byte[] Lamp_AVERAGE_ADC_DATA;
     // 用于更新UI时判断加载进度条是否需要显示
     private boolean completeDeviceConnection = false;
 
@@ -308,6 +309,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Toast.makeText(this, "无法获得设备信息，软件发生异常！", Toast.LENGTH_LONG).show();
             finish();
         }
+        // 判断设备连接过程是否已经完成
         completeDeviceConnection = false;
     }
 
@@ -316,7 +318,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         if (view.getId() == R.id.imageButton_back) {
             finish();
         } else if (view.getId() == R.id.start_scan_button) {
+            // todo:判断选中的采集模式、设备功能、参比使用
             PerformScan(300);
+            // 防止重复点击
             start_scan_button.setEnabled(false);
         }
     }
@@ -327,7 +331,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
             @Override
             public void run() {
-                //Send broadcast START_SCAN will trigger to scan data
+                // 发送广播 START_SCAN 将触发扫描
                 ISCNIRScanSDK.StartScan();
                 start_scan_button.setEnabled(true);
             }
@@ -758,10 +762,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Log.d(TAG, "扫描页-ReturnMFGNumReceiver called，设备制造序列号MFG_NUM：" + Arrays.toString(MFG_NUM));
             // 当Tiva为 2.5.x 时，调用GetHWModel。
             if ((!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4) >= 0) || (isExtendVer && fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_3) >= 0)) {
-                Log.d(TAG, "扫描页-ReturnMFGNumReceiver，设备为标准光谱，fw_level_standardcompareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4)>=0，具体为:" + fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4));
+                Log.d(TAG, "扫描页-ReturnMFGNumReceiver，设备为标准光谱，fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4)>=0，具体为:" + fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4));
                 ISCNIRScanSDK.GetHWModel();
             } else {
-                Log.d(TAG, "扫描页-ReturnMFGNumReceiver，设备为标准光谱，fw_level_standardcompareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4)<0，具体为:" + fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4));
+                Log.d(TAG, "扫描页-ReturnMFGNumReceiver，设备为标准光谱，fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4)<0，具体为:" + fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_4));
 
                 ISCNIRScanSDK.GetUUID();
             }
@@ -812,24 +816,26 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 new Handler().postDelayed(() -> {
                     setDeviceButtonStatus();
                     // todo:显示设备已激活
-                    pb_load_calibration.setVisibility(View.GONE);
                     tv_load_calibration.setText(getText(R.string.device_activated));
                     tv_load_calibration.setAnimation(fadeIn);
                     tv_load_calibration.startAnimation(fadeIn);
                 }, 300);
                 storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.Activacatestatus, "Activated.");
                 Log.d(TAG, "扫描页-ReturnReadActivateStatusReceiver，设备激活状态已存储：Activated.");
+
                 // 尝试获取设备状态，延时3秒防止挂起
                 mHandler.postDelayed(() -> {
+                    Log.d(TAG, "扫描页-ReturnReadActivateStatusReceiver，开始获取设备状态信息。");
+
                     tv_load_calibration.setVisibility(View.GONE);
+                    completeDeviceConnection = true;
                     ISCNIRScanSDK.GetDeviceStatus();
-                    enableAllComponent(true);
                 }, 3000);
             } else {
+                // todo:检查本地是否有存储许可证（密钥长度为24）
                 Toast.makeText(mContext, "设备激活失败！", Toast.LENGTH_LONG).show();
                 finish();
             }
-            // todo:检查本地是否有存储许可证（密钥长度为24）
         }
     }
 
@@ -850,11 +856,44 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             devbyte = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DEV_STATUS_BYTE);
             errbyte = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_ERR_BYTE);
             Log.e(TAG, "battery:" + battery + "\nTotalLampTime:" + totalLampTime + "\ndevbyte:" + Arrays.toString(devbyte));
-
+            // 更新界面设备状态信息UI
             updateDeviceStatusUI();
+            // 用于判断是否是设备连接过程
+            if (completeDeviceConnection) {
+                pb_load_calibration.setVisibility(View.GONE);
+                enableAllComponent(true);
+                completeDeviceConnection = false;
+            }
         }
     }
 
+    // 获取灯源ADC（模数转换）
+    public class ReturnLampRampUpADCReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Lamp_RAMPUP_ADC_DATA = intent.getByteArrayExtra(ISCNIRScanSDK.LAMP_RAMPUP_DATA);
+            ISCNIRScanSDK.GetLampADCAverage();
+        }
+    }
+
+    // 获取平均灯源ADC（模数转换）
+    public class ReturnLampADCAverageReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Lamp_AVERAGE_ADC_DATA = intent.getByteArrayExtra(ISCNIRScanSDK.LAMP_ADC_AVERAGE_DATA);
+            if (isExtendVer_PLUS || (!isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_5) == 0)
+                    || (isExtendVer && fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_4) == 0)) {
+                // 当前设备Tivarev:2.4.7、fw_level_standard：LEVEL_3、isExtendVer_PLUS:false、isExtendVer:false
+                ISCNIRScanSDK.GetLampADCTimeStamp();
+            }
+//            else
+//                DoScanComplete();
+        }
+    }
+
+    // 更新布局中的设备信息
     private void updateDeviceStatusUI() {
         tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
         // todo:规范参比更新时间描述
