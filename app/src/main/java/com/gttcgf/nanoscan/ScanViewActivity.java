@@ -1,5 +1,9 @@
 package com.gttcgf.nanoscan;
 
+import static com.ISCSDK.ISCNIRScanSDK.Interpret_intensity;
+import static com.ISCSDK.ISCNIRScanSDK.Interpret_length;
+import static com.ISCSDK.ISCNIRScanSDK.Interpret_uncalibratedIntensity;
+import static com.ISCSDK.ISCNIRScanSDK.Interpret_wavelength;
 import static com.ISCSDK.ISCNIRScanSDK.getBooleanPref;
 import static com.ISCSDK.ISCNIRScanSDK.getStringPref;
 import static com.ISCSDK.ISCNIRScanSDK.storeBooleanPref;
@@ -19,7 +23,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.graphics.Color;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -42,9 +46,11 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.ISCSDK.ISCNIRScanSDK;
-import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.data.Entry;
+import com.google.android.material.tabs.TabLayout;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -106,7 +112,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private Button start_scan_button;
     private ProgressBar pb_load_calibration;
     private TextView tv_load_calibration, tv_battery_level_value, tv_update_time;
-    private LineChart chart;
+    private ViewPager2 vp_chart_pages;
+    private TabLayout tabLayout;
+    private SharedPreferences sharedPreferences;
+    //    private LineChart chart;
     private RecyclerView rv_function_list;
     private FunctionListAdapter functionListAdapter;
     private List<FunctionItem> functionList = new ArrayList<>();
@@ -135,6 +144,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // endregion
     // 设备是否已经连接上
     private boolean connected;
+    private boolean isConnectionTimeout = true;
+    private final long CONNECTION_TIMEOUT = 10000L;
     // region 设备配置文件
     // 存储设备配置文件数量
     private int storedConfSize;
@@ -154,7 +165,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private String totalLampTime = "";
     private byte[] devbyte;
     private byte[] errbyte;
-    private float temprature;
+    private float temperature;
     private float humidity;
     private String devStatus = "";
     private String errorStatus = "";
@@ -188,6 +199,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private byte[] Lamp_AVERAGE_ADC_DATA;
     // 用于更新UI时判断加载进度条是否需要显示
     private boolean completeDeviceConnection = false;
+    // 用于记录测量耗时
+    private long measureTime = 0;
+    // 扫描光谱数据
+    private ISCNIRScanSDK.ScanResults Scan_Spectrum_Data;
+    // region 图表用数据
+    private ArrayList<String> mXValues;
+    private ArrayList<Entry> mReflectanceFloat;
+    private ArrayList<Float> mWavelengthFloat;
+    // endregion
 
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
@@ -259,7 +279,11 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         tv_battery_level_value = findViewById(R.id.tv_battery_level_value);
         tv_update_time = findViewById(R.id.tv_update_time);
         iv_battery = findViewById(R.id.iv_battery);
-        chart = findViewById(R.id.chart);
+        vp_chart_pages = findViewById(R.id.vp_chart_pages);
+        tabLayout = findViewById(R.id.tabLayout);
+//        chart = findViewById(R.id.chart);
+        tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
+        tv_update_time.setText("-");
 
         imageButton_back.setOnClickListener(this);
         start_scan_button.setOnClickListener(this);
@@ -277,17 +301,18 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         tv_battery_level_value.setAnimation(fadeIn);
         tv_update_time.setText(getText(R.string.not_available));
         tv_update_time.setAnimation(fadeIn);
-
+        // 更新设备状态数据
+        updateDeviceStatusUI();
+        // 初始化表格样式
         initChart();
     }
 
     private void initChart() {
-        chart.setBackgroundColor(Color.WHITE);
+//        chart.setBackgroundColor(Color.WHITE);
     }
 
     // 初始化各类数据
     private void initialData() {
-        // todo: 后续根据是否存储了参比数据判断要不要默认选择使用出厂参比
         // 初始化功能列表
         FunctionItem functionItem_1 = new FunctionItem("采集模式", "采集并预测", R.drawable.baseline_auto_graph_24, true);
         functionItem_1.setSelected(true);
@@ -314,8 +339,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Toast.makeText(this, "无法获得设备信息，软件发生异常！", Toast.LENGTH_LONG).show();
             finish();
         }
+        // todo: 后续根据是否存储了参比数据判断要不要默认选择使用出厂参比，使用设备MAC作为区分
+        sharedPreferences = this.getSharedPreferences(deviceItem.getDeviceMac(), Context.MODE_PRIVATE);
+
+        // 读取本地设备状态数据
+        loadDeviceStatus();
         // 判断设备连接过程是否已经完成
         completeDeviceConnection = false;
+
+        mXValues = new ArrayList<>();
+        mReflectanceFloat = new ArrayList<>();
+        mWavelengthFloat = new ArrayList<>();
     }
 
     @Override
@@ -436,7 +470,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private void enableAllComponent(boolean enable) {
         imageButton_back.setEnabled(enable);
         start_scan_button.setEnabled(enable);
-        chart.setVisibility(View.VISIBLE);
+//        chart.setVisibility(View.VISIBLE);
     }
 
     // todo:完成GetActiveConfigOnResume的逻辑
@@ -467,6 +501,27 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         // 更改电池图标
         iv_battery.setImageResource(upDateBatteryIcon(battery));
 
+    }
+
+    // 存储设备状态信息。
+    private void saveDeviceStatus() {
+        Log.d(TAG, "扫描页-saveDeviceStatus called.存储了设备信息。");
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(getString(R.string.pref_device_battery), battery);
+        editor.putFloat(getString(R.string.pref_device_temperature), temperature);
+        editor.putFloat(getString(R.string.pref_device_humidity), humidity);
+        editor.putString(getString(R.string.pref_device_totalLampTime), totalLampTime);
+        // todo:规范参考更新时间
+//        editor.putString(getString(R.string.pref_app_reference_update_time), "-");
+        editor.apply();
+    }
+
+    private void loadDeviceStatus() {
+        Log.d(TAG, "扫描页-loadDeviceStatus called.读取了设备信息。");
+        battery = sharedPreferences.getInt(getString(R.string.pref_device_battery), 0);
+        temperature = sharedPreferences.getFloat(getString(R.string.pref_device_temperature), 0);
+        humidity = sharedPreferences.getFloat(getString(R.string.pref_device_humidity), 0);
+        totalLampTime = sharedPreferences.getString(getString(R.string.pref_device_totalLampTime), "-");
     }
 
     private int upDateBatteryIcon(int battery) {
@@ -711,6 +766,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             // todo:如果用户本次连接已经存储过校准系数，则再次进入此界面时，不需要重新再获取校准系数和矩阵
             //  （ ISCNIRScanSDK.ShouldDownloadCoefficient = false）。
             Log.d(TAG, "扫描页-NotifyCompleteReceiver called.\nwarmUp:" + warmUp);
+            // 设备连接未超时
+            isConnectionTimeout = false;
             // 如果用户选择了预热设备
             if (warmUp) {
                 ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.ON);
@@ -1067,7 +1124,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         public void onReceive(Context context, Intent intent) {
             Log.d(TAG, "扫描页-StatusReceiver called");
             battery = intent.getIntExtra(ISCNIRScanSDK.EXTRA_BATT, 0);
-            temprature = intent.getFloatExtra(ISCNIRScanSDK.EXTRA_TEMP, 0);
+            temperature = intent.getFloatExtra(ISCNIRScanSDK.EXTRA_TEMP, 0);
             humidity = intent.getFloatExtra(ISCNIRScanSDK.EXTRA_HUMID, 0);
             long lampTime = intent.getLongExtra(ISCNIRScanSDK.EXTRA_LAMPTIME, 0);
             totalLampTime = GetLampTimeString(lampTime);
@@ -1079,6 +1136,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Log.e(TAG, "battery:" + battery + "\nTotalLampTime:" + totalLampTime + "\ndevByte:" + Arrays.toString(devbyte));
             // 更新界面设备状态信息UI
             updateDeviceStatusUI();
+            // todo:存储设备状态信息。
+            saveDeviceStatus();
             // 用于判断是否是设备连接过程
             if (completeDeviceConnection) {
                 pb_load_calibration.setVisibility(View.GONE);
@@ -1116,14 +1175,55 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 //                DoScanComplete();
         }
     }
-//    用于处理扫描数据和正确设置图形的自定义接收器（应调用ISCNIRScanSDK.StartScan（））
+
+    //    用于处理扫描数据和正确设置图形的自定义接收器（应调用ISCNIRScanSDK.StartScan（））
     public class ScanDataReadyReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
             Log.d(TAG, "扫描页-ScanDataReadyReceiver called.");
             long endTime = System.currentTimeMillis();
+            measureTime = endTime - ISCNIRScanSDK.startScanTime;
+            if (Interpret_length < 0) {
+                Toast.makeText(mContext, "设备异常，请重新连接！", Toast.LENGTH_LONG).show();
+                finish();
+            } else {
+                // 获取扫描光谱数据
+                Scan_Spectrum_Data = new ISCNIRScanSDK.ScanResults(Interpret_wavelength, Interpret_intensity, Interpret_uncalibratedIntensity, Interpret_length);
+                mReflectanceFloat.clear();
+                mWavelengthFloat.clear();
 
+                for (int i = 0; i < Scan_Spectrum_Data.getLength(); i++) {
+                    mXValues.add(String.format(getString(R.string.scan_wave_length), ISCNIRScanSDK.ScanResults.getSpatialFreq(mContext, Scan_Spectrum_Data.getWavelength()[i])));
+                    mReflectanceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / Scan_Spectrum_Data.getIntensity()[i]));
+                    mWavelengthFloat.add((float) Scan_Spectrum_Data.getWavelength()[i]);
+                }
+                // 初始化图表横、纵坐标的范围
+                initializesTableRange();
+
+            }
+        }
+
+        private void initializesTableRange() {
+            minWavelength = mWavelengthFloat.get(0);
+            maxWavelength = mWavelengthFloat.get(0);
+
+            for (Float f : mWavelengthFloat) {
+                if (f < minWavelength) minWavelength = f;
+                if (f > maxWavelength) maxWavelength = f;
+            }
+            minReflectance = mReflectanceFloat.get(0).getY();
+            maxReflectance = mReflectanceFloat.get(0).getY();
+
+            for (Entry e : mReflectanceFloat) {
+                if (e.getY() < minReflectance || Float.isNaN(minReflectance))
+                    minReflectance = e.getY();
+                if (e.getY() > maxReflectance || Float.isNaN(maxReflectance))
+                    maxReflectance = e.getY();
+            }
+            if (minReflectance == 0 && maxReflectance == 0) {
+                maxReflectance = 2;
+            }
         }
     }
 
@@ -1187,12 +1287,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 // 设备名称包含设备前缀(DEVICE_NAME)，且设备MAC地址等于选中设备的MAC地址
                 if (name.contains(DEVICE_NAME) && device.getAddress().equals(preferredNano)) {
                     // 连接当前的设备
+
+                    boolean connect = mNanoBLEService.connect(device.getAddress());
                     Log.d(TAG, "扫描页-mPreferredLeScanCallback的onScanResult 成功获取preferredNano和name"
-                            + preferredNano + "，name:" + name + "。已连接设备！connected = true");
-                    mNanoBLEService.connect(device.getAddress());
+                            + preferredNano + "，name:" + name + "。已连接设备！connected =" + connect);
+                    if (!connected) {
+                        checkDeviceConnections();
+                    }
                     connected = true;
                     scanPreferredLeDevice(false);
-
                     tv_load_calibration.setText(getString(R.string.connected_to_the_device));
                 }
             } else {
@@ -1216,6 +1319,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     Log.d(TAG, "扫描页-mLeScanCallback的onScanResult ，preferredNano和device.getAddress()一致（mac一致）！"
                             + preferredNano + "，device.getAddress:" + device.getAddress() + "。正式开始连接设备！");
                     mNanoBLEService.connect(preferredNano);
+                    if (!connected) {
+                        checkDeviceConnections();
+                    }
                     connected = true;
                     scanLeDevice(false);
                 }
@@ -1223,5 +1329,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     };
 
+    private void checkDeviceConnections() {
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (isConnectionTimeout) {
+                    Toast.makeText(mContext, "连接超时，请重试！", Toast.LENGTH_LONG).show();
+                    finish();
+                }
+
+            }
+        }, CONNECTION_TIMEOUT);
+    }
 
 }

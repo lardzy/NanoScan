@@ -2,7 +2,9 @@ package com.gttcgf.nanoscan;
 
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -24,6 +26,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.util.Objects;
+
 public class DeviceDetailsActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "DeviceDetailsActivity";
     private static String DEVICE_NAME = "NIR";
@@ -31,12 +35,21 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
     private ImageButton scan, imageButton_back, imageButton_menu;
     private ConstraintLayout device_connection_layout;
     private DeviceItem deviceItem;
-    private TextView light_usage_duration, temperature_value, humidity_value, battery_level, tv_device_mac, tv_device_name, connect_text;
+    private TextView light_usage_duration, humidity_value, battery_level, tv_device_mac,
+            tv_device_name, connect_text, spectral_reference_update_date_value, number_of_spectra_collected_value;
     private ProgressBar scan_progressbar, progressBar;
-    private ImageView connect_btn;
+    private ImageView connect_btn, battery_image;
     private Animation fadeIn, fadeOut;
     private Handler handler;
     private boolean warmUp = false;
+    private SharedPreferences sharedPreferences;
+    // region 设备状态
+    // todo:完成状态信息共享
+    private int battery;
+    private String totalLampTime = "";
+    private String referenceUpdateDate = "-";
+    private int numberOfSpectraCollected = 0;
+    // endregion
 
 
     @Override
@@ -57,6 +70,13 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 更新设备状态信息、光谱数据。
+        updateDeviceData();
+    }
+
     private void initialComponent() {
         Log.d(TAG, "设备详情页-initialComponent called!");
         // 实例化组件
@@ -64,8 +84,6 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         scan = findViewById(R.id.scan);
         device_connection_layout = findViewById(R.id.device_connection_layout);
         light_usage_duration = findViewById(R.id.light_usage_duration);
-        temperature_value = findViewById(R.id.spectral_reference_update_date_value);
-        humidity_value = findViewById(R.id.number_of_spectra_collected_value);
         battery_level = findViewById(R.id.battery_level);
         scan_progressbar = findViewById(R.id.scan_progressbar);
         progressBar = findViewById(R.id.progressBar);
@@ -74,10 +92,15 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         tv_device_mac = findViewById(R.id.tv_device_mac);
         tv_device_name = findViewById(R.id.tv_device_name);
         connect_btn = findViewById(R.id.connect_btn);
+        battery_image = findViewById(R.id.battery_image);
         connect_text = findViewById(R.id.connect_text);
+        spectral_reference_update_date_value = findViewById(R.id.spectral_reference_update_date_value);
+        number_of_spectra_collected_value = findViewById(R.id.number_of_spectra_collected_value);
 
         tv_device_mac.setText(deviceItem.getDeviceMac());
         tv_device_name.setText(deviceItem.getDeviceName());
+
+        scan.setEnabled(false);
         // 设置按钮点击事件
         scan.setOnClickListener(this);
         device_connection_layout.setOnClickListener(this);
@@ -107,7 +130,29 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         updateDeviceData();
     }
 
-    // 读取本地的光谱、光源通电时长、参比日期、光谱数量更新设备信息并更新到界面。
+    private int upDateBatteryIcon(int battery) {
+        if (battery >= 0 && battery <= 12) {
+            return R.drawable.baseline_battery_0_bar_24; // 0% - 12%
+        } else if (battery >= 13 && battery <= 25) {
+            return R.drawable.baseline_battery_1_bar_24; // 13% - 25%
+        } else if (battery >= 26 && battery <= 37) {
+            return R.drawable.baseline_battery_2_bar_24; // 26% - 37%
+        } else if (battery >= 38 && battery <= 50) {
+            return R.drawable.baseline_battery_3_bar_24; // 38% - 50%
+        } else if (battery >= 51 && battery <= 62) {
+            return R.drawable.baseline_battery_4_bar_24; // 51% - 62%
+        } else if (battery >= 63 && battery <= 75) {
+            return R.drawable.baseline_battery_5_bar_24; // 63% - 75%
+        } else if (battery >= 76 && battery <= 87) {
+            return R.drawable.baseline_battery_6_bar_24; // 76% - 87%
+        } else if (battery >= 88 && battery <= 100) {
+            return R.drawable.baseline_battery_full_24; // 88% - 100%
+        } else {
+            return R.drawable.baseline_battery_charging_full_24;
+        }
+    }
+
+    // todo:读取本地的光谱、光源通电时长、参比日期、光谱数量更新设备信息并更新到界面。
     private void updateDeviceData() {
         device_connection_layout.setClickable(false);
         progressBar.setVisibility(View.VISIBLE);
@@ -115,6 +160,20 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         connect_btn.setVisibility(View.GONE);
         connect_text.startAnimation(fadeOut);
         connect_text.setVisibility(View.GONE);
+        // 读取本地数据
+        battery = sharedPreferences.getInt(getString(R.string.pref_device_battery), -1);
+        totalLampTime = sharedPreferences.getString(getString(R.string.pref_device_totalLampTime), "-");
+
+        light_usage_duration.setText(totalLampTime);
+        spectral_reference_update_date_value.setText(referenceUpdateDate);
+        number_of_spectra_collected_value.setText(String.valueOf(numberOfSpectraCollected));
+        if (battery > 0) {
+            battery_level.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
+        } else {
+            battery_level.setText(getString(R.string.not_available));
+        }
+
+        battery_image.setImageResource(upDateBatteryIcon(battery));
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -128,10 +187,11 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
                         connect_btn.startAnimation(fadeIn);
                         connect_text.startAnimation(fadeIn);
                         device_connection_layout.setClickable(true);
+                        scan.setEnabled(true);
                     }
                 });
             }
-        }, 3000L);
+        }, 1000L);
     }
 
     private void initialData() {
@@ -139,6 +199,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         handler = new Handler();
         // 初始化数据
         deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
+        sharedPreferences = this.getSharedPreferences(Objects.requireNonNull(deviceItem).getDeviceMac(), Context.MODE_PRIVATE);
     }
 
     @Override
@@ -155,6 +216,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         } else if (view.getId() == R.id.device_connection_layout) {
             // 点击了设备连接布局
             Log.d("DeviceDetailsActivity", "点击了设备连接布局");
+            // 更新设备数据
             updateDeviceData();
         } else if (view.getId() == R.id.imageButton_back) {
             // 点击了返回按钮

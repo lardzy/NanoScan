@@ -184,12 +184,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/ll_top_components">
 
-        <com.github.mikephil.charting.charts.LineChart
-            android:id="@+id/chart"
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="0.5"
-            android:visibility="invisible" />
+            android:layout_weight="0.05"
+            android:background="@color/zxing_transparent"
+            app:tabGravity="fill"
+            app:tabIndicatorColor="@color/main_color"
+            app:tabMode="scrollable"
+            app:tabSelectedTextColor="@color/main_color"
+            app:tabTextColor="@color/gray" />
+
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/vp_chart_pages"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.45"
+            android:visibility="visible" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_function_list"

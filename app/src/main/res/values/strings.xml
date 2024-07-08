@@ -8,6 +8,11 @@
     <string name="pref_user_password">userPassword</string>
     <string name="pref_user_token">userToken</string>
     <string name="pref_user_ipAddress">userIp</string>
+    <string name="pref_device_battery">battery</string>
+    <string name="pref_device_temperature">temperature</string>
+    <string name="pref_device_humidity">humidity</string>
+    <string name="pref_device_totalLampTime">totalLampTime</string>
+    <string name="pref_app_reference_update_time">referenceUpdateTime</string>
 
 
     <string name="user_agreement">用户协议</string>
@@ -151,5 +156,6 @@
     <string name="active_scan_config_read_from_local">活动扫描配置已从本地缓存获取</string>
     <string name="active_scan_config_received">活动扫描配置接收完成</string>
     <string name="device_activated">设备激活成功</string>
+    <string name="scan_wave_length">%.02f</string>
 
 </resources>
