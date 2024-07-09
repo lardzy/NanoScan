@@ -11,7 +11,7 @@ public class DeviceItem implements Serializable {
     private final String deviceBluetoothName;
 
     public DeviceItem(int imageResource, String deviceName, String deviceType, String deviceMac, String deviceToken) {
-        ImageResource = imageResource;
+        this.ImageResource = imageResource;
         this.deviceName = deviceName;
         this.deviceType = deviceType;
         this.deviceMac = deviceMac;

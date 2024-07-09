@@ -39,10 +39,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -51,10 +53,14 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.ISCSDK.ISCNIRScanSDK;
 import com.github.mikephil.charting.data.Entry;
 import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -113,8 +119,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private ProgressBar pb_load_calibration;
     private TextView tv_load_calibration, tv_battery_level_value, tv_update_time;
     private ViewPager2 vp_chart_pages;
+    private ChartPagerAdapter chartPagerAdapter;
     private TabLayout tabLayout;
     private SharedPreferences sharedPreferences;
+    private List<Fragment> charts = new ArrayList<>();
     //    private LineChart chart;
     private RecyclerView rv_function_list;
     private FunctionListAdapter functionListAdapter;
@@ -201,11 +209,22 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private boolean completeDeviceConnection = false;
     // 用于记录测量耗时
     private long measureTime = 0;
+    // 记录当前时间
+    private String currentTime = "";
     // 扫描光谱数据
     private ISCNIRScanSDK.ScanResults Scan_Spectrum_Data;
     // region 图表用数据
+    // x轴数据点
     private ArrayList<String> mXValues;
+    // 反射率
     private ArrayList<Entry> mReflectanceFloat;
+    // 光谱强度数据（即为原始数据）
+    private ArrayList<Entry> mIntensityFloat;
+    // 吸光度
+    private ArrayList<Entry> mAbsorbanceFloat;
+    // 参比
+    private ArrayList<Entry> mReferenceFloat;
+    // 波长范围
     private ArrayList<Float> mWavelengthFloat;
     // endregion
 
@@ -303,13 +322,37 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         tv_update_time.setAnimation(fadeIn);
         // 更新设备状态数据
         updateDeviceStatusUI();
-        // 初始化表格样式
-        initChart();
+
+        // todo:测试用，后续删除
+        charts.add(new ScanResultLineChartFragment());
+        charts.add(new ScanResultLineChartFragment());
+        charts.add(new ScanResultLineChartFragment());
+        charts.add(new ScanResultLineChartFragment());
+        chartPagerAdapter = new ChartPagerAdapter(this, charts);
+        vp_chart_pages.setAdapter(chartPagerAdapter);
+        vp_chart_pages.setVisibility(View.INVISIBLE);
+        tabLayout.setVisibility(View.INVISIBLE);
+        new TabLayoutMediator(tabLayout, vp_chart_pages, new TabLayoutMediator.TabConfigurationStrategy() {
+            @Override
+            public void onConfigureTab(@NonNull TabLayout.Tab tab, int position) {
+                switch (position) {
+                    case 0:
+                        tab.setText(R.string.tab_absorbance);
+                        break;
+                    case 1:
+                        tab.setText(R.string.tab_reflectance);
+                        break;
+                    case 2:
+                        tab.setText(R.string.tab_intensity);
+                        break;
+                    case 3:
+                        tab.setText(R.string.tab_Reference);
+                        break;
+                }
+            }
+        }).attach();
     }
 
-    private void initChart() {
-//        chart.setBackgroundColor(Color.WHITE);
-    }
 
     // 初始化各类数据
     private void initialData() {
@@ -349,7 +392,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         mXValues = new ArrayList<>();
         mReflectanceFloat = new ArrayList<>();
+        mIntensityFloat = new ArrayList<>();
         mWavelengthFloat = new ArrayList<>();
+        mAbsorbanceFloat = new ArrayList<>();
+        mReferenceFloat = new ArrayList<>();
     }
 
     @Override
@@ -363,7 +409,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             start_scan_button.setEnabled(false);
         }
     }
-
+    // 执行扫描
     private void PerformScan(long delayTime) {
         Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
@@ -372,7 +418,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             public void run() {
                 // 发送广播 START_SCAN 将触发扫描
                 ISCNIRScanSDK.StartScan();
-                start_scan_button.setEnabled(true);
             }
         }, delayTime);
     }
@@ -466,11 +511,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         }
     }
-
+    // 启用或停用界面组件
     private void enableAllComponent(boolean enable) {
         imageButton_back.setEnabled(enable);
         start_scan_button.setEnabled(enable);
-//        chart.setVisibility(View.VISIBLE);
+        tabLayout.setEnabled(enable);
+        vp_chart_pages.setEnabled(enable);
+        if (enable) {
+            tabLayout.setVisibility(View.VISIBLE);
+        } else {
+            tabLayout.setVisibility(View.INVISIBLE);
+        }
     }
 
     // todo:完成GetActiveConfigOnResume的逻辑
@@ -766,8 +817,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             // todo:如果用户本次连接已经存储过校准系数，则再次进入此界面时，不需要重新再获取校准系数和矩阵
             //  （ ISCNIRScanSDK.ShouldDownloadCoefficient = false）。
             Log.d(TAG, "扫描页-NotifyCompleteReceiver called.\nwarmUp:" + warmUp);
-            // 设备连接未超时
-            isConnectionTimeout = false;
             // 如果用户选择了预热设备
             if (warmUp) {
                 ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.ON);
@@ -804,6 +853,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 }
 
             }
+
+            // 设备连接未超时
+            isConnectionTimeout = false;
+            Log.d(TAG, "扫描页-isConnectionTimeout=false");
         }
     }
 
@@ -1117,7 +1170,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
-    // 获取设备状态，包括电池容量、温度湿度等。
+    // 获取设备状态，包括电池余量、温度湿度等。
     public class StatusReceiver extends BroadcastReceiver {
 
         @Override
@@ -1141,9 +1194,21 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             // 用于判断是否是设备连接过程
             if (completeDeviceConnection) {
                 pb_load_calibration.setVisibility(View.GONE);
+                vp_chart_pages.setVisibility(View.VISIBLE);
                 enableAllComponent(true);
                 completeDeviceConnection = false;
             }
+            // 当前设备Tivarev:2.4.7、fw_level_standard：LEVEL_3、isExtendVer_PLUS:false、isExtendVer:false
+            // 请求获取灯源ADC
+            if (isExtendVer_PLUS ||
+                    (isExtendVer && (fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_2) == 0 || fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_4) == 0))
+                    || (!isExtendVer && (fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_3) == 0 || fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_5) == 0))) {
+                Log.d(TAG, "扫描页-固件版本f符合，正在请求获取灯源ADC。");
+                ISCNIRScanSDK.GetScanLampRampUpADC();
+            } else {
+                Log.e(TAG, "扫描页-固件版本不符合，call DoScanComplete();");
+            }
+
         }
     }
 
@@ -1154,6 +1219,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "扫描页-ReturnLampRampUpADCReceiver called.");
             Lamp_RAMPUP_ADC_DATA = intent.getByteArrayExtra(ISCNIRScanSDK.LAMP_RAMPUP_DATA);
             ISCNIRScanSDK.GetLampADCAverage();
         }
@@ -1164,16 +1230,31 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "扫描页-ReturnLampADCAverageReceiver called");
             Lamp_AVERAGE_ADC_DATA = intent.getByteArrayExtra(ISCNIRScanSDK.LAMP_ADC_AVERAGE_DATA);
             if (isExtendVer_PLUS || (!isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_5) == 0)
                     || (isExtendVer && fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_4) == 0)) {
                 // 当前设备Tivarev:2.4.7、fw_level_standard：LEVEL_3、isExtendVer_PLUS:false、isExtendVer:false
+                // 开发用设备不符合条件
                 ISCNIRScanSDK.GetLampADCTimeStamp();
+            } else {
+                Log.e(TAG, "扫描页-ReturnLampADCAverageReceiver，已获取Lamp_AVERAGE_ADC_DATA。设备固件不符合条件，准备执行执行DoScanComplete");
+                // todo:scanComplete。
+                scanComplete();
             }
-            // todo:增加DoScanComplete。
-//            else
-//                DoScanComplete();
         }
+    }
+
+    private void scanComplete() {
+    /* todo:
+        1.更新设备物理按钮锁定状态
+        2.检查设备激活状态，未激活则关闭特定功能
+        3.将扫描数据存储进NirSpectralData对象中
+        4.获取光谱预测数据
+        5.根据选择的采集模式，处理光谱数据，比如：更新参比
+        6.更新UI状态，包括图表、预测结果、是否保存结果等
+      */
+        start_scan_button.setEnabled(true);
     }
 
     //    用于处理扫描数据和正确设置图形的自定义接收器（应调用ISCNIRScanSDK.StartScan（））
@@ -1190,20 +1271,38 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             } else {
                 // 获取扫描光谱数据
                 Scan_Spectrum_Data = new ISCNIRScanSDK.ScanResults(Interpret_wavelength, Interpret_intensity, Interpret_uncalibratedIntensity, Interpret_length);
+                Log.d(TAG, "扫描页-Scan_Spectrum_Data扫描数据成功获取，measureTime:" + measureTime + "\nScan_Spectrum_Data.length:" + Scan_Spectrum_Data.getLength());
                 mReflectanceFloat.clear();
+                mIntensityFloat.clear();
+                mAbsorbanceFloat.clear();
+                mReferenceFloat.clear();
                 mWavelengthFloat.clear();
 
                 for (int i = 0; i < Scan_Spectrum_Data.getLength(); i++) {
                     mXValues.add(String.format(getString(R.string.scan_wave_length), ISCNIRScanSDK.ScanResults.getSpatialFreq(mContext, Scan_Spectrum_Data.getWavelength()[i])));
+                    mIntensityFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i]));
+                    mAbsorbanceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (-1) * (float) Math.log10((double) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / (double) Scan_Spectrum_Data.getIntensity()[i])));
                     mReflectanceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / Scan_Spectrum_Data.getIntensity()[i]));
                     mWavelengthFloat.add((float) Scan_Spectrum_Data.getWavelength()[i]);
+                    mReferenceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getIntensity()[i]));
                 }
                 // 初始化图表横、纵坐标的范围
                 initializesTableRange();
-
+                // 获取当前时间
+                SimpleDateFormat filesimpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+                currentTime = filesimpleDateFormat.format(new Date());
+                if (warmUp) {
+                    // 如果灯源此时在预热状态，则改回AUTO，关闭光源。
+                    ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.AUTO);
+                    lampInfo = LampInfo.CloseWarmUpLampInScan;
+                } else {
+                    // 开始获取设备信息。
+                    ISCNIRScanSDK.GetDeviceStatus();
+                }
             }
         }
 
+        // 初始化图表横、纵坐标的范围
         private void initializesTableRange() {
             minWavelength = mWavelengthFloat.get(0);
             maxWavelength = mWavelengthFloat.get(0);
@@ -1212,6 +1311,16 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 if (f < minWavelength) minWavelength = f;
                 if (f > maxWavelength) maxWavelength = f;
             }
+
+            minAbsorbance = mAbsorbanceFloat.get(0).getY();
+            maxAbsorbance = mAbsorbanceFloat.get(0).getY();
+            for (Entry e : mAbsorbanceFloat) {
+                if (e.getY() < minAbsorbance || Float.isNaN(minAbsorbance))
+                    minAbsorbance = e.getY();
+                if (e.getY() > maxAbsorbance || Float.isNaN(maxAbsorbance))
+                    maxAbsorbance = e.getY();
+            }
+
             minReflectance = mReflectanceFloat.get(0).getY();
             maxReflectance = mReflectanceFloat.get(0).getY();
 
@@ -1223,6 +1332,32 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             }
             if (minReflectance == 0 && maxReflectance == 0) {
                 maxReflectance = 2;
+            }
+
+            minIntensity = mIntensityFloat.get(0).getY();
+            maxIntensity = mIntensityFloat.get(0).getY();
+
+            for (Entry e : mIntensityFloat) {
+                if (e.getY() < minIntensity || Float.isNaN(minIntensity))
+                    minIntensity = e.getY();
+                if (e.getY() > maxIntensity || Float.isNaN(maxIntensity))
+                    maxIntensity = e.getY();
+            }
+            if (minIntensity == 0 && maxIntensity == 0) {
+                maxIntensity = 1000;
+            }
+
+            minReference = mReferenceFloat.get(0).getY();
+            maxReference = mReferenceFloat.get(0).getY();
+
+            for (Entry e : mReferenceFloat) {
+                if (e.getY() < minReference || Float.isNaN(minReference))
+                    minReference = e.getY();
+                if (e.getY() > maxReference || Float.isNaN(maxReference))
+                    maxReference = e.getY();
+            }
+            if (minReference == 0 && maxReference == 0) {
+                maxReference = 1000;
             }
         }
     }

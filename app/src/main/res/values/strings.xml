@@ -138,8 +138,8 @@
     <string name="main_tv_ad">最新消息</string>
     <string name="tv_devices_list">最近未使用任何设备</string>
     <string name="tv_nes_empty">暂无信息</string>
-    <string name="not_connected_title">未连接</string>
-    <string name="not_connected_message">请你确保设备的蓝牙已经打开，然后重新尝试进行连接！</string>
+    <string name="not_connected_title">连接超时</string>
+    <string name="not_connected_message">请确保设备的电源已经打开，然后重新尝试连接！</string>
     <string name="division_line">纵向分割线</string>
     <string name="back_button">返回按钮</string>
     <string name="tv_scan_function_mode">采集模式</string>
@@ -156,6 +156,10 @@
     <string name="active_scan_config_read_from_local">活动扫描配置已从本地缓存获取</string>
     <string name="active_scan_config_received">活动扫描配置接收完成</string>
     <string name="device_activated">设备激活成功</string>
-    <string name="scan_wave_length">%.02f</string>
+    <string name="scan_wave_length">%.2f</string>
+    <string name="tab_reflectance">反射率</string>
+    <string name="tab_absorbance">吸光度</string>
+    <string name="tab_intensity">光强度</string>
+    <string name="tab_Reference">参比</string>
 
 </resources>
