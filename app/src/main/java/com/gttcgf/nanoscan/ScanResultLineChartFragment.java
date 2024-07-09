@@ -9,9 +9,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import java.util.Objects;
-
 public class ScanResultLineChartFragment extends Fragment {
+
     public ScanResultLineChartFragment() {
 
     }

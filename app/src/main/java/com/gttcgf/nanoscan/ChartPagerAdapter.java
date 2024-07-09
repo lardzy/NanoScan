@@ -23,6 +23,6 @@ public class ChartPagerAdapter extends FragmentStateAdapter {
 
     @Override
     public int getItemCount() {
-        return 4;
+        return chartFragmentList.size();
     }
 }
