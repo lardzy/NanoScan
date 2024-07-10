@@ -323,12 +323,11 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         // 更新设备状态数据
         updateDeviceStatusUI();
 
-        // todo:测试用，后续删除
+        // 添加4种图表
         charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_ABSORBANCE, mAbsorbanceFloat));
         charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_REFLECTANCE, mReflectanceFloat));
         charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_INTENSITY, mIntensityFloat));
         charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_REFERENCE, mReferenceFloat));
-
 
         chartPagerAdapter = new ChartPagerAdapter(this, charts);
         vp_chart_pages.setAdapter(chartPagerAdapter);
@@ -412,6 +411,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             pb_load_calibration.setVisibility(View.VISIBLE);
         }
     }
+
     // 执行扫描
     private void PerformScan(long delayTime) {
         Handler handler = new Handler();
@@ -516,6 +516,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         }
     }
+
     // 启用或停用界面组件
     private void enableAllComponent(boolean enable) {
         imageButton_back.setEnabled(enable);

@@ -94,7 +94,7 @@ public class ScanResultLineChartFragment extends Fragment {
         }
         // 不显示数据点顶端的小圆点
         lineDataSet.setDrawIcons(false); // 不显示端点的icon
-        lineDataSet.setDrawCircles(false); // 显示顶点圆quan
+        lineDataSet.setDrawCircles(false); // 显示顶点圆圈
         lineDataSet.setDrawCircleHole(true); // 空心还是实心
         lineDataSet.setDrawValues(false);  // 不显示具体数值
 
@@ -113,7 +113,7 @@ public class ScanResultLineChartFragment extends Fragment {
             lineChart.invalidate();
         }
     }
-
+    // 更新光谱数据
     public void updateChart(ArrayList<Entry> newData) {
         chartData.clear();
         chartData.addAll(newData);

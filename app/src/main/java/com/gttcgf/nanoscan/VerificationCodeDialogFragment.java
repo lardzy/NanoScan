@@ -69,8 +69,8 @@ public class VerificationCodeDialogFragment extends DialogFragment {
         // 获取存储的Bundle
         this.context = getActivity();
         this.phone_number = getArguments().getString("PHONE_NUMBER");
-        View view = getLayoutInflater().inflate(R.layout.dialog_verification_code_image, container, false);
-//        View view = inflater.inflate(R.layout.dialog_verification_code_image, container, false);
+//        View view = getLayoutInflater().inflate(R.layout.dialog_verification_code_image, container, false);
+        View view = inflater.inflate(R.layout.dialog_verification_code_image, container, false);
 
         handler = new Handler();
 
