@@ -122,7 +122,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private ChartPagerAdapter chartPagerAdapter;
     private TabLayout tabLayout;
     private SharedPreferences sharedPreferences;
-    private List<Fragment> charts = new ArrayList<>();
+    private List<ScanResultLineChartFragment> charts = new ArrayList<>();
     //    private LineChart chart;
     private RecyclerView rv_function_list;
     private FunctionListAdapter functionListAdapter;
@@ -154,6 +154,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private boolean connected;
     private boolean isConnectionTimeout = true;
     private final long CONNECTION_TIMEOUT = 10000L;
+    private boolean isDeviceScanning = false;  // 设备是否正在扫描
     // region 设备配置文件
     // 存储设备配置文件数量
     private int storedConfSize;
@@ -300,7 +301,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         iv_battery = findViewById(R.id.iv_battery);
         vp_chart_pages = findViewById(R.id.vp_chart_pages);
         tabLayout = findViewById(R.id.tabLayout);
-//        chart = findViewById(R.id.chart);
         tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
         tv_update_time.setText("-");
 
@@ -324,10 +324,12 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         updateDeviceStatusUI();
 
         // todo:测试用，后续删除
-        charts.add(new ScanResultLineChartFragment());
-        charts.add(new ScanResultLineChartFragment());
-        charts.add(new ScanResultLineChartFragment());
-        charts.add(new ScanResultLineChartFragment());
+        charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_ABSORBANCE, mAbsorbanceFloat));
+        charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_REFLECTANCE, mReflectanceFloat));
+        charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_INTENSITY, mIntensityFloat));
+        charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_REFERENCE, mReferenceFloat));
+
+
         chartPagerAdapter = new ChartPagerAdapter(this, charts);
         vp_chart_pages.setAdapter(chartPagerAdapter);
         vp_chart_pages.setVisibility(View.INVISIBLE);
@@ -404,9 +406,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             finish();
         } else if (view.getId() == R.id.start_scan_button) {
             // todo:判断选中的采集模式、设备功能、参比使用
-            PerformScan(300);
+            PerformScan(1000);
             // 防止重复点击
-            start_scan_button.setEnabled(false);
+            enableAllComponent(false);
+            pb_load_calibration.setVisibility(View.VISIBLE);
         }
     }
     // 执行扫描
@@ -416,6 +419,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
             @Override
             public void run() {
+                // 判断是否处于扫描过程中
+                isDeviceScanning = true;
                 // 发送广播 START_SCAN 将触发扫描
                 ISCNIRScanSDK.StartScan();
             }
@@ -517,10 +522,13 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         start_scan_button.setEnabled(enable);
         tabLayout.setEnabled(enable);
         vp_chart_pages.setEnabled(enable);
+        functionListAdapter.setClickable(enable);
         if (enable) {
             tabLayout.setVisibility(View.VISIBLE);
+            vp_chart_pages.setVisibility(View.VISIBLE);
         } else {
             tabLayout.setVisibility(View.INVISIBLE);
+            vp_chart_pages.setVisibility(View.INVISIBLE);
         }
     }
 
@@ -1191,7 +1199,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             updateDeviceStatusUI();
             // todo:存储设备状态信息。
             saveDeviceStatus();
-            // 用于判断是否是设备连接过程
+            // 用于判断是否是设备第一次和软件的连接过程
             if (completeDeviceConnection) {
                 pb_load_calibration.setVisibility(View.GONE);
                 vp_chart_pages.setVisibility(View.VISIBLE);
@@ -1254,7 +1262,18 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         5.根据选择的采集模式，处理光谱数据，比如：更新参比
         6.更新UI状态，包括图表、预测结果、是否保存结果等
       */
-        start_scan_button.setEnabled(true);
+        if (isDeviceScanning) {
+            Log.d(TAG, "扫描页-scanComplete called.");
+            chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_ABSORBANCE, mAbsorbanceFloat);
+            chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_REFLECTANCE, mReflectanceFloat);
+            chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_INTENSITY, mIntensityFloat);
+            chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_REFERENCE, mReferenceFloat);
+            enableAllComponent(true);
+            pb_load_calibration.setVisibility(View.INVISIBLE);
+            // 判断是否处于扫描过程中
+            isDeviceScanning = false;
+        }
+
     }
 
     //    用于处理扫描数据和正确设置图形的自定义接收器（应调用ISCNIRScanSDK.StartScan（））

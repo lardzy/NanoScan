@@ -161,5 +161,6 @@
     <string name="tab_absorbance">吸光度</string>
     <string name="tab_intensity">光强度</string>
     <string name="tab_Reference">参比</string>
+    <string name="chart_no_data_text">无数据</string>
 
 </resources>
