@@ -55,7 +55,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Context mcontext;
     private String username, loginToken;
     private SharedPreferences sharedPreferences;
-//    public static StoreCalibration storeCalibration = new StoreCalibration();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,8 +75,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         initializeData();
         initComponent();
-        checkFirstRunOrUserAgreement();   // 检查用户是否是第一次使用、检查用户是否已登录
-
+        // 检查用户是否是第一次使用、检查用户是否已登录
+        checkIsFirstTimeUse();
+//        checkUserLoginStatus();
+//        checkFirstRunOrUserAgreement();
         // 应用窗口边缘到边缘的设置
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -91,6 +92,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onResume() {
         super.onResume();
         Log.e(TAG, "主界面-onResume called!");
+        // todo:这里验证登录
+
+        checkUserLoginStatus();
         // 更新列表数据和UI
         updateData();
     }
@@ -111,6 +115,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void initializeData() {
         Log.e(TAG, "主界面-initializeData called");
+        // 读取本地文件
+        sharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
 
         this.deviceItem = loadDataFromFiles();
         Log.d(TAG, "主界面-设备列表文件读取长度为：" + deviceItem.size());
@@ -165,31 +171,41 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         enableAllComponent(false);
     }
 
-    // 检查用户是否是第一次使用、检查用户是否已登录
-    private void checkFirstRunOrUserAgreement() {
-        Log.e(TAG, "主界面-检查是否是第一次启动checkFirstRunOrUserAgreement called");
-        // 禁用所有组件，避免误触
+    private void checkIsFirstTimeUse() {
+        Log.d(TAG, "主界面-检查是否是第一次启动，checkIsFirstTimeUse called");
         enableAllComponent(false);
         // 显示加载进度条
         pb_devices_list.setVisibility(View.VISIBLE);
-        // 读取本地文件
-        sharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
         boolean isFirstRun = sharedPreferences.getBoolean(getString(R.string.pref_first_run), true);
         boolean userAgreed = sharedPreferences.getBoolean(getString(R.string.pref_user_agreed), false);
-        loginToken = sharedPreferences.getString(getString(R.string.pref_user_token), "");
-
         // todo:如果pref_user_token不为空，则尝试直接登录，期间禁用UI，登录成功则启用UI，失败则跳转登录界面
-        Log.d(TAG, "主界面-checkFirstRunOrUserAgreement读取到本地文件：isFirstRun:" + isFirstRun + "\nuserAgreed:" + userAgreed + "\nloginToken:" + loginToken);
-
+        Log.d(TAG, "主界面-checkIsFirstTimeUse读取到本地文件：isFirstRun:" + isFirstRun + "\nuserAgreed:" + userAgreed);
         if (isFirstRun && !userAgreed) {
             // UserAgreementActivity 是用户协议界面的Activity
             Log.d(TAG, "主界面-用户是第一次使用（从未登录过），且并未同意用户协议！");
             Intent intent = new Intent(this, UserAgreementActivity.class);
             startActivity(intent);
             finish(); // 关闭当前活动，以防用户返回到这个界面
-        } else if (!LoginActivity.userLoggedIn || loginToken.isEmpty()) {
-            Log.d(TAG, "主界面-用户登录标志为false或loginToken为空！开始服务器验证登录权限。");
+        } else {
+            enableAllComponent(true);
+            // 显示加载进度条
+            pb_devices_list.setVisibility(View.INVISIBLE);
+        }
+
+    }
+
+    private void checkUserLoginStatus() {
+        Log.d(TAG, "主界面-checkUserLoginStatus called");
+        // 禁用所有组件，避免误触
+        enableAllComponent(false);
+        // 显示加载进度条
+        pb_devices_list.setVisibility(View.VISIBLE);
+        loginToken = sharedPreferences.getString(getString(R.string.pref_user_token), "");
+        // todo:如果pref_user_token不为空，则尝试直接登录，期间禁用UI，登录成功则启用UI，失败则跳转登录界面
+        Log.d(TAG, "主界面-checkUserLoginStatus读取到本地文件：loginToken:" + loginToken);
+        if (!LoginActivity.userLoggedIn || loginToken.isEmpty()) {
             // 当登录标志为否，或本地未存储登录token时，重新验证登录
+            Log.d(TAG, "主界面-用户登录标志为false或loginToken为空！开始服务器验证登录权限。");
             // todo:增加判断是否登录的逻辑。
             serverVerificationLoginToken(new CheckLoginStatueCallback() {
                 @Override
@@ -238,7 +254,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             });
 
         }
-
     }
 
     // 通过服务器校验用户登录状态

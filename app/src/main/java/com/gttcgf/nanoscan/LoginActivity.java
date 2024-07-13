@@ -47,9 +47,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     private static final String serverUrl = "https://newnirtechnolgy.top/api";
     private static final String IPIFY_URL = "https://api.ipify.org";
     private static final String TAG = "LoginActivity";
-    public static Boolean userLoggedIn = false;
-    // todo: 调试用
-//    Button btn_debug, btn_debug_1;
+    // todo:登录标志位
+    public static boolean userLoggedIn = false;
     private EditText phone_number, password;
     private TextView forgot_password, register;
     private Button login_button;
@@ -100,9 +99,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         forgot_password = findViewById(R.id.forgot_password); // 获取忘记密码按钮
         register = findViewById(R.id.register); // 获取注册按钮
         login_button = findViewById(R.id.login_button);
-        // todo:按钮为测试用，用完删除
-//        btn_debug = findViewById(R.id.btn_debug);
-//        btn_debug_1 = findViewById(R.id.btn_debug_1);
 
         // 设置手机号输入框的输入限制
         phone_number.addTextChangedListener(new CustomTextWatcher(phone_number,
@@ -169,8 +165,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         register.setOnClickListener(this);
         // 点击登录按钮后
         login_button.setOnClickListener(this);
-//        btn_debug.setOnClickListener(this);
-//        btn_debug_1.setOnClickListener(this);
     }
 
     // 初始化用户数据

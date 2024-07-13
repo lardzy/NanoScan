@@ -66,6 +66,8 @@
     <string name="scanning_bluetooth_device">正在扫描蓝牙设备…</string>
     <string name="scanning_bluetooth_device_timeout_title">扫描超时</string>
     <string name="scanning_bluetooth_device_timeout_content">请检查设备的电源是否打开，然后返回重试</string>
+    <string name="device_added_successfully">设备添加成功</string>
+    <string name="device_added_successfully_content">设备%s已成功添加到设备列表</string>
     <string name="card_image_contentDescription">设备名</string>
     <string name="device_name">设备名称</string>
     <string name="device_type_nir">近红外光谱仪</string>

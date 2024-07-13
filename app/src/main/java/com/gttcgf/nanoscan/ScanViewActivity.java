@@ -113,17 +113,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private LampInfo lampInfo = LampInfo.ManualLamp;
     private ArrayList<ISCNIRScanSDK.ScanConfiguration> scanConfigList = new ArrayList<>();
     // region UI组件
-//    private FrameLayout view_back;
     private ImageButton imageButton_back;
     private Button start_scan_button;
-    private ProgressBar pb_load_calibration;
+    private CircularProgressBarView pb_load_calibration;
     private TextView tv_load_calibration, tv_battery_level_value, tv_update_time;
     private ViewPager2 vp_chart_pages;
     private ChartPagerAdapter chartPagerAdapter;
     private TabLayout tabLayout;
     private SharedPreferences sharedPreferences;
     private List<ScanResultLineChartFragment> charts = new ArrayList<>();
-    //    private LineChart chart;
     private RecyclerView rv_function_list;
     private FunctionListAdapter functionListAdapter;
     private List<FunctionItem> functionList = new ArrayList<>();

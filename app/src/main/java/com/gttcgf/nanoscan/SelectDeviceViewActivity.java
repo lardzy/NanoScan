@@ -19,6 +19,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -39,6 +40,7 @@ import com.ISCSDK.ISCNIRScanSDK;
 import java.util.ArrayList;
 
 public class SelectDeviceViewActivity extends AppCompatActivity implements View.OnClickListener { // 选择蓝牙设备界面
+    private static final String TAG = "SelectDeviceViewActivit";
     private static final int REQUEST_CODE_PERMISSIONS = 101;
     private static final String[] REQUIRED_PERMISSIONS = getRequiredPermissions();
     private static String DEVICE_NAME = "NIR";  // 名称前缀
@@ -53,9 +55,9 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
     private ScanCallback scannerCallback;
     private ArrayList<ISCNIRScanSDK.NanoDevice> nanoDeviceList = new ArrayList<>();
     private NanoScanAdapter nanoScanAdapter;
-    private AlertDialog alertDialog;
     private SharedPreferences sharedPreferences;
     private String pref_user_phone_number, pref_user_password, pref_user_token, pref_user_ipAddress;
+    private boolean isStopped = false;
 
     // 需要的权限列表，获取位置和蓝牙相关权限。
     private static String[] getRequiredPermissions() {
@@ -150,7 +152,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
                 @SuppressLint("MissingPermission")
                 String name = device.getName();
                 if (name != null && name.contains(DEVICE_NAME) && result.getScanRecord() != null) {
-                    Boolean isDeviceInList = false;
+                    boolean isDeviceInList = false;
                     // 新建ISCNIRScanSDK.NanoDevice对象
                     ISCNIRScanSDK.NanoDevice nanoDevice = new ISCNIRScanSDK.NanoDevice(device, result.getRssi(), result.getScanRecord().getBytes());
                     // 判断设备是否已在列表中，如果已经在，就该设备更新信号强度。
@@ -185,9 +187,14 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
                     tv_loading.setVisibility(View.INVISIBLE);
                     // 当列表依旧为空时，弹窗提示扫描超时
                     if (nanoDeviceList.isEmpty()) {
-                        GeneralMessageDialogFragment messageDialogFragment = GeneralMessageDialogFragment.newInstance(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, getString(R.string.scanning_bluetooth_device_timeout_title)
-                                , getString(R.string.scanning_bluetooth_device_timeout_content));
-                        messageDialogFragment.show(getSupportFragmentManager(), "DeviceScanTimeout");
+                        if (!isFinishing() && !isDestroyed() && !isStopped) {
+                            GeneralMessageDialogFragment messageDialogFragment = GeneralMessageDialogFragment.newInstance(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, getString(R.string.scanning_bluetooth_device_timeout_title)
+                                    , getString(R.string.scanning_bluetooth_device_timeout_content));
+                            messageDialogFragment.show(getSupportFragmentManager(), "DeviceScanTimeout");
+                        } else {
+                            Log.e(TAG, "连接失败弹窗-弹窗时Activity已销毁。");
+                            finish();
+                        }
                     }
 //                    Toast.makeText(this, "蓝牙设备扫描已停止", Toast.LENGTH_SHORT).show();
                 }, ISCNIRScanSDK.SCAN_PERIOD);  // 6000L
@@ -220,8 +227,11 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
                     i.putExtra("NAME", name);
                     i.putExtra("MAC", mac);
                     i.putExtra("DEVICE_TOKEN", token);
+                    // 返回结果成功
                     setResult(Activity.RESULT_OK, i);
-                    finish();
+                    GeneralMessageDialogFragment messageDialogFragment = GeneralMessageDialogFragment.newInstance(GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK, getString(R.string.device_added_successfully),
+                            getString(R.string.device_added_successfully_content, name));
+                    messageDialogFragment.show(getSupportFragmentManager(), "Device added successfully");
                 }
             }
 
@@ -239,6 +249,18 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
         if (view.getId() == R.id.imageButton_back) {
             finish();
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isStopped = false;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        isStopped = true;
     }
 
     // 检查所有权限

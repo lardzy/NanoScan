@@ -31,6 +31,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class DeviceListActivity extends AppCompatActivity {
     private List<DeviceItem> itemList;
@@ -165,9 +166,14 @@ public class DeviceListActivity extends AppCompatActivity {
         });
         builder.setNegativeButton("取消", (dialog, which) -> {
         });
-        // 创建并显示AlertDialog
-        builder.create().show();
+        // 创建AlertDialog
+        AlertDialog dialog = builder.create();
+        // 设置自定义背景
+        Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawableResource(R.drawable.rounded_rectangle);
+        // 显示AlertDialog
+        dialog.show();
     }
+
 
     // 添加设备，更新列表和本地配置文件
     private void addDevice(DeviceItem newItem) {
