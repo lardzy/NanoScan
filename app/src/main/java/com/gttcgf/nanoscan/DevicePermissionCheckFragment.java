@@ -301,7 +301,7 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
         // 设置无标题样式
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setCanceledOnTouchOutside(false);
-        return super.onCreateDialog(savedInstanceState);
+        return dialog;
     }
 
     @Override

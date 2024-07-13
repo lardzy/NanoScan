@@ -228,6 +228,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // 波长范围
     private ArrayList<Float> mWavelengthFloat;
     // endregion
+    private boolean isStopped = false;
 
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
@@ -400,6 +401,12 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        isStopped = false;
+    }
+
+    @Override
     public void onClick(View view) {
         if (view.getId() == R.id.imageButton_back) {
             finish();
@@ -495,26 +502,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
     private void notConnectedDialog() {
         Log.e(TAG, "扫描页-notConnectedDialog called，设备连接失败，弹窗提示用户!");
-        final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-        alertDialogBuilder.setTitle(this.getResources().getString(R.string.not_connected_title));
-        alertDialogBuilder.setCancelable(false);
-        alertDialogBuilder.setMessage(this.getResources().getString(R.string.not_connected_message));
-        // 用户点击确认后，结束当前activity
-        alertDialogBuilder.setPositiveButton(getResources().getString(R.string.ok), (arg0, arg1) -> {
-            alertDialog.dismiss();
-            // todo: 调试期间注释finish
-            finish();
-        });
+        DeviceNotConnectedDialogFragment dialogFragment = DeviceNotConnectedDialogFragment.newInstance();
         // 确保此时用户没有退出当前Activity
-        if (!isFinishing() && !isDestroyed()) {
-            runOnUiThread(() -> {
-                if (!isFinishing() && !isDestroyed()) {
-                    alertDialog = alertDialogBuilder.create();
-                    alertDialog.show();
-                }
-            });
-
+        if (!isFinishing() && !isDestroyed() && !isStopped) {
+            dialogFragment.show(getSupportFragmentManager(), "连接超时");
+        } else {
+            // 如果弹窗时软件不在前台，则直接finish.
+            finish();
         }
+
     }
 
     // 启用或停用界面组件
@@ -758,8 +754,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     protected void onPause() {
         super.onPause();
         Log.e(TAG, "扫描页-onPause called");
+
         // todo:按照SDK中的建议，如果onPause不是为了跳转其他界面，则应该finish()当前Activity。
 
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        isStopped = true;
     }
 
     @Override

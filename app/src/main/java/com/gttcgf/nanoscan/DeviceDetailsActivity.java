@@ -213,6 +213,8 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
             intent.putExtra("warmUp", warmUp);
             intent.putExtra("mainFlag", true);
             startActivity(intent);
+            // 防止重复点击
+            scan.setEnabled(false);
         } else if (view.getId() == R.id.device_connection_layout) {
             // 点击了设备连接布局
             Log.d("DeviceDetailsActivity", "点击了设备连接布局");

@@ -8,70 +8,76 @@
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"/>
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="@string/version_number"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:text="@string/version_number"/>
+        app:layout_constraintStart_toStartOf="parent" />
+
     <ImageButton
         android:id="@+id/next_step"
         android:layout_width="56dp"
         android:layout_height="56dp"
+        android:layout_marginEnd="30dp"
+        android:layout_marginBottom="40dp"
+        android:background="@drawable/circle_button_background"
+        android:clickable="true"
         android:contentDescription="@string/next_step_contentDescription"
         android:src="@drawable/baseline_navigate_next_24"
-        android:background="@drawable/circle_button_background"
-        android:layout_marginBottom="40dp"
-        android:layout_marginEnd="30dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:clickable="true"
         app:layout_constraintVertical_weight="0.1" />
+
     <Button
         android:id="@+id/start_binding"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginEnd="30dp"
+        android:layout_marginBottom="40dp"
+        android:backgroundTint="@color/accept_button"
+        android:clickable="true"
         android:text="@string/start_binding"
+        android:textColor="@color/white"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:textColor="@color/white"
-        android:backgroundTint="@color/accept_button"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="40dp"
-        android:layout_marginEnd="30dp"
-        android:clickable="true"
         app:layout_constraintVertical_weight="0.1" />
+
     <ImageView
         android:id="@+id/dot_step_1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/dot_inactive"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginStart="40dp"
         android:layout_marginBottom="48dp"
-        android:layout_marginStart="40dp"/>
+        android:src="@drawable/dot_inactive"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <ImageView
         android:id="@+id/dot_step_2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/dot_inactive"
-        app:layout_constraintStart_toStartOf="@+id/dot_step_1"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginStart="16dp"
         android:layout_marginBottom="48dp"
-        android:layout_marginStart="16dp"/>
+        android:src="@drawable/dot_inactive"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/dot_step_1" />
+
     <ImageView
         android:id="@+id/dot_step_3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/dot_inactive"
-        app:layout_constraintStart_toStartOf="@+id/dot_step_2"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginStart="16dp"
         android:layout_marginBottom="48dp"
-        android:layout_marginStart="16dp"/>
+        android:src="@drawable/dot_inactive"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/dot_step_2" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

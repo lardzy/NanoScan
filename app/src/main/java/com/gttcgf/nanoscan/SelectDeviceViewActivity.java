@@ -22,6 +22,8 @@ import android.os.Handler;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -39,10 +41,12 @@ import java.util.ArrayList;
 public class SelectDeviceViewActivity extends AppCompatActivity implements View.OnClickListener { // 选择蓝牙设备界面
     private static final int REQUEST_CODE_PERMISSIONS = 101;
     private static final String[] REQUIRED_PERMISSIONS = getRequiredPermissions();
-    private static String DEVICE_NAME = "NIR";
+    private static String DEVICE_NAME = "NIR";  // 名称前缀
     public BluetoothLeScanner mBluetoothLeScanner;
     private ImageButton imageButton_back;
     private ListView lv_nanoDevices;
+    private TextView tv_loading;
+    private ProgressBar pb_loadDevice;
     private Context context;
     private Handler handler;
     private BluetoothAdapter mBluetoothAdapter;
@@ -129,6 +133,8 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
     private void initialComponent() {
         imageButton_back = findViewById(R.id.imageButton_back);
         lv_nanoDevices = findViewById(R.id.lv_nanoDevices);
+        tv_loading = findViewById(R.id.tv_loading);
+        pb_loadDevice = findViewById(R.id.pb_loadDevice);
         imageButton_back.setOnClickListener(this);
 
 
@@ -157,6 +163,8 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
                     }
                     // 如果不在设备列表中，则添加到设备集合中，并通知列表更新。
                     if (!isDeviceInList) {
+                        pb_loadDevice.setVisibility(View.INVISIBLE);
+                        tv_loading.setVisibility(View.INVISIBLE);
                         nanoDeviceList.add(nanoDevice);
                         nanoScanAdapter.notifyDataSetChanged();
                     }
@@ -173,7 +181,15 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
             if (enable) {
                 handler.postDelayed(() -> {
                     mBluetoothLeScanner.stopScan(scannerCallback);
-                    Toast.makeText(this, "扫描已停止", Toast.LENGTH_SHORT).show();
+                    pb_loadDevice.setVisibility(View.INVISIBLE);
+                    tv_loading.setVisibility(View.INVISIBLE);
+                    // 当列表依旧为空时，弹窗提示扫描超时
+                    if (nanoDeviceList.isEmpty()) {
+                        GeneralMessageDialogFragment messageDialogFragment = GeneralMessageDialogFragment.newInstance(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, getString(R.string.scanning_bluetooth_device_timeout_title)
+                                , getString(R.string.scanning_bluetooth_device_timeout_content));
+                        messageDialogFragment.show(getSupportFragmentManager(), "DeviceScanTimeout");
+                    }
+//                    Toast.makeText(this, "蓝牙设备扫描已停止", Toast.LENGTH_SHORT).show();
                 }, ISCNIRScanSDK.SCAN_PERIOD);  // 6000L
                 Toast.makeText(this, "扫描蓝牙设备中...", Toast.LENGTH_LONG).show();
                 mBluetoothLeScanner.startScan(scannerCallback);

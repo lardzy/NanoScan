@@ -25,8 +25,8 @@
             android:id="@+id/frameLayout_back"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginStart="32dp"
-            android:layout_gravity="center_vertical">
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="32dp">
 
             <ImageButton
                 android:id="@+id/imageButton_back"
@@ -47,6 +47,29 @@
             android:textStyle="bold" />
     </LinearLayout>
 
+    <ProgressBar
+        android:id="@+id/pb_loadDevice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="visible"
+        android:layout_marginBottom="32dp"
+        app:layout_constraintBottom_toTopOf="@+id/tv_loading"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/tv_loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/scanning_bluetooth_device"
+        android:textColor="@color/gray"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@+id/lv_nanoDevices"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/ll_top" />
+
     <ListView
         android:id="@+id/lv_nanoDevices"
         android:layout_width="0dp"
@@ -55,9 +78,9 @@
         android:layout_marginTop="12dp"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="12dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/ll_top"
         app:layout_constraintVertical_weight="0.8" />
 
