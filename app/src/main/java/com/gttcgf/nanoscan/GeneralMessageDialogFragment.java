@@ -1,6 +1,7 @@
 package com.gttcgf.nanoscan;
 
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.media.Image;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -9,6 +10,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -17,6 +20,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
 
+import java.util.Objects;
+
 public class GeneralMessageDialogFragment extends DialogFragment implements View.OnClickListener {
     public static final int MESSAGE_TYPE_ERROR = 0;
     public static final int MESSAGE_TYPE_CHECK = 1;
@@ -24,6 +29,7 @@ public class GeneralMessageDialogFragment extends DialogFragment implements View
     private String titleContent = "";
     private String informationContent = "";
     private View.OnClickListener clickListener;
+    private boolean isDialogFinishActivity = true;
     //region UI组件
     private ImageView iv_icon;
     private TextView tv_title, tv_message_content;
@@ -125,10 +131,44 @@ public class GeneralMessageDialogFragment extends DialogFragment implements View
         }
     }
 
+    public boolean isDialogFinishActivity() {
+        return isDialogFinishActivity;
+    }
+
+    public void setDialogFinishActivity(boolean dialogFinishActivity) {
+        isDialogFinishActivity = dialogFinishActivity;
+    }
+    @Override
+    public void onDismiss(@NonNull DialogInterface dialog) {
+        View view = getView();
+        if (view != null) {
+            Animation slideOutAnimation = AnimationUtils.loadAnimation(getContext(), R.anim.slide_out_down);
+            slideOutAnimation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {}
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    GeneralMessageDialogFragment.super.onDismiss(dialog);
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {}
+            });
+            view.startAnimation(slideOutAnimation);
+        } else {
+            super.onDismiss(dialog);
+        }
+    }
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.btn_accept) {
-            requireActivity().finish();
+            if (isDialogFinishActivity) {
+                requireActivity().finish();
+            } else {
+//                dismiss();
+                onDismiss(Objects.requireNonNull(getDialog()));
+            }
         }
     }
 }

@@ -4,6 +4,8 @@ import static com.ISCSDK.ISCNIRScanSDK.Interpret_intensity;
 import static com.ISCSDK.ISCNIRScanSDK.Interpret_length;
 import static com.ISCSDK.ISCNIRScanSDK.Interpret_uncalibratedIntensity;
 import static com.ISCSDK.ISCNIRScanSDK.Interpret_wavelength;
+import static com.ISCSDK.ISCNIRScanSDK.Reference_Info;
+import static com.ISCSDK.ISCNIRScanSDK.Scan_Config_Info;
 import static com.ISCSDK.ISCNIRScanSDK.getBooleanPref;
 import static com.ISCSDK.ISCNIRScanSDK.getStringPref;
 import static com.ISCSDK.ISCNIRScanSDK.storeBooleanPref;
@@ -24,6 +26,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -54,7 +58,9 @@ import com.ISCSDK.ISCNIRScanSDK;
 import com.github.mikephil.charting.data.Entry;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
+import com.gttcgf.nanoscan.tools.PasswordUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -115,8 +121,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // region UI组件
     private ImageButton imageButton_back;
     private Button start_scan_button;
-    private CircularProgressBarView pb_load_calibration;
-    private TextView tv_load_calibration, tv_battery_level_value, tv_update_time;
+    private CircularProgressBarView pb_load_calibration, pb_load_calibration_inside;
+    private TextView tv_load_calibration, tv_load_calibration_value, tv_battery_level_value, tv_update_time;
     private ViewPager2 vp_chart_pages;
     private ChartPagerAdapter chartPagerAdapter;
     private TabLayout tabLayout;
@@ -126,7 +132,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private FunctionListAdapter functionListAdapter;
     private List<FunctionItem> functionList = new ArrayList<>();
     private Animation fadeIn, fadeOut;
-    private ImageView iv_battery;
+    private ImageView iv_battery, iv_device;
+    private ProgressBar pb_scanning;
+    private int progressOfProgressbarOutside = 0;
+    private int progressOfProgressbarInside = 0;
     // endregion
     private DeviceItem deviceItem;
     private ISCNIRScanSDK mNanoBLEService;
@@ -150,8 +159,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // endregion
     // 设备是否已经连接上
     private boolean connected;
-    private boolean isConnectionTimeout = true;
-    private final long CONNECTION_TIMEOUT = 10000L;
+    private boolean isConnectionTimeout = true;  // todo:重要标志位，用于判断设备连接是否中途出现卡顿
+    private final long CONNECTION_TIMEOUT = 12000L;
     private boolean isDeviceScanning = false;  // 设备是否正在扫描
     // region 设备配置文件
     // 存储设备配置文件数量
@@ -227,6 +236,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private ArrayList<Float> mWavelengthFloat;
     // endregion
     private boolean isStopped = false;
+    // 常规扫描
+    private ScanMethod Current_Scan_Method = ScanMethod.Normal;
 
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
@@ -293,15 +304,22 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         imageButton_back = findViewById(R.id.imageButton_back);
         start_scan_button = findViewById(R.id.start_scan_button);
         pb_load_calibration = findViewById(R.id.pb_load_calibration);
+        pb_load_calibration_inside = findViewById(R.id.pb_load_calibration_inside);
         tv_load_calibration = findViewById(R.id.tv_load_calibration);
+        tv_load_calibration_value = findViewById(R.id.tv_load_calibration_value);
         rv_function_list = findViewById(R.id.rv_function_list);
         tv_battery_level_value = findViewById(R.id.tv_battery_level_value);
         tv_update_time = findViewById(R.id.tv_update_time);
         iv_battery = findViewById(R.id.iv_battery);
+        iv_device = findViewById(R.id.iv_device);
         vp_chart_pages = findViewById(R.id.vp_chart_pages);
         tabLayout = findViewById(R.id.tabLayout);
+        pb_scanning = findViewById(R.id.pb_scanning);
         tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
         tv_update_time.setText("-");
+        iv_device.setVisibility(View.INVISIBLE);
+        pb_load_calibration.setVisibility(View.INVISIBLE);
+        pb_load_calibration_inside.setVisibility(View.INVISIBLE);
 
         imageButton_back.setOnClickListener(this);
         start_scan_button.setOnClickListener(this);
@@ -366,7 +384,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         FunctionItem functionItem_2 = new FunctionItem("设备功能", "使用出厂参比", R.drawable.baseline_factory_24, false);
         functionItem_2.setSelected(true);
         functionList.add(functionItem_2);
-
+        progressOfProgressbarOutside = 0;
+        progressOfProgressbarInside = 0;
         // 获取传入的设备对象deviceItem
         deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
         warmUp = getIntent().getBooleanExtra("warmUp", false);
@@ -413,7 +432,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             PerformScan(1000);
             // 防止重复点击
             enableAllComponent(false);
-            pb_load_calibration.setVisibility(View.VISIBLE);
+            pb_scanning.setVisibility(View.VISIBLE);
+//            pb_load_calibration.setVisibility(View.VISIBLE);
         }
     }
 
@@ -521,6 +541,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         if (enable) {
             tabLayout.setVisibility(View.VISIBLE);
             vp_chart_pages.setVisibility(View.VISIBLE);
+            pb_scanning.setVisibility(View.INVISIBLE);
         } else {
             tabLayout.setVisibility(View.INVISIBLE);
             vp_chart_pages.setVisibility(View.INVISIBLE);
@@ -794,6 +815,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         WarmDevice, ManualLamp, CloseWarmUpLampInScan
     }
 
+    public enum ScanMethod {
+        Normal, QuickSet, Manual, Maintain
+    }
+
     // 灯源设置完成会发送对应广播，接收器根据灯源状态进行进一步的操作
     public class ReturnSetLampReceiver extends BroadcastReceiver {
         @Override
@@ -829,6 +854,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Log.d(TAG, "扫描页-NotifyCompleteReceiver called.\nwarmUp:" + warmUp);
             // 如果用户选择了预热设备
             if (warmUp) {
+                // UI
+                showLoadAnimation(true);
+
                 ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.ON);
                 lampInfo = LampInfo.WarmDevice;
                 // 注册ReturnSetLampReceiver以执行下一步
@@ -852,21 +880,23 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     //获取 active config ，同步时间。
                     ISCNIRScanSDK.ShouldDownloadCoefficient = false;  // 确保SDK不会下载校准数据，直接进入下一步
                     ISCNIRScanSDK.SetCurrentTime();
+                    //UI
+                    showLoadAnimation(true);
+                    // 本地获取到校准系数、矩阵，进度设置为100.
+                    progressOfProgressbarOutside = 100;
+                    pb_load_calibration.setProgress(progressOfProgressbarOutside, 1000);
                     tv_load_calibration.setText(getString(R.string.calibration_coefficient_and_matrix_read_from_local));
-                    tv_load_calibration.setAnimation(fadeIn);
-                    tv_load_calibration.startAnimation(fadeIn);
+
                 } else {
                     // 本次启动没有存储校准参数，同步时间并下载校准系数和校准矩阵
                     ISCNIRScanSDK.ShouldDownloadCoefficient = true;
                     ISCNIRScanSDK.SetCurrentTime();
+                    // UI
+                    showLoadAnimation(true);
                     Log.d(TAG, "扫描页-NotifyCompleteReceiver本地未找到校准数据，NotifyCompleteReceiver SetCurrentTime() called.");
                 }
 
             }
-
-            // 设备连接未超时
-            isConnectionTimeout = false;
-            Log.d(TAG, "扫描页-isConnectionTimeout=false");
         }
     }
 
@@ -887,16 +917,22 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 refCoeffDataProgressCurrentProgress = 0;
                 Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为true，当前为第一个数据包。");
                 Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中接收到数据包总大小为：" + refCoeffDataProgressTotalSize);
+
             } else {
                 // 不是第一个数据包，ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE代表当前数据包大小，更新进度条
                 // todo:此处更新进度
                 int currentSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
                 refCoeffDataProgressCurrentProgress += currentSize;
+                // 更新进度条进度
+                progressOfProgressbarOutside = (refCoeffDataProgressCurrentProgress / refCoeffDataProgressTotalSize) * 50;
+                tv_load_calibration_value.setText(getString(R.string.connecting_progress, progressOfProgressbarOutside));
+
                 String receivingProgress = getString(R.string.calibration_coefficient_receiving, String.valueOf(refCoeffDataProgressCurrentProgress), String.valueOf(refCoeffDataProgressTotalSize));
                 tv_load_calibration.setText(receivingProgress);
                 Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为false，当前数据包大小为：" + currentSize);
             }
             if (refCoeffDataProgressCurrentProgress == refCoeffDataProgressTotalSize) {
+//                pb_load_calibration.setProgress(progressOfProgressbarOutside, 1000);
                 tv_load_calibration.setAnimation(fadeIn);
                 tv_load_calibration.startAnimation(fadeIn);
                 tv_load_calibration.setText(getString(R.string.calibration_coefficient_received));
@@ -925,10 +961,16 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 calMatrixDataProgressCurrentProgress += currentSize;
                 String receivingProgress = getString(R.string.calibration_matrix_receiving, String.valueOf(calMatrixDataProgressCurrentProgress), String.valueOf(calMatrixDataProgressTotalSize));
                 tv_load_calibration.setText(receivingProgress);
+
+                // 更新进度
+                progressOfProgressbarOutside = 50 + (refCoeffDataProgressCurrentProgress / refCoeffDataProgressTotalSize) * 50;
+                tv_load_calibration_value.setText(getString(R.string.connecting_progress, progressOfProgressbarOutside));
+
                 Log.d(TAG, "扫描页-CalMatrixDataProgressReceiver中EXTRA_REF_CAL_MATRIX_SIZE为false，当前数据包大小为：" + currentSize);
             }
 
             if (calMatrixDataProgressCurrentProgress == calMatrixDataProgressTotalSize) {
+                pb_load_calibration.setProgress(progressOfProgressbarOutside, 1000);
                 tv_load_calibration.setText(getString(R.string.calibration_matrix_received));
                 tv_load_calibration.setAnimation(fadeIn);
                 tv_load_calibration.startAnimation(fadeIn);
@@ -943,6 +985,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     public class RefDataReadyReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
+            // 设备连接未超时
+            isConnectionTimeout = false;
             Log.d(TAG, "扫描页-RefDataReadyReceiver called,获取校准系数和校准矩阵具体的数值.");
             refCoeff = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_REF_COEF_DATA);
             refMatrix = intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_REF_MATRIX_DATA);
@@ -996,10 +1040,18 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            // 设备连接未超时
+            isConnectionTimeout = false;
+
             receivedConfSize++;
             scanConfigByteList.add(intent.getByteArrayExtra(ISCNIRScanSDK.EXTRA_DATA));
             scanConfigList.add(ISCNIRScanSDK.scanConf);
             tv_load_calibration.setText(getString(R.string.active_scan_config_receiving, String.valueOf(receivedConfSize), String.valueOf(storedConfSize)));
+
+            // 更新进度
+            progressOfProgressbarInside = (receivedConfSize / storedConfSize) * 100;
+            tv_load_calibration_value.setText(getString(R.string.connecting_progress, progressOfProgressbarInside));
+
             Log.d(TAG, "扫描页-ScanConfReceiver获取到扫描配置：receivedConfSize:" + receivedConfSize + "\n" +
                     "scanConfigByteList.size:" + scanConfigByteList.size() + "\nscanConfigList.size:" + scanConfigList.size() + "\n" +
                     "storedConfSize:" + storedConfSize);
@@ -1009,6 +1061,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 tv_load_calibration.setText(getString(R.string.active_scan_config_received));
                 tv_load_calibration.setAnimation(fadeIn);
                 tv_load_calibration.startAnimation(fadeIn);
+                pb_load_calibration_inside.setProgress(progressOfProgressbarInside, 1000);
 
                 for (int i = 0; i < scanConfigList.size(); i++) {
                     Log.d(TAG, "扫描页-ScanConfReceiver扫描配置获取完成。i:" + i);
@@ -1168,7 +1221,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 mHandler.postDelayed(() -> {
                     Log.d(TAG, "扫描页-ReturnReadActivateStatusReceiver，开始获取设备状态信息。");
 
-                    tv_load_calibration.setVisibility(View.GONE);
+                    tv_load_calibration.setText(getString(R.string.device_connected));
                     completeDeviceConnection = true;
                     ISCNIRScanSDK.GetDeviceStatus();
                 }, 3000);
@@ -1203,10 +1256,20 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             saveDeviceStatus();
             // 用于判断是否是设备第一次和软件的连接过程
             if (completeDeviceConnection) {
-                pb_load_calibration.setVisibility(View.GONE);
+                // UI
+                showLoadAnimation(false);
+
                 vp_chart_pages.setVisibility(View.VISIBLE);
                 enableAllComponent(true);
                 completeDeviceConnection = false;
+                // 弹窗提醒连接成功
+                if (!isFinishing() && !isDestroyed() && !isStopped) {
+                    GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+                            GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK, getString(R.string.connection_successful_dialog_title),
+                            getString(R.string.connection_successful_dialog_content));
+                    dialogFragment.setDialogFinishActivity(false);
+                    dialogFragment.show(getSupportFragmentManager(), "Device connection successful!");
+                }
             }
             // 当前设备Tivarev:2.4.7、fw_level_standard：LEVEL_3、isExtendVer_PLUS:false、isExtendVer:false
             // 请求获取灯源ADC
@@ -1276,6 +1339,214 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             isDeviceScanning = false;
         }
 
+    }
+
+    // 将扫描数据写入为csv文件，发送至服务器并预测
+    private void writeCSV(ISCNIRScanSDK.ScanResults scanResults) {
+        boolean HaveError = false;
+        int scanType;
+        int numSections;
+        String[] widthnm = {"", "", "2.34", "3.51", "4.68", "5.85", "7.03", "8.20", "9.37", "10.54", "11.71", "12.88", "14.05", "15.22", "16.39", "17.56", "18.74"
+                , "19.91", "21.08", "22.25", "23.42", "24.59", "25.76", "26.93", "28.10", "29.27", "30.44", "31.62", "32.79", "33.96", "35.13", "36.30", "37.47", "38.64", "39.81"
+                , "40.98", "42.15", "43.33", "44.50", "45.67", "46.84", "48.01", "49.18", "50.35", "51.52", "52.69", "53.86", "55.04", "56.21", "57.38", "58.55", "59.72", "60.89"};
+        String[] widthnm_plus = {"", "", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"
+                , "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34"
+                , "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61"};
+        String[] exposureTime = {"0.635", "1.27", " 2.54", " 5.08", "15.24", "30.48", "60.96"};
+        int index = 0;
+        double temp;
+        double humidity;
+        //-------------------------------------------------
+        String newdate = "";
+        String[][] CSV = new String[35][15];
+        for (int i = 0; i < 35; i++)
+            for (int j = 0; j < 15; j++)
+                CSV[i][j] = ",";
+
+        numSections = ISCNIRScanSDK.ScanConfigInfo.numSections[0];
+        scanType = ISCNIRScanSDK.ScanConfigInfo.scanType[0];
+        //----------------------------------------------------------------
+        String configname = PasswordUtils.getBytetoString(ISCNIRScanSDK.ScanConfigInfo.configName);
+        // 写入参比更新时间
+        // todo:当更新参比时，此处存储当前的时间（注意增加判断是否“选中增加参比”）
+        if (Current_Scan_Method == ScanMethod.Maintain) {
+            configname = "Reference";
+            Date datetime = new Date();
+            SimpleDateFormat format_1 = new SimpleDateFormat("yy/MM/dd", Locale.getDefault());
+            SimpleDateFormat format_2 = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+            newdate = format_1.format(datetime) + "T" + format_2.format(datetime);
+            CSV[14][8] = newdate;
+        } else {
+            // 使用存储的时间
+            CSV[14][8] = ISCNIRScanSDK.ReferenceInfo.refday[0] + "/" + ISCNIRScanSDK.ReferenceInfo.refday[1]
+                    + "/" + ISCNIRScanSDK.ReferenceInfo.refday[2] + "T" + ISCNIRScanSDK.ReferenceInfo.refday[3]
+                    + ":" + ISCNIRScanSDK.ReferenceInfo.refday[4] + ":" + ISCNIRScanSDK.ReferenceInfo.refday[5];
+        }
+        //region Section information field names
+        CSV[0][0] = "***Scan Config Information***,";
+        CSV[1][0] = "Scan Config Name:,";
+        CSV[2][0] = "Scan Config Type:,";
+        CSV[3][0] = "Section Config Type:,";
+        CSV[4][0] = "Start Wavelength (nm):,";
+        CSV[5][0] = "End Wavelength (nm):,";
+        CSV[6][0] = "Pattern Width (nm):,";
+        CSV[7][0] = "Exposure (ms):,";
+        CSV[8][0] = "Digital Resolution:,";
+        CSV[9][0] = "Num Repeats:,";
+        CSV[10][0] = "PGA Gain:,";
+        CSV[11][0] = "System Temp (C):,";
+        CSV[12][0] = "Humidity (%):,";
+        CSV[13][0] = "Battery Capacity (%):,";
+        if ((isExtendVer && fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_2) >= 0) || (!isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_3) >= 0)) {
+            // 当前设备满足
+            CSV[14][0] = "Lamp ADC:,";
+        } else {
+            CSV[14][0] = "Lamp Indicator:,";
+        }
+        CSV[15][0] = "Data Date-Time:,";
+        CSV[16][0] = "Total Measurement Time in sec:,";
+
+        CSV[1][1] = configname + ",";
+        CSV[2][1] = "Slew,";
+        CSV[2][2] = "Num Section:,";
+        CSV[2][3] = numSections + ",";
+        // 写入扫描模式信息(Column、Hadamard）
+        for (int i = 0; i < numSections; i++) {
+            if (ISCNIRScanSDK.ScanConfigInfo.sectionScanType[i] == 0) {
+                CSV[3][i + 1] = "Column,";
+            } else {
+                CSV[3][i + 1] = "Hadamard,";
+            }
+            CSV[4][i + 1] = ISCNIRScanSDK.ScanConfigInfo.sectionWavelengthStartNm[i] + ",";
+            CSV[5][i + 1] = ISCNIRScanSDK.ScanConfigInfo.sectionWavelengthEndNm[i] + ",";
+            index = ISCNIRScanSDK.ScanConfigInfo.sectionWidthPx[i];
+            if (isExtendVer_PLUS) {
+                // 当前设备不满足
+                CSV[6][i + 1] = widthnm_plus[index] + ",";
+            } else {
+                CSV[6][i + 1] = widthnm[index] + ",";
+            }
+            index = ISCNIRScanSDK.ScanConfigInfo.sectionExposureTime[i];
+            CSV[7][i + 1] = exposureTime[index] + ",";
+            CSV[8][i + 1] = ISCNIRScanSDK.ScanConfigInfo.sectionNumPatterns[i] + ",";
+            CSV[9][1] = ISCNIRScanSDK.ScanConfigInfo.sectionNumRepeats[0] + ",";
+            CSV[10][1] = ISCNIRScanSDK.ScanConfigInfo.pga[0] + ",";
+            temp = ISCNIRScanSDK.ScanConfigInfo.systemp[0];
+            temp = temp / 100;
+            CSV[11][1] = temp + ",";
+            humidity = ISCNIRScanSDK.ScanConfigInfo.syshumidity[0];
+            humidity = humidity / 100;
+            CSV[12][1] = humidity + ",";
+            CSV[13][1] = battery + ",";
+            CSV[14][1] = ISCNIRScanSDK.ScanConfigInfo.lampintensity[0] + ",";
+            CSV[15][1] = ISCNIRScanSDK.ScanConfigInfo.day[0] + "/" + ISCNIRScanSDK.ScanConfigInfo.day[1]
+                    + "/" + ISCNIRScanSDK.ScanConfigInfo.day[2] + "T" + ISCNIRScanSDK.ScanConfigInfo.day[3]
+                    + ":" + ISCNIRScanSDK.ScanConfigInfo.day[4] + ":" + ISCNIRScanSDK.ScanConfigInfo.day[5] + ",";
+            CSV[16][1] = Double.toString((double) measureTime / 1000);
+        }
+        //endregion
+        //region General Information
+        CSV[17][0] = "***General Information***,";
+        CSV[18][0] = "Model Name:,";
+        CSV[19][0] = "Serial Number:,";
+        CSV[20][0] = "APP Version:,";
+        CSV[21][0] = "TIVA Version:,";
+        CSV[22][0] = "UUID:,";
+        CSV[23][0] = "Main Board Version:,";
+        CSV[24][0] = "Detector Board Version:,";
+
+        CSV[18][1] = model_name + ",";
+        CSV[19][1] = serial_num + ",";
+        String mfg_num = getMfg_num();
+        CSV[19][2] = mfg_num + ",";
+        String version = "";
+        int versionCode = 0;
+        try {
+            PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            version = pInfo.versionName;
+            versionCode = pInfo.versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "扫描页-writeCSV，PackageManager.NameNotFoundException：" + e);
+        }
+        CSV[20][1] = version + "." + Integer.toString(versionCode);
+        CSV[21][1] = Tivarev + ",";
+        CSV[22][1] = uuid + ",";
+        String[] split_hw = HWrev.split("\\.");
+        CSV[23][1] = split_hw[0] + ",";
+        CSV[24][1] = split_hw[2] + ",";
+        // endregion
+        //region Reference Scan Information
+        CSV[0][7] = "***Reference Scan Information***,";
+        CSV[1][7] = "Scan Config Name:,";
+        CSV[2][7] = "Scan Config Type:,";
+        CSV[3][7] = "Section Config Type:,";
+        CSV[4][7] = "Start Wavelength (nm):,";
+        CSV[5][7] = "End Wavelength (nm):,";
+        CSV[6][7] = "Pattern Width (nm):,";
+        CSV[7][7] = "Exposure (ms):,";
+        CSV[8][7] = "Digital Resolution:,";
+        CSV[9][7] = "Num Repeats:,";
+        CSV[10][7] = "PGA Gain:,";
+        CSV[11][7] = "System Temp (C):,";
+        CSV[12][7] = "Humidity (%):,";
+        CSV[13][7] = "Lamp Indicator:,";
+        CSV[14][7] = "Data Date-Time:,";
+        if (PasswordUtils.getBytetoString(ISCNIRScanSDK.ReferenceInfo.refconfigName).equals("SystemTest")) {
+            CSV[1][8] = "Built-in Factory Reference";
+        } else {
+            CSV[1][8] = "Built-in User Reference";
+        }
+        CSV[2][8] = "Slew,";
+        CSV[2][9] = "Num Section:,";
+        CSV[2][10] = "1,";
+        if (ISCNIRScanSDK.ReferenceInfo.refconfigtype[0] == 0) {
+            CSV[3][8] = "Column,";
+        } else {
+            CSV[3][8] = "Hadamard,";
+        }
+        CSV[4][8] = Double.toString(ISCNIRScanSDK.ReferenceInfo.refstartwav[0]);
+        CSV[5][8] = Double.toString(ISCNIRScanSDK.ReferenceInfo.refendwav[0]);
+        index = ISCNIRScanSDK.ReferenceInfo.width[0];
+        if (isExtendVer_PLUS) {
+            CSV[6][8] = widthnm_plus[index] + ",";
+        } else {
+            CSV[6][8] = widthnm[index] + ",";
+        }
+        index = ISCNIRScanSDK.ReferenceInfo.refexposuretime[0];
+        CSV[7][8] = exposureTime[index] + ",";
+        CSV[8][8] = ISCNIRScanSDK.ReferenceInfo.numpattren[0] + ",";
+        CSV[9][8] = ISCNIRScanSDK.ReferenceInfo.numrepeat[0] + ",";
+        CSV[10][8] = Integer.toString(ISCNIRScanSDK.ReferenceInfo.refpga[0]);
+        temp = ISCNIRScanSDK.ReferenceInfo.refsystemp[0];
+        temp = temp / 100;
+        CSV[11][8] = temp + ",";
+        humidity = (double) ISCNIRScanSDK.ReferenceInfo.refsyshumidity[0] / 100;
+        CSV[12][8] = Double.toString(humidity);
+        CSV[13][8] = ISCNIRScanSDK.ReferenceInfo.reflampintensity[0] + ",";
+        // endregion
+
+        // 校准系数
+    }
+
+    private @NonNull String getMfg_num() {
+        String mfg_num = "";
+        try {
+            mfg_num = new String(MFG_NUM, StandardCharsets.ISO_8859_1);
+            if (!mfg_num.contains("70UB1") && !mfg_num.contains("95UB1"))
+                mfg_num = "";
+            else if (mfg_num.contains("95UB1"))//Extended 19 words, standard 18 words
+            {
+                if (isExtendVer && mfg_num.length() >= 19)
+                    mfg_num = mfg_num.substring(0, 19);
+                else if (!isExtendVer_PLUS && !isExtendVer && mfg_num.length() >= 18)
+                    mfg_num = mfg_num.substring(0, 18);
+                else
+                    mfg_num = mfg_num.substring(0, mfg_num.length() - 2);
+            }
+        } catch (Exception e) {
+            mfg_num = "";
+        }
+        return mfg_num;
     }
 
     //    用于处理扫描数据和正确设置图形的自定义接收器（应调用ISCNIRScanSDK.StartScan（））
@@ -1380,6 +1651,55 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             if (minReference == 0 && maxReference == 0) {
                 maxReference = 1000;
             }
+        }
+    }
+
+    private void showLoadAnimation(boolean enable) {
+        if (enable) {
+            iv_device.setVisibility(View.VISIBLE);
+            iv_device.setAnimation(fadeIn);
+            iv_device.startAnimation(fadeIn);
+
+            pb_load_calibration.setVisibility(View.VISIBLE);
+            pb_load_calibration_inside.setVisibility(View.VISIBLE);
+
+            pb_load_calibration.setAnimation(fadeIn);
+            pb_load_calibration_inside.setAnimation(fadeIn);
+
+            pb_load_calibration.startAnimation(fadeIn);
+            pb_load_calibration_inside.startAnimation(fadeIn);
+
+            tv_load_calibration.setAnimation(fadeIn);
+            tv_load_calibration.startAnimation(fadeIn);
+        } else {
+            fadeOut.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+
+                    pb_load_calibration.setVisibility(View.GONE);
+                    pb_load_calibration_inside.setVisibility(View.GONE);
+                    iv_device.setVisibility(View.GONE);
+                    tv_load_calibration.setVisibility(View.GONE);
+                    tv_load_calibration_value.setVisibility(View.GONE);
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+
+                }
+            });
+
+            iv_device.startAnimation(fadeOut);
+            pb_load_calibration.startAnimation(fadeOut);
+            pb_load_calibration_inside.startAnimation(fadeOut);
+            tv_load_calibration.startAnimation(fadeOut);
+            tv_load_calibration_value.startAnimation(fadeOut);
         }
     }
 
@@ -1490,8 +1810,16 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             @Override
             public void run() {
                 if (isConnectionTimeout) {
-                    Toast.makeText(mContext, "连接超时，请重试！", Toast.LENGTH_LONG).show();
-                    finish();
+                    Toast.makeText(mContext, "连接意外中断，请重试！", Toast.LENGTH_LONG).show();
+                    // 使用弹窗
+                    if (!isFinishing() && !isDestroyed() && !isStopped) {
+                        GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+                                GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, getString(R.string.connection_interruption_dialog_title),
+                                getString(R.string.connection_interruption_dialog_content));
+                        dialogFragment.show(getSupportFragmentManager(), "Unexpected connection interruption!");
+                    } else {
+                        finish();
+                    }
                 }
 
             }

@@ -58,6 +58,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     private SharedPreferences sharedPreferences;
     private OkHttpClient client;
     private Context context;
+    private boolean isStopped = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,6 +88,12 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         Log.d(TAG, "登录界面-onRestart()被调用。");
         // 初始化用户数据
         initializeData();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isStopped = false;
     }
 
     // 初始化组件
@@ -388,7 +395,9 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                                             runOnUiThread(new Runnable() {
                                                 @Override
                                                 public void run() {
-                                                    Toast.makeText(context, "登录失败！\n" + msg, Toast.LENGTH_LONG).show();
+                                                    // todo:改为弹窗
+                                                    showResultDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                                                            "登录失败", "验证码错误！\n详细信息：" + msg, false);
                                                     enableAllComponents();
                                                 }
                                             });
@@ -420,26 +429,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         } else if (view.getId() == R.id.forgot_password) {
             Toast.makeText(LoginActivity.this, "功能开发中...", Toast.LENGTH_SHORT).show();
         }
-//        else if (view.getId() == R.id.btn_debug) {
-//            Intent i;
-//            if (isFirstTimeUse) {
-//                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
-//            } else {
-//                i = new Intent(LoginActivity.this, DeviceListActivity.class);
-//            }
-//            startActivity(i);
-//            finish();
-//        } else if (view.getId() == R.id.btn_debug_1) {
-//            Intent i;
-//            if (isFirstTimeUse) {
-//                i = new Intent(LoginActivity.this, IntroGuideActivity.class);
-//            } else {
-//                userLoggedIn = true;
-//                i = new Intent(LoginActivity.this, MainActivity.class);
-//            }
-//            startActivity(i);
-//            finish();
-//        }
     }
 
     // 用于获取IPv4地址
@@ -469,6 +458,21 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                 }
             }
         });
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        isStopped = true;
+    }
+
+    private void showResultDialog(int MESSAGE_TYPE, String titleContent, String informationContent, boolean isDialogFinishActivity) {
+        if (!isFinishing() && !isDestroyed() && !isStopped) {
+            GeneralMessageDialogFragment dialogFragment =
+                    GeneralMessageDialogFragment.newInstance(MESSAGE_TYPE, titleContent, informationContent);
+            dialogFragment.setDialogFinishActivity(isDialogFinishActivity);
+            dialogFragment.show(getSupportFragmentManager(), TAG);
+        }
     }
 
     public interface ServerLoginVerificationCallback {

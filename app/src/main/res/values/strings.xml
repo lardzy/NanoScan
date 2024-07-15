@@ -152,8 +152,10 @@
     <string name="tv_scan_function_mode">采集模式</string>
     <string name="tv_scan_function_1">采集并预测</string>
     <string name="please_wait">请稍候…</string>
-
+    <string name="please_wait_for_value">0 %</string>
+    <string name="connecting_progress">%d %%</string>
     <string name="connected_to_the_device">已连接到设备…开始同步数据</string>
+    <string name="device_connected">已完成设备连接</string>
     <string name="calibration_coefficient_receiving">校准系数接收中…%1$s/%2$s</string>
     <string name="calibration_matrix_receiving">校准矩阵接收中…%1$s/%2$s</string>
     <string name="calibration_coefficient_and_matrix_read_from_local">校准系数和矩阵已从本地缓存获取</string>
@@ -174,5 +176,9 @@
     <string name="troubleshooting_prompt_text_step_1">故障排查：\n检查设备底部电源开关是否移动至“ON”处</string>
     <string name="troubleshooting_prompt_text_step_2">故障排查：\n检查设备正面电源及蓝牙指示灯是否打开</string>
     <string name="troubleshooting_prompt_text_step_3">故障排查：\n检查手机蓝牙是否已经启动</string>
+    <string name="connection_interruption_dialog_title">连接中断</string>
+    <string name="connection_interruption_dialog_content">连接意外中断，请返回重试！</string>
+    <string name="connection_successful_dialog_content">设备连接成功</string>
+    <string name="connection_successful_dialog_title">连接成功</string>
 
 </resources>

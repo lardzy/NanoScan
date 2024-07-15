@@ -19,8 +19,8 @@
         <shape android:shape="oval">
             <solid android:color="@color/preheat_toggle_text" />
             <size
-                android:width="35dp"
-                android:height="35dp" />
+                android:width="40dp"
+                android:height="40dp" />
         </shape>
     </item>
 
