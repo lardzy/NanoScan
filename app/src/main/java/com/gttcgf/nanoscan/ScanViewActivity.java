@@ -4,7 +4,6 @@ import static com.ISCSDK.ISCNIRScanSDK.Interpret_intensity;
 import static com.ISCSDK.ISCNIRScanSDK.Interpret_length;
 import static com.ISCSDK.ISCNIRScanSDK.Interpret_uncalibratedIntensity;
 import static com.ISCSDK.ISCNIRScanSDK.Interpret_wavelength;
-import static com.ISCSDK.ISCNIRScanSDK.Reference_Info;
 import static com.ISCSDK.ISCNIRScanSDK.Scan_Config_Info;
 import static com.ISCSDK.ISCNIRScanSDK.getBooleanPref;
 import static com.ISCSDK.ISCNIRScanSDK.getStringPref;
@@ -48,7 +47,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -68,6 +66,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 public class ScanViewActivity extends AppCompatActivity implements View.OnClickListener {
@@ -237,7 +236,11 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // endregion
     private boolean isStopped = false;
     // 常规扫描
-    private ScanMethod Current_Scan_Method = ScanMethod.Normal;
+    private ScanMethod currentScanMethod = ScanMethod.ScanAndPredict;
+    // 默认使用出厂参比，如果参比不为空则默认不使用出厂参比
+    // TODO: 2024/7/16  如果参比不为空则默认不使用出厂参比
+    private boolean useFactoryReference = true;
+    private LocalReferenceIntensity localReferenceIntensity;
 
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
@@ -276,7 +279,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         Intent intent = new Intent(this, ISCNIRScanSDK.class);
         bindService(intent, serviceConnection, BIND_AUTO_CREATE);
         Log.d(TAG, "扫描页-ISCNIRScanSDK服务已绑定!");
-        //todo: region 注册广播接收器
         //region 注册所有 broadcast receivers
         Log.d(TAG, "扫描页-开始注册广播。");
         LocalBroadcastManager.getInstance(this).registerReceiver(StatusReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_STATUS));
@@ -374,6 +376,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
     // 初始化各类数据
     private void initialData() {
+        // 设备按钮默认锁定，即不允许用户直接使用物理按钮。
+        storeBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton, true);
         // 初始化功能列表
         FunctionItem functionItem_1 = new FunctionItem("采集模式", "采集并预测", R.drawable.baseline_auto_graph_24, true);
         functionItem_1.setSelected(true);
@@ -398,8 +402,14 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             storeStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, deviceItem.getDeviceName());
         } else {
             Log.e(TAG, "扫描页-获取到传入的设备对象deviceItem为NULL！");
-            Toast.makeText(this, "无法获得设备信息，软件发生异常！", Toast.LENGTH_LONG).show();
-            finish();
+            GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+                    GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                    getString(R.string.device_information_cannot_be_obtained_dialog_title),
+                    getString(R.string.device_information_cannot_be_obtained)
+            );
+            if (!isFinishing() && !isDestroyed() && !isStopped) {
+                dialogFragment.show(getSupportFragmentManager(), getString(R.string.device_information_cannot_be_obtained));
+            }
         }
         // todo: 后续根据是否存储了参比数据判断要不要默认选择使用出厂参比，使用设备MAC作为区分
         sharedPreferences = this.getSharedPreferences(deviceItem.getDeviceMac(), Context.MODE_PRIVATE);
@@ -408,7 +418,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         loadDeviceStatus();
         // 判断设备连接过程是否已经完成
         completeDeviceConnection = false;
-
+        // TODO: 2024/7/16 存储参比信息到本地、从本地文件读取参比信息
         mXValues = new ArrayList<>();
         mReflectanceFloat = new ArrayList<>();
         mIntensityFloat = new ArrayList<>();
@@ -423,17 +433,75 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         isStopped = false;
     }
 
+    // 根据UI内容，更新扫描模式
+    private void upDateScanMethod() {
+        // 更新是否使用出厂参比
+        if (functionList.get(3).isSelected()) {
+            Log.d(TAG, "扫描页-使用出厂参比已选中！");
+            useFactoryReference = true;
+        } else {
+            Log.d(TAG, "扫描页-使用出厂参比未选中！");
+            useFactoryReference = false;
+        }
+        // 更新扫描模式
+        if (functionList.get(0).isSelected()) {
+            currentScanMethod = ScanMethod.ScanAndPredict;
+        } else if (functionList.get(1).isSelected()) {
+            currentScanMethod = ScanMethod.ScanOnly;
+        } else if (functionList.get(2).isSelected()) {
+            currentScanMethod = ScanMethod.Maintain;
+        } else {
+            Log.e(TAG, "扫描页-upDateScanMethod，未选中任何扫描模式");
+            currentScanMethod = ScanMethod.ScanOnly;
+        }
+    }
+
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.imageButton_back) {
             finish();
         } else if (view.getId() == R.id.start_scan_button) {
             // todo:判断选中的采集模式、设备功能、参比使用
-            PerformScan(1000);
-            // 防止重复点击
-            enableAllComponent(false);
-            pb_scanning.setVisibility(View.VISIBLE);
-//            pb_load_calibration.setVisibility(View.VISIBLE);
+            upDateScanMethod();
+            // TODO: 2024/7/16 如果用户没有选中”使用出厂参比“，并且软件未存储本地参比，则弹窗提醒，并取消用户操作
+            if (!useFactoryReference && (localReferenceIntensity == null || localReferenceIntensity.isEmpty())) {
+                // 将useFactoryReference选项改回去
+                functionList.get(3).setSelected(true);
+                functionListAdapter.notifyItemChanged(3);
+
+                GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+                        GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                        "本地未存储参比",
+                        "本地未存储参比，请先‘更新参比’再进行此操作！"
+                );
+                dialogFragment.setDialogFinishActivity(false);
+                dialogFragment.show(getSupportFragmentManager(), "本地未存储参比");
+                // 不执行后续操作
+                return;
+            }
+            if (currentScanMethod == ScanMethod.ScanOnly) {
+                PerformScan(1000);
+                // 防止重复点击
+                enableAllComponent(false);
+                pb_scanning.setVisibility(View.VISIBLE);
+            } else if (currentScanMethod == ScanMethod.ScanAndPredict) {
+                Toast.makeText(this, "马上开发好", Toast.LENGTH_SHORT).show();
+            } else if (currentScanMethod == ScanMethod.Maintain) {
+                ConfirmUpdateLocalReferenceDialogFragment confirmDialog = ConfirmUpdateLocalReferenceDialogFragment.newInstance();
+                confirmDialog.setClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (view.getId() == R.id.button_cancel) {
+                            confirmDialog.dismiss();
+                        } else if (view.getId() == R.id.button_confirm) {
+                            confirmDialog.dismiss();
+                            PerformScan(1000);
+                        }
+
+                    }
+                });
+                confirmDialog.show(getSupportFragmentManager(), "用户尝试更新本地参比。");
+            }
         }
     }
 
@@ -591,6 +659,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         editor.apply();
     }
 
+    // 获取本地设备状态信息
     private void loadDeviceStatus() {
         Log.d(TAG, "扫描页-loadDeviceStatus called.读取了设备信息。");
         battery = sharedPreferences.getInt(getString(R.string.pref_device_battery), 0);
@@ -599,6 +668,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         totalLampTime = sharedPreferences.getString(getString(R.string.pref_device_totalLampTime), "-");
     }
 
+    // 根据传入的电量，返回对应电池图标资源文件
     private int upDateBatteryIcon(int battery) {
         if (battery >= 0 && battery <= 12) {
             return R.drawable.baseline_battery_0_bar_24; // 0% - 12%
@@ -757,8 +827,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 //        quickset_init_start_nm = (Integer.parseInt(et_quickset_spec_start.getText().toString()));
 //        quickset_init_end_nm = (Integer.parseInt(et_quickset_spec_end.getText().toString()));
         //不支持锁定按钮
-        if (!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_1) <= 0)
+        if (!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_1) <= 0) {
             storeBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton, false);
+        }
     }
 
     // 改变灯状态
@@ -816,7 +887,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     }
 
     public enum ScanMethod {
-        Normal, QuickSet, Manual, Maintain
+        ScanAndPredict, ScanOnly, Maintain
     }
 
     // 灯源设置完成会发送对应广播，接收器根据灯源状态进行进一步的操作
@@ -912,7 +983,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
             if (size) {
                 // 是第一个数据包,此处初始化进度条
-                // todo:此处初始化进度条，获得进度条总长度
+                // 此处初始化进度条，获得进度条总长度
                 refCoeffDataProgressTotalSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
                 refCoeffDataProgressCurrentProgress = 0;
                 Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为true，当前为第一个数据包。");
@@ -920,7 +991,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
             } else {
                 // 不是第一个数据包，ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE代表当前数据包大小，更新进度条
-                // todo:此处更新进度
+                // 此处更新进度
                 int currentSize = intent.getIntExtra(ISCNIRScanSDK.EXTRA_REF_CAL_COEFF_SIZE, 0);
                 refCoeffDataProgressCurrentProgress += currentSize;
                 // 更新进度条进度
@@ -1279,6 +1350,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 Log.d(TAG, "扫描页-固件版本f符合，正在请求获取灯源ADC。");
                 ISCNIRScanSDK.GetScanLampRampUpADC();
             } else {
+                // TODO: 2024/7/16 处理固件版本不符合设备
                 Log.e(TAG, "扫描页-固件版本不符合，call DoScanComplete();");
             }
 
@@ -1318,24 +1390,40 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
+    // 扫描完成，开始处理数据
     private void scanComplete() {
+        Log.d(TAG, "扫描页-scanComplete called.");
     /* todo:
-        1.更新设备物理按钮锁定状态
-        2.检查设备激活状态，未激活则关闭特定功能
+        1.更新设备物理按钮锁定状态-Ok
+        2.检查设备激活状态，未激活则关闭特定功能-ok
         3.将扫描数据存储进NirSpectralData对象中
-        4.获取光谱预测数据
+        4.获取光谱预测数据-ok
         5.根据选择的采集模式，处理光谱数据，比如：更新参比
         6.更新UI状态，包括图表、预测结果、是否保存结果等
       */
+        boolean isLockButton = getBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton, false);
+        if (isLockButton) { // 设定设备按钮状态
+            Log.d(TAG, "扫描页-scanComplete-设备物理按钮切换为lock");
+            ISCNIRScanSDK.ControlPhysicalButton(ISCNIRScanSDK.PhysicalButton.Lock);
+        } else {
+            Log.d(TAG, "扫描页-scanComplete-设备物理按钮切换为unlock");
+            ISCNIRScanSDK.ControlPhysicalButton(ISCNIRScanSDK.PhysicalButton.Unlock);
+        }
+        // TODO: 2024/7/16 此处后续根据用户会员等级，限制功能
+
+
         if (isDeviceScanning) {
-            Log.d(TAG, "扫描页-scanComplete called.");
+            Log.d(TAG, "扫描页-scanComplete called.isDeviceScanning:true");
+            // 将采集的数据转换为csv格式文本
+            writeCSV(Scan_Spectrum_Data);
+            // 更新4张图表
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_ABSORBANCE, mAbsorbanceFloat);
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_REFLECTANCE, mReflectanceFloat);
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_INTENSITY, mIntensityFloat);
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_REFERENCE, mReferenceFloat);
+            // 启用所有组件
             enableAllComponent(true);
-            pb_load_calibration.setVisibility(View.INVISIBLE);
-            // 判断是否处于扫描过程中
+            // 是否处于扫描过程中-设置为否
             isDeviceScanning = false;
         }
 
@@ -1369,7 +1457,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         String configname = PasswordUtils.getBytetoString(ISCNIRScanSDK.ScanConfigInfo.configName);
         // 写入参比更新时间
         // todo:当更新参比时，此处存储当前的时间（注意增加判断是否“选中增加参比”）
-        if (Current_Scan_Method == ScanMethod.Maintain) {
+        if (currentScanMethod == ScanMethod.Maintain) {
             configname = "Reference";
             Date datetime = new Date();
             SimpleDateFormat format_1 = new SimpleDateFormat("yy/MM/dd", Locale.getDefault());
@@ -1405,7 +1493,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
         CSV[15][0] = "Data Date-Time:,";
         CSV[16][0] = "Total Measurement Time in sec:,";
-
+        //  Slew 扫描允许用户将光谱分成多个区段，每个区段可以有不同的扫描参数（如曝光时间、分辨率等）
+        // numSections 表示扫描配置中的区段数量
+        // 为了更精细地控制扫描参数（如曝光时间、分辨率等），可以将整个波长范围划分为多个区段 (section)。每个区段可以有自己独立的扫描参数
         CSV[1][1] = configname + ",";
         CSV[2][1] = "Slew,";
         CSV[2][2] = "Num Section:,";
@@ -1491,6 +1581,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         CSV[12][7] = "Humidity (%):,";
         CSV[13][7] = "Lamp Indicator:,";
         CSV[14][7] = "Data Date-Time:,";
+        // TODO: 2024/7/16 当用户使用新采集的参比时，此处使用新参比的参数
         if (PasswordUtils.getBytetoString(ISCNIRScanSDK.ReferenceInfo.refconfigName).equals("SystemTest")) {
             CSV[1][8] = "Built-in Factory Reference";
         } else {
@@ -1525,7 +1616,118 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         CSV[13][8] = ISCNIRScanSDK.ReferenceInfo.reflampintensity[0] + ",";
         // endregion
 
-        // 校准系数
+        //region 校准系数
+        CSV[17][7] = "***Calibration Coefficients***,";
+        CSV[18][7] = "Shift Vector Coefficients:,";
+        CSV[19][7] = "Pixel to Wavelength Coefficients:,";
+        CSV[21][7] = "***Lamp Usage * **,";
+        CSV[22][7] = "Total Time(HH:MM:SS):,";
+        CSV[23][7] = "***Device/Error Status***,";
+        CSV[24][7] = "Device Status:,";
+        CSV[25][7] = "Error status:,";
+
+        CSV[18][8] = Scan_Config_Info.shift_vector_coff[0] + ",";
+        CSV[18][9] = Scan_Config_Info.shift_vector_coff[1] + ",";
+        CSV[18][10] = Scan_Config_Info.shift_vector_coff[2] + ",";
+
+        CSV[19][8] = Scan_Config_Info.pixel_coff[0] + ",";
+        CSV[19][9] = Scan_Config_Info.pixel_coff[1] + ",";
+        CSV[19][10] = Scan_Config_Info.pixel_coff[2] + ",";
+        CSV[22][8] = totalLampTime + ",";
+        final StringBuilder stringBuilder = new StringBuilder(8);
+        for (int i = 3; i >= 0; i--)
+            stringBuilder.append(String.format("%02X", devbyte[i]));
+        CSV[24][8] = "0x" + stringBuilder.toString();
+        final StringBuilder stringBuilder_errorstatus = new StringBuilder(8);
+        for (int i = 3; i >= 0; i--)
+            stringBuilder_errorstatus.append(String.format("%02X", errbyte[i]));
+        CSV[25][8] = "0x" + stringBuilder_errorstatus.toString() + ",";
+        final StringBuilder stringBuilder_errorcode = new StringBuilder(8);
+        for (int i = 0; i < 20; i++) {
+            stringBuilder_errorcode.append(String.format("%02X", errbyte[i]));
+            if (errbyte[i] != 0)
+                HaveError = true;
+        }
+        CSV[25][9] = "Error Code:,";
+        CSV[25][10] = "0x" + stringBuilder_errorcode.toString() + ",";
+        CSV[27][0] = "***Scan Data***,";
+        String prefix = getString(R.string.file_prefix);
+        //--------------------------------------
+        //endregion
+        String csvOS = "";
+        CSV[26][9] = "Error Details:,";
+        if (HaveError) {
+            CSV[26][10] = errorByteTransfer();
+            csvOS = prefix + "_" + configname + "_" + currentTime + "_Error_Detected" + ".csv";
+            // todo:设备异常时提醒用户，并在数据列表中体现
+        } else {
+            CSV[26][10] = "Not Found,";
+            csvOS = prefix + "_" + configname + "_" + currentTime + ".csv";
+        }
+
+        List<String[]> data = new ArrayList<>();
+        StringBuilder buf = new StringBuilder();
+        for (int i = 0; i < 28; i++) {
+            for (int j = 0; j < 15; j++) {
+                buf.append(CSV[i][j]);
+                if (j == 14) {
+                    data.add(new String[]{buf.toString()});
+                }
+            }
+            buf = new StringBuilder();
+        }
+        data.add(new String[]{"Wavelength (nm),Absorbance (AU),Reference Signal (unitless),Sample Signal (unitless)"});
+        // TODO: 2024/7/16 如果使用自定义参比，这里需要修改
+        int csvIndex;
+        for (csvIndex = 0; csvIndex < scanResults.getLength(); csvIndex++) {
+            double waves = scanResults.getWavelength()[csvIndex];
+            int intens = scanResults.getUncalibratedIntensity()[csvIndex];
+            float absorb = (-1) * (float) Math.log10((double) scanResults.getUncalibratedIntensity()[csvIndex] / (double) scanResults.getIntensity()[csvIndex]);
+            //float reflect = (float) Scan_Spectrum_Data.getUncalibratedIntensity()[csvIndex] / Scan_Spectrum_Data.getIntensity()[csvIndex];
+            float reference = (float) Scan_Spectrum_Data.getIntensity()[csvIndex];
+            data.add(new String[]{String.valueOf(waves), String.valueOf(absorb), String.valueOf(reference), String.valueOf(intens)});
+        }
+
+        if ((isExtendVer && (fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_2) == 0 || fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_4) == 0))
+                || (!isExtendVer_PLUS && !isExtendVer && (fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_3) == 0 || fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_5) == 0))) {
+            // 写入ADC数据
+            WriteADCNotTimeStamp(data, CSV);
+        } else {
+            // TODO: 2024/7/16 提示设备固件过低，然后不写入ADC
+            GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+                    GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, "设备固件版本与软件不匹配",
+                    "设备固件版本与软件不匹配，测量结果将忽略ADC数据");
+            if (!isFinishing() && !isDestroyed() && isStopped) {
+                dialogFragment.setDialogFinishActivity(false);
+                dialogFragment.show(getSupportFragmentManager(), "fw_level_standard not comparable!");
+            }
+        }
+
+        data.forEach(new Consumer<String[]>() {
+            @Override
+            public void accept(String[] strings) {
+                Log.d(TAG, "扫描页-扫描结果：" + Arrays.toString(strings));
+            }
+        });
+
+//            if (isExtendVer_PLUS)
+//                data = WriteADCNotTimeStamp_PLUS(data, CSV);
+//            else if ((!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_5) == 0)
+//                    || (isExtendVer && fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_4) == 0))
+//                data = WriteADCTimeStamp(data, CSV);
+//            else if ((isExtendVer && (fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_2) == 0 || fw_level_ext.compareTo(ISCNIRScanSDK.FW_LEVEL_EXT.LEVEL_EXT_4) == 0))
+//                    || (!isExtendVer_PLUS && !isExtendVer && (fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_3) == 0 || fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_5) == 0)))
+//                data = WriteADCNotTimeStamp(data, CSV);
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+//                MediaStoreWriteCSV(data, configname, prefix);
+//            else {
+//                // initiate media scan and put the new things into the path array to
+//                // make the scanner aware of the location and the files you want to see
+//                MediaScannerConnection.scanFile(this, new String[]{csvOS}, null, null);
+//                writer = new CSVWriter(new FileWriter(csvOS), ',', CSVWriter.NO_QUOTE_CHARACTER);
+//                writer.writeAll(data);
+//                writer.close();
+//            }
     }
 
     private @NonNull String getMfg_num() {
@@ -1549,7 +1751,227 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         return mfg_num;
     }
 
-    //    用于处理扫描数据和正确设置图形的自定义接收器（应调用ISCNIRScanSDK.StartScan（））
+    private String errorByteTransfer() {
+        String ErrorMsg = "";
+        int ErrorInt = errbyte[0] & 0xFF | (errbyte[1] << 8);
+        if ((ErrorInt & 0x00000001) > 0)//Scan Error
+        {
+            ErrorMsg += "Scan Error : ";
+            int ErrDetailInt = errbyte[4] & 0xFF;
+            if ((ErrDetailInt & 0x01) > 0)
+                ErrorMsg += "DLPC150 Boot Error Detected.    ";
+            if ((ErrDetailInt & 0x02) > 0)
+                ErrorMsg += "DLPC150 Init Error Detected.    ";
+            if ((ErrDetailInt & 0x04) > 0)
+                ErrorMsg += "DLPC150 Lamp Driver Error Detected.    ";
+            if ((ErrDetailInt & 0x08) > 0)
+                ErrorMsg += "DLPC150 Crop Image Failed.    ";
+            if ((ErrDetailInt & 0x10) > 0)
+                ErrorMsg += "ADC Data Error.    ";
+            if ((ErrDetailInt & 0x20) > 0)
+                ErrorMsg += "Scan Config Invalid.    ";
+            if ((ErrDetailInt & 0x40) > 0)
+                ErrorMsg += "Scan Pattern Streaming Error.    ";
+            if ((ErrDetailInt & 0x80) > 0)
+                ErrorMsg += "DLPC150 Read Error.    ";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000002) > 0)  // ADC Error
+        {
+            ErrorMsg += "ADC Error : ";
+            int ErrDetailInt = errbyte[5] & 0xFF;
+            if (ErrDetailInt == 1)
+                ErrorMsg += "Timeout Error.    ";
+            else if (ErrDetailInt == 2)
+                ErrorMsg += "PowerDown Error.    ";
+            else if (ErrDetailInt == 3)
+                ErrorMsg += "PowerUp Error.    ";
+            else if (ErrDetailInt == 4)
+                ErrorMsg += "Standby Error.    ";
+            else if (ErrDetailInt == 5)
+                ErrorMsg += "WakeUp Error.    ";
+            else if (ErrDetailInt == 6)
+                ErrorMsg += "Read Register Error.    ";
+            else if (ErrDetailInt == 7)
+                ErrorMsg += "Write Register Error.    ";
+            else if (ErrDetailInt == 8)
+                ErrorMsg += "Configure Error.    ";
+            else if (ErrDetailInt == 9)
+                ErrorMsg += "Set Buffer Error.    ";
+            else if (ErrDetailInt == 10)
+                ErrorMsg += "Command Error.    ";
+            else if (ErrDetailInt == 11)
+                ErrorMsg += "Set PGA Error.    ";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000004) > 0)  // SD Card Error
+        {
+            ErrorMsg += "SD Card Error.";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000008) > 0)  // EEPROM Error
+        {
+            ErrorMsg += "EEPROM Error.";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000010) > 0)  // BLE Error
+        {
+            ErrorMsg += "Bluetooth Error.";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000020) > 0)  // Spectrum Library Error
+        {
+            ErrorMsg += "Spectrum Library Error.";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000040) > 0)  // Hardware Error
+        {
+            ErrorMsg += "HW Error : ";
+            int ErrDetailInt = errbyte[11] & 0xFF;
+            if (ErrDetailInt == 1)
+                ErrorMsg += "DLPC150 Error.    ";
+            else if (ErrDetailInt == 2)
+                ErrorMsg += "Read UUID Error.    ";
+            else if (ErrDetailInt == 3)
+                ErrorMsg += "Flash Initial Error.    ";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000080) > 0)  // TMP Sensor Error
+        {
+            ErrorMsg += "TMP Error : ";
+            int ErrDetailInt = errbyte[12] & 0xFF;
+            if (ErrDetailInt == 1)
+                ErrorMsg += "Invalid Manufacturing ID.    ";
+            else if (ErrDetailInt == 2)
+                ErrorMsg += "Invalid Device ID.    ";
+            else if (ErrDetailInt == 3)
+                ErrorMsg += "Reset Error.    ";
+            else if (ErrDetailInt == 4)
+                ErrorMsg += "Read Register Error.    ";
+            else if (ErrDetailInt == 5)
+                ErrorMsg += "Write Register Error.    ";
+            else if (ErrDetailInt == 6)
+                ErrorMsg += "Timeout Error.    ";
+            else if (ErrDetailInt == 7)
+                ErrorMsg += "I2C Error.    ";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000100) > 0)  // HDC Sensor Error
+        {
+            ErrorMsg += "HDC Error : ";
+            int ErrDetailInt = errbyte[13] & 0xFF;
+            if (ErrDetailInt == 1)
+                ErrorMsg += "Invalid Manufacturing ID.    ";
+            else if (ErrDetailInt == 2)
+                ErrorMsg += "Invalid Device ID.    ";
+            else if (ErrDetailInt == 3)
+                ErrorMsg += "Reset Error.    ";
+            else if (ErrDetailInt == 4)
+                ErrorMsg += "Read Register Error.    ";
+            else if (ErrDetailInt == 5)
+                ErrorMsg += "Write Register Error.    ";
+            else if (ErrDetailInt == 6)
+                ErrorMsg += "Timeout Error.    ";
+            else if (ErrDetailInt == 7)
+                ErrorMsg += "I2C Error.    ";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000200) > 0)  // Battery Error
+        {
+            ErrorMsg += "Battery Error : ";
+            int ErrDetailInt = errbyte[14] & 0xFF;
+            if (ErrDetailInt == 0x01)
+                ErrorMsg += "Battery Low.    ";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000400) > 0)  // Insufficient Memory Error
+        {
+            ErrorMsg += "Not Enough Memory.";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00000800) > 0)  // UART Error
+        {
+            ErrorMsg += "UART Error.";
+            ErrorMsg += ",";
+        }
+        if ((ErrorInt & 0x00001000) > 0)   // System Error
+        {
+            ErrorMsg += "System Error : ";
+            int ErrDetailInt = errbyte[17] & 0xFF;
+            if ((ErrDetailInt & 0x01) > 0)
+                ErrorMsg += "Unstable Lamp ADC.    ";
+            if ((ErrDetailInt & 0x02) > 0)
+                ErrorMsg += "Unstable Peak Intensity.    ";
+            if ((ErrDetailInt & 0x04) > 0)
+                ErrorMsg += "ADS1255 Error.    ";
+            if ((ErrDetailInt & 0x08) > 0)
+                ErrorMsg += "Auto PGA Error.    ";
+
+            ErrDetailInt = errbyte[18] & 0xFF;
+            if ((ErrDetailInt & 0x01) > 0)
+                ErrorMsg += "Unstable Scan in Repeated times.    ";
+            ErrorMsg += ",";
+        }
+        if (ErrorMsg.equals(""))
+            ErrorMsg = "Not Found";
+        return ErrorMsg;
+    }
+
+    private void WriteADCNotTimeStamp(List<String[]> data, String[][] CSV) {
+        try {
+            data.add(new String[]{""});
+            data.add(new String[]{"***Lamp Ramp Up ADC***,"});
+            data.add(new String[]{"ADC0,ADC1,ADC2,ADC3"});
+            String[] ADC = new String[4];
+            int count = 0;
+            for (int i = 0; i < Lamp_RAMPUP_ADC_DATA.length; i += 2) {
+                int adc_value = (Lamp_RAMPUP_ADC_DATA[i + 1] & 0xff) << 8 | Lamp_RAMPUP_ADC_DATA[i] & 0xff;
+                if (adc_value == 0)
+                    break;
+                ADC[count] = Integer.toString(adc_value);
+                count++;
+                if (count == 4) {
+                    data.add(ADC);
+                    count = 0;
+                    ADC = new String[4];
+                }
+            }
+            //-----------------------------------
+            data.add(new String[]{""});
+            data.add(new String[]{"***Lamp ADC among repeated times***,"});
+            data.add(new String[]{"ADC0,ADC1,ADC2,ADC3"});
+            ADC = new String[4];
+            int[] Average_ADC = new int[4];
+            int cal_count = 0;
+            count = 0;
+            for (int i = 0; i < Lamp_AVERAGE_ADC_DATA.length; i += 2) {
+                int adc_value = (Lamp_AVERAGE_ADC_DATA[i + 1] & 0xff) << 8 | Lamp_AVERAGE_ADC_DATA[i] & 0xff;
+                if (adc_value == 0)
+                    break;
+                ADC[count] = Integer.toString(adc_value);
+                Average_ADC[count] += adc_value;
+                count++;
+                if (count == 4) {
+                    data.add(ADC);
+                    cal_count++;
+                    count = 0;
+                    ADC = new String[4];
+                }
+            }
+            StringBuilder AverageADC = new StringBuilder("Lamp ADC:,");
+
+            for (int i = 0; i < 4; i++) {
+                double buf_adc = Average_ADC[i];
+                AverageADC.append(Math.round(buf_adc / cal_count)).append(",");
+            }
+            AverageADC.append(",,").append(CSV[14][7]).append(CSV[14][8]);// add ref data-time data
+            data.get(14)[0] = AverageADC.toString();
+        } catch (Exception e) {
+            Log.e(TAG, "扫描页-WriteADCNotTimeStamp-Exception:" + e);
+        }
+    }
+
+    // 用于处理扫描数据和正确设置图形的自定义接收器（应调用ISCNIRScanSDK.StartScan（））
     public class ScanDataReadyReceiver extends BroadcastReceiver {
 
         @Override

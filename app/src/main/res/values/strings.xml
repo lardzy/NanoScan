@@ -181,4 +181,11 @@
     <string name="connection_successful_dialog_content">设备连接成功</string>
     <string name="connection_successful_dialog_title">连接成功</string>
 
+    <string name="file_prefix">GTTC</string>
+    <string name="device_information_cannot_be_obtained">无法获得设备信息，软件发生异常！</string>
+    <string name="device_information_cannot_be_obtained_dialog_title">软件发生异常</string>
+    <string name="confirm_update_local_reference_dialog_tile">请将\'参比白板\'置于采集口</string>
+    <string name="confirm_update_local_reference_dialog_content">注意，此操作将显著影响光谱的准确性！\n请清洁采集口，并将参比白板置于采集口，确保稳定后点击\'继续\'。</string>
+    <string name="button_continue">继续</string>
+
 </resources>

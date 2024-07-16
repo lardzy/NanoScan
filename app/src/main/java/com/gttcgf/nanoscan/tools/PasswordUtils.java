@@ -28,6 +28,7 @@ public class PasswordUtils {
         }
         return hexString.toString();
     }
+
     public static String getBytetoString(byte[] configName) {
         byte[] byteChars = new byte[40];
         ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -46,7 +47,7 @@ public class PasswordUtils {
             os.write(configName[i]);
         }
         try {
-            s = new String(os.toByteArray(), "UTF-8");
+            s = os.toString("UTF-8");
         } catch (UnsupportedEncodingException var7) {
             var7.printStackTrace();
         }
