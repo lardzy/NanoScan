@@ -37,6 +37,7 @@ import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -57,6 +58,7 @@ import com.github.mikephil.charting.data.Entry;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.gttcgf.nanoscan.tools.PasswordUtils;
+import com.mikhaellopez.circularprogressbar.CircularProgressBar;
 
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -132,7 +134,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private List<FunctionItem> functionList = new ArrayList<>();
     private Animation fadeIn, fadeOut;
     private ImageView iv_battery, iv_device;
-    private ProgressBar pb_scanning;
+    private CircularProgressBar pb_scanning;
+    private LinearLayout ll_predict_result;
+    private RecyclerView rv_predict_result_list;
     private int progressOfProgressbarOutside = 0;
     private int progressOfProgressbarInside = 0;
     // endregion
@@ -317,6 +321,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         vp_chart_pages = findViewById(R.id.vp_chart_pages);
         tabLayout = findViewById(R.id.tabLayout);
         pb_scanning = findViewById(R.id.pb_scanning);
+        ll_predict_result = findViewById(R.id.ll_predict_result);
+        rv_predict_result_list = findViewById(R.id.rv_predict_result_list);
+
         tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
         tv_update_time.setText("-");
         iv_device.setVisibility(View.INVISIBLE);

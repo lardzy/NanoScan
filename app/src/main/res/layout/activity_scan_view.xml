@@ -280,7 +280,8 @@
                     android:id="@+id/iv_device"
                     android:layout_width="0dp"
                     android:layout_height="0dp"
-                    android:alpha="0.6"
+                    android:alpha="0.9"
+                    android:elevation="12dp"
                     android:src="@drawable/rounded_rectangle_with_circle"
                     app:layout_constraintBottom_toBottomOf="@+id/pb_load_calibration"
                     app:layout_constraintEnd_toEndOf="@+id/pb_load_calibration"
@@ -369,8 +370,9 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="@string/please_wait"
+                android:layout_marginTop="12dp"
                 android:textColor="@color/main_color"
-                android:textSize="14sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:visibility="visible" />
         </LinearLayout>
@@ -378,14 +380,24 @@
 
     </LinearLayout>
 
-    <ProgressBar
+    <com.mikhaellopez.circularprogressbar.CircularProgressBar
         android:id="@+id/pb_scanning"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:visibility="invisible"
+        app:cpb_background_progressbar_color="@color/preheat_toggle_text"
+        app:cpb_background_progressbar_width="12dp"
+        app:cpb_indeterminate_mode="true"
+        app:cpb_progress_direction="to_right"
+        app:cpb_progressbar_color="@color/main_color"
+        app:cpb_progressbar_width="16dp"
+        app:cpb_round_border="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_default="percent"
+        app:layout_constraintWidth_percent="0.2" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

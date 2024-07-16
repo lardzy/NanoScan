@@ -203,7 +203,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         loginToken = sharedPreferences.getString(getString(R.string.pref_user_token), "");
         // todo:如果pref_user_token不为空，则尝试直接登录，期间禁用UI，登录成功则启用UI，失败则跳转登录界面
         Log.d(TAG, "主界面-checkUserLoginStatus读取到本地文件：loginToken:" + loginToken);
-        if (!LoginActivity.userLoggedIn || loginToken.isEmpty()) {
+        if (LoginActivity.userLoggedIn && !loginToken.isEmpty()) {
+            enableAllComponent(true);
+            pb_devices_list.setVisibility(View.INVISIBLE);
+        } else if (!LoginActivity.userLoggedIn && !loginToken.isEmpty()) {
             // 当登录标志为否，或本地未存储登录token时，重新验证登录
             Log.d(TAG, "主界面-用户登录标志为false或loginToken为空！开始服务器验证登录权限。");
             // todo:增加判断是否登录的逻辑。
@@ -237,22 +240,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             Toast.makeText(MainActivity.this, "用户未登录！", Toast.LENGTH_SHORT).show();
                         }
                     });
+                    LoginActivity.userLoggedIn = false;
                     Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                     startActivity(intent);
                     finish(); // 关闭当前活动，以防用户返回到这个界面
                 }
             }, loginToken);
         } else {
-            Log.d(TAG, "主界面-用户已登录！");
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Log.d(TAG, "主界面-用户已经是登录状态！启用所有组件");
-                    enableAllComponent(true);
-                    pb_devices_list.setVisibility(View.INVISIBLE);
-                }
-            });
-
+            Log.d(TAG, "主界面-用户未登录！跳转登录界面");
+            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+            startActivity(intent);
+            finish(); // 关闭当前活动，以防用户返回到这个界面
         }
     }
 
