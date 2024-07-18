@@ -2,6 +2,10 @@ package com.gttcgf.nanoscan.tools;
 
 import android.content.Context;
 
+import org.bouncycastle.crypto.engines.AESEngine;
+import org.bouncycastle.crypto.modes.EAXBlockCipher;
+import org.bouncycastle.crypto.params.AEADParameters;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.BufferedReader;
@@ -19,6 +23,7 @@ import java.util.UUID;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 public class RSAEncrypt {
 
@@ -47,17 +52,22 @@ public class RSAEncrypt {
         // 以上验证没问题
         // 使用 AES 会话密钥加密数据
 //        Cipher aesCipher = Cipher.getInstance("AES/EAX/NoPadding", "BC");
+//        Cipher aesCipher = Cipher.getInstance("AES/EAX/PKCS7Padding", "BC");
         Cipher aesCipher = Cipher.getInstance("AES/EAX/NoPadding", "BC");
 
         byte[] nonce = new byte[16];
         new SecureRandom().nextBytes(nonce);
 
-        aesCipher.init(Cipher.ENCRYPT_MODE, sessionKey, new javax.crypto.spec.GCMParameterSpec(128, nonce));
-        byte[] ciphertext = aesCipher.doFinal(data.getBytes(StandardCharsets.UTF_8));
+        EAXBlockCipher eaxCipher = new EAXBlockCipher(new AESEngine());
+        AEADParameters aeadParameters = new AEADParameters(new KeyParameter(sessionKey.getEncoded()), 128, nonce);
+        eaxCipher.init(true, aeadParameters);
 
-        // 获取 tag
-        byte[] tag = new byte[16];
-        System.arraycopy(ciphertext, ciphertext.length - 16, tag, 0, 16);
+        byte[] ciphertext = new byte[eaxCipher.getOutputSize(data.getBytes(StandardCharsets.UTF_8).length)];
+        int len = eaxCipher.processBytes(data.getBytes(StandardCharsets.UTF_8), 0, data.getBytes(StandardCharsets.UTF_8).length, ciphertext, 0);
+        len += eaxCipher.doFinal(ciphertext, len);
+
+        // 生成 tag
+        byte[] tag = eaxCipher.getMac();
 
         byte[] encryptedData = new byte[ciphertext.length - 16];
         System.arraycopy(ciphertext, encryptedData.length - 16, encryptedData, 0, encryptedData.length);
