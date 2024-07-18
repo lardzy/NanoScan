@@ -48,8 +48,7 @@ public class RSAEncrypt {
         SecretKey sessionKey = kenGen.generateKey();
 
         // 使用 RSA 公钥加密会话密钥
-//        Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
+        Cipher rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding", "BC");
         rsaCipher.init(Cipher.ENCRYPT_MODE, publicKey);
         byte[] encSessionKey = rsaCipher.doFinal(sessionKey.getEncoded());
 
