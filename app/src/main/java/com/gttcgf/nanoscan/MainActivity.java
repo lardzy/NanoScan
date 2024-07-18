@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -167,8 +169,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             i.putExtra("deviceItem", deviceItem.get(position));
             startActivity(i);
         });
+        et_search.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                // 调用搜索方法
+                filter(charSequence.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
         // 初始化完成后，先禁用所有组件，避免误触。
         enableAllComponent(false);
+    }
+
+    private void filter(String string) {
+        List<DeviceItem> filteredList = new ArrayList<>();
+
+        for (DeviceItem item : deviceItem) {
+            // 如果DeviceItem包含搜索的文本，则添加到过滤列表中
+            if (item.getDeviceName().toLowerCase().contains(string.toLowerCase())) {
+                filteredList.add(item);
+            }
+        }
+
+        // 更新适配器
+        deviceListAdapter.filterList(filteredList);
     }
 
     private void checkIsFirstTimeUse() {
@@ -240,6 +273,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             Toast.makeText(MainActivity.this, "用户未登录！", Toast.LENGTH_SHORT).show();
                         }
                     });
+                    loginToken = "";
+                    SharedPreferences.Editor editor = sharedPreferences.edit();
+                    editor.remove(getString(R.string.pref_user_token));
+                    editor.apply();
+
                     LoginActivity.userLoggedIn = false;
                     Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                     startActivity(intent);

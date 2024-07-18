@@ -256,7 +256,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
     // 服务器验证登录信息
     private void serverVerification(ServerLoginVerificationCallback verificationCallback) throws JSONException {
-        String uri = serverUrl + "/users/login";
+        String url = serverUrl + "/users/login";
         MediaType JSON = MediaType.get("application/json");
         JSONObject userObject = new JSONObject();
         userObject.put("username", phone_number.getText().toString());
@@ -270,7 +270,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         Log.d(TAG, "登录界面-请求体已构建完成：\nbody:" + json);
         RequestBody body = RequestBody.create(json, JSON);
         Request request = new Request.Builder()
-                .url(uri)
+                .url(url)
                 .post(body)
                 .build();
 

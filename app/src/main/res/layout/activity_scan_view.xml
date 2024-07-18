@@ -162,7 +162,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="18dp"
                         android:text="@string/spectral_reference_update_time_value"
-                        android:textSize="24sp"
+                        android:textSize="11sp"
                         android:textStyle="bold"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent"

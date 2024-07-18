@@ -187,5 +187,7 @@
     <string name="confirm_update_local_reference_dialog_tile">请将\'参比白板\'置于采集口</string>
     <string name="confirm_update_local_reference_dialog_content">注意，此操作将显著影响光谱的准确性！\n请清洁采集口，并将参比白板置于采集口，确保稳定后点击\'继续\'。</string>
     <string name="button_continue">继续</string>
+    <string name="reference_update_success_dialog_tile">参比更新成功</string>
+    <string name="reference_update_success_dialog_content">本地参比更新成功，下一次扫描生效。</string>
 
 </resources>

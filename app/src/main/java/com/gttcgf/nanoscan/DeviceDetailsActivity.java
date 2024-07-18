@@ -163,7 +163,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         // 读取本地数据
         battery = sharedPreferences.getInt(getString(R.string.pref_device_battery), -1);
         totalLampTime = sharedPreferences.getString(getString(R.string.pref_device_totalLampTime), "-");
-
+        referenceUpdateDate = sharedPreferences.getString(getString(R.string.pref_app_reference_update_time), "-");
         light_usage_duration.setText(totalLampTime);
         spectral_reference_update_date_value.setText(referenceUpdateDate);
         number_of_spectra_collected_value.setText(String.valueOf(numberOfSpectraCollected));

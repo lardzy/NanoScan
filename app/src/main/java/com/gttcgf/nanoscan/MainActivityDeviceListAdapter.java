@@ -107,6 +107,11 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
 
         }
     }
+    // 更新适配器数据并通知数据集变化
+    public void filterList(List<DeviceItem> filteredList) {
+        deviceItemList = filteredList;
+        notifyDataSetChanged();
+    }
 
     interface OnItemClickListener {
         void OnItemClick(int position);

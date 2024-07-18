@@ -36,7 +36,7 @@ import java.util.Objects;
 public class DeviceListActivity extends AppCompatActivity {
     private List<DeviceItem> itemList;
     private Button button_add_device;
-    private ImageButton imageButton_search, imageButton_back;
+    private ImageButton imageButton_back;
     private View.OnClickListener onClickListener;
     private TextView device_type_input, device_info_input, device_list_empty;
     private EditText device_name_input;
@@ -86,7 +86,6 @@ public class DeviceListActivity extends AppCompatActivity {
     private void initialComponent() {
         RecyclerView recyclerView = findViewById(R.id.device_list);
         button_add_device = findViewById(R.id.button_add_device);
-        imageButton_search = findViewById(R.id.imageButton_search);
         imageButton_back = findViewById(R.id.imageButton_back);
         device_list_empty = findViewById(R.id.device_list_empty);
 
@@ -119,13 +118,10 @@ public class DeviceListActivity extends AppCompatActivity {
 
             } else if (view.getId() == R.id.imageButton_back) {
                 finish();
-            } else if (view.getId() == R.id.imageButton_search) {
-                Toast.makeText(DeviceListActivity.this, "搜索设备功能正在开发中...", Toast.LENGTH_SHORT).show();
             }
         };
         // 绑定监听器
         button_add_device.setOnClickListener(onClickListener);
-        imageButton_search.setOnClickListener(onClickListener);
         imageButton_back.setOnClickListener(onClickListener);
 
     }

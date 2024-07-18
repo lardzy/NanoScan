@@ -5,6 +5,7 @@ import static com.ISCSDK.ISCNIRScanSDK.Interpret_length;
 import static com.ISCSDK.ISCNIRScanSDK.Interpret_uncalibratedIntensity;
 import static com.ISCSDK.ISCNIRScanSDK.Interpret_wavelength;
 import static com.ISCSDK.ISCNIRScanSDK.Scan_Config_Info;
+import static com.ISCSDK.ISCNIRScanSDK.current_scanConf;
 import static com.ISCSDK.ISCNIRScanSDK.getBooleanPref;
 import static com.ISCSDK.ISCNIRScanSDK.getStringPref;
 import static com.ISCSDK.ISCNIRScanSDK.storeBooleanPref;
@@ -38,7 +39,6 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,9 +58,20 @@ import com.github.mikephil.charting.data.Entry;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.gttcgf.nanoscan.tools.PasswordUtils;
+import com.gttcgf.nanoscan.tools.RSAEncrypt;
 import com.mikhaellopez.circularprogressbar.CircularProgressBar;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,11 +79,21 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 public class ScanViewActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "ScanViewActivity";
+    private static final String serverUrl = "https://newnirtechnolgy.top/api";
     //允许 AddScanConfigViewActivity 获得光谱校准系数，以计算 max pattern
     public static byte[] passSpectrumCalCoefficients = new byte[144];
     // Tiva版本是否是标准波长、扩展波长、扩展plus波长
@@ -188,6 +209,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private float humidity;
     private String devStatus = "";
     private String errorStatus = "";
+    private String referenceUpdateTime = "";
     // endregion
     // region DeviceInfoReceiver使用的变量、常量。
     private String model_name = "";
@@ -245,6 +267,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // TODO: 2024/7/16  如果参比不为空则默认不使用出厂参比
     private boolean useFactoryReference = true;
     private LocalReferenceIntensity localReferenceIntensity;
+    private OkHttpClient client;
+    private String predictSessionUUID;
+    private NirSpectralData nirSpectralData;
 
     public static String GetLampTimeString(long lamptime) {
         String lampusage = "";
@@ -276,9 +301,14 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+        client = new OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
+                .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
+                .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
+                .build();
 
         initialData();
         initialComponent();
+
         // 绑定服务
         Intent intent = new Intent(this, ISCNIRScanSDK.class);
         bindService(intent, serviceConnection, BIND_AUTO_CREATE);
@@ -383,8 +413,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
     // 初始化各类数据
     private void initialData() {
+        // 获取传入的设备对象deviceItem
+        deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
         // 设备按钮默认锁定，即不允许用户直接使用物理按钮。
         storeBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton, true);
+        // 读取本地参比数据
+        LocalReferenceIntensity referenceIntensity = loadReferenceIntensityFromFile();
+        if (referenceIntensity != null) {
+            this.localReferenceIntensity = referenceIntensity;
+        }
         // 初始化功能列表
         FunctionItem functionItem_1 = new FunctionItem("采集模式", "采集并预测", R.drawable.baseline_auto_graph_24, true);
         functionItem_1.setSelected(true);
@@ -393,12 +430,11 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         functionList.add(new FunctionItem("设备功能", "更新参比", R.drawable.baseline_switch_access_shortcut_24, true));
         // 使用出厂参比可以与其他选项共存
         FunctionItem functionItem_2 = new FunctionItem("设备功能", "使用出厂参比", R.drawable.baseline_factory_24, false);
-        functionItem_2.setSelected(true);
+        // 根据本地是否存储参比数据来确认选项是否选中
+        functionItem_2.setSelected(referenceIntensity == null);
         functionList.add(functionItem_2);
         progressOfProgressbarOutside = 0;
         progressOfProgressbarInside = 0;
-        // 获取传入的设备对象deviceItem
-        deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
         warmUp = getIntent().getBooleanExtra("warmUp", false);
         mainFlag = getIntent().getBooleanExtra("mainFlag", false);
         Log.d(TAG, "扫描页-获取到deviceItem：" + deviceItem + "\n" + "获取到warmUp：" + warmUp);
@@ -418,11 +454,12 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 dialogFragment.show(getSupportFragmentManager(), getString(R.string.device_information_cannot_be_obtained));
             }
         }
-        // todo: 后续根据是否存储了参比数据判断要不要默认选择使用出厂参比，使用设备MAC作为区分
+        // todo: 后续根据是否存储了参比数据判断要不要默认选择使用出厂参比，使用设备MAC作为区分-ok
         sharedPreferences = this.getSharedPreferences(deviceItem.getDeviceMac(), Context.MODE_PRIVATE);
 
         // 读取本地设备状态数据
         loadDeviceStatus();
+
         // 判断设备连接过程是否已经完成
         completeDeviceConnection = false;
         // TODO: 2024/7/16 存储参比信息到本地、从本地文件读取参比信息
@@ -486,14 +523,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 // 不执行后续操作
                 return;
             }
+            // 当采集模式为仅采集光谱
             if (currentScanMethod == ScanMethod.ScanOnly) {
                 PerformScan(1000);
                 // 防止重复点击
                 enableAllComponent(false);
                 pb_scanning.setVisibility(View.VISIBLE);
             } else if (currentScanMethod == ScanMethod.ScanAndPredict) {
+                // 当采集模式为采集光谱并预测
                 Toast.makeText(this, "马上开发好", Toast.LENGTH_SHORT).show();
             } else if (currentScanMethod == ScanMethod.Maintain) {
+                // 当采集模式为维护模式，即更新本地参比
                 ConfirmUpdateLocalReferenceDialogFragment confirmDialog = ConfirmUpdateLocalReferenceDialogFragment.newInstance();
                 confirmDialog.setClickListener(new View.OnClickListener() {
                     @Override
@@ -503,6 +543,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                         } else if (view.getId() == R.id.button_confirm) {
                             confirmDialog.dismiss();
                             PerformScan(1000);
+                            // 防止重复点击
+                            enableAllComponent(false);
+                            pb_scanning.setVisibility(View.VISIBLE);
                         }
 
                     }
@@ -521,6 +564,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             public void run() {
                 // 判断是否处于扫描过程中
                 isDeviceScanning = true;
+                // 刷新会话UUID
+                predictSessionUUID = RSAEncrypt.getUUID();
                 // 发送广播 START_SCAN 将触发扫描
                 ISCNIRScanSDK.StartScan();
             }
@@ -645,7 +690,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private void updateDeviceStatusUI() {
         tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
         // todo:规范参比更新时间描述
-        tv_update_time.setText("-");
+        tv_update_time.setText(referenceUpdateTime);
         tv_battery_level_value.startAnimation(fadeIn);
         tv_update_time.startAnimation(fadeIn);
         // 更改电池图标
@@ -662,7 +707,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         editor.putFloat(getString(R.string.pref_device_humidity), humidity);
         editor.putString(getString(R.string.pref_device_totalLampTime), totalLampTime);
         // todo:规范参考更新时间
-//        editor.putString(getString(R.string.pref_app_reference_update_time), "-");
+        editor.putString(getString(R.string.pref_app_reference_update_time), referenceUpdateTime);
         editor.apply();
     }
 
@@ -673,6 +718,14 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         temperature = sharedPreferences.getFloat(getString(R.string.pref_device_temperature), 0);
         humidity = sharedPreferences.getFloat(getString(R.string.pref_device_humidity), 0);
         totalLampTime = sharedPreferences.getString(getString(R.string.pref_device_totalLampTime), "-");
+        if (localReferenceIntensity != null) {
+            Date upDateTime = localReferenceIntensity.getUpDateTime();
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            referenceUpdateTime = format.format(upDateTime);
+        } else {
+            referenceUpdateTime = "-";
+        }
+
     }
 
     // 根据传入的电量，返回对应电池图标资源文件
@@ -1405,7 +1458,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         2.检查设备激活状态，未激活则关闭特定功能-ok
         3.将扫描数据存储进NirSpectralData对象中
         4.获取光谱预测数据-ok
-        5.根据选择的采集模式，处理光谱数据，比如：更新参比
+        5.根据选择的采集模式，处理光谱数据，比如：更新参比-ok
         6.更新UI状态，包括图表、预测结果、是否保存结果等
       */
         boolean isLockButton = getBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton, false);
@@ -1422,7 +1475,53 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         if (isDeviceScanning) {
             Log.d(TAG, "扫描页-scanComplete called.isDeviceScanning:true");
             // 将采集的数据转换为csv格式文本
-            writeCSV(Scan_Spectrum_Data);
+            List<String[]> scanResultCSV = writeCSV(Scan_Spectrum_Data);
+            // 将结果发送至服务器，获得预测结果
+            // 设备MAC数据加密
+            String testCode = "";
+            try {
+                testCode = RSAEncrypt.encryptData(deviceItem.getDeviceMac(), RSAEncrypt.loadPublicKey(this, R.raw.public_pem));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            // 整合csv数据
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < scanResultCSV.size(); i++) {
+                for (int i1 = 0; i1 < scanResultCSV.get(i).length; i1++) {
+                    sb.append(scanResultCSV.get(i)[i1]).append(",");
+                }
+                sb.append("\n");
+            }
+            // 将当次扫描的UUID上传服务器。
+            String UUID = predictSessionUUID;
+            // 将扫描数据汇总
+            String inData = sb.toString();
+            try {
+                ServerPredictResult(testCode, UUID, inData, new ServerPredictResultCallback() {
+                    @Override
+                    public void onSuccess() {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(mContext, "成功", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFailed(String msg) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(mContext, "失败", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            } catch (JSONException e) {
+//                throw new RuntimeException(e);
+                Log.e(TAG, "扫描页-ServerPredictResultCallback JSON解析失败！");
+            }
             // 更新4张图表
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_ABSORBANCE, mAbsorbanceFloat);
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_REFLECTANCE, mReflectanceFloat);
@@ -1436,8 +1535,76 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
     }
 
+    // 对采集结果进行预测
+    private void ServerPredictResult(String testCode, String testID, String inData, ServerPredictResultCallback resultCallback) throws JSONException {
+        String url = serverUrl + "/test";
+        MediaType mediaType = MediaType.get("application/json");
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("test_code", testCode);
+        jsonObject.put("test_id", testID);
+        jsonObject.put("indata", inData);
+        String json = jsonObject.toString();
+//        Log.d(TAG, "扫描页-预测结果请求体内容已经构建完成：\n" + json);
+        System.out.println(json);
+        RequestBody body = RequestBody.create(json, mediaType);
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader("Authorization", deviceItem.getDeviceToken())
+                .post(body)
+                .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "扫描页-服务器请求失败，考虑网络问题");
+                resultCallback.onFailed(e.toString());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
+                    // 预测成功！
+                    // 解析响应结果
+                    Log.e(TAG, "扫描页-预测成功：" + response.body().string());
+                    try {
+                        JSONArray jsonArray = new JSONArray(response.body().string());
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            String data = jsonArray.getString(i);
+                            String[] parts = data.split(":");
+                            String material = parts[0];  // 获得成分
+                            String percentageString = parts.length > 1 ? parts[1].replace("%", "") : "0";  // 获得含量
+                            float percentage = 0f;
+                            try {
+                                percentage = Float.parseFloat(percentageString);
+                            } catch (NumberFormatException e) {
+//                                throw new RuntimeException(e);
+                                // TODO: 2024/7/17 提示用户解析异常
+                            }
+
+                        }
+                    } catch (JSONException e) {
+                        // TODO: 2024/7/17 json 解析失败，弹窗提醒。
+                        throw new RuntimeException(e);
+                    }
+
+                } else {
+                    if (response.body() != null) {
+                        String string = response.body().string();
+                        Log.e(TAG, "扫描页-服务器请求成功，但是预测不成功:" + string);
+                    }
+                }
+
+            }
+        });
+    }
+
+    private interface ServerPredictResultCallback {
+        void onSuccess();
+
+        void onFailed(String msg);
+    }
+
     // 将扫描数据写入为csv文件，发送至服务器并预测
-    private void writeCSV(ISCNIRScanSDK.ScanResults scanResults) {
+    private List<String[]> writeCSV(ISCNIRScanSDK.ScanResults scanResults) {
         boolean HaveError = false;
         int scanType;
         int numSections;
@@ -1589,10 +1756,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         CSV[13][7] = "Lamp Indicator:,";
         CSV[14][7] = "Data Date-Time:,";
         // TODO: 2024/7/16 当用户使用新采集的参比时，此处使用新参比的参数
-        if (PasswordUtils.getBytetoString(ISCNIRScanSDK.ReferenceInfo.refconfigName).equals("SystemTest")) {
-            CSV[1][8] = "Built-in Factory Reference";
-        } else {
+//        if (PasswordUtils.getBytetoString(ISCNIRScanSDK.ReferenceInfo.refconfigName).equals("SystemTest")) {
+//            CSV[1][8] = "Built-in Factory Reference";
+//        } else {
+//            CSV[1][8] = "Built-in User Reference";
+//        }
+        if (!useFactoryReference) {
             CSV[1][8] = "Built-in User Reference";
+        } else {
+            CSV[1][8] = "Built-in Factory Reference";
         }
         CSV[2][8] = "Slew,";
         CSV[2][9] = "Num Section:,";
@@ -1667,6 +1839,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             CSV[26][10] = errorByteTransfer();
             csvOS = prefix + "_" + configname + "_" + currentTime + "_Error_Detected" + ".csv";
             // todo:设备异常时提醒用户，并在数据列表中体现
+            GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+                    GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                    "发生错误",
+                    "设备报告了一个错误，错误信息：" + CSV[26][10]
+            );
+            dialogFragment.setDialogFinishActivity(false);
+            if (!isDestroyed() && !isFinishing() && !isStopped) {
+                dialogFragment.show(getSupportFragmentManager(), "设备报错");
+            }
         } else {
             CSV[26][10] = "Not Found,";
             csvOS = prefix + "_" + configname + "_" + currentTime + ".csv";
@@ -1689,9 +1870,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         for (csvIndex = 0; csvIndex < scanResults.getLength(); csvIndex++) {
             double waves = scanResults.getWavelength()[csvIndex];
             int intens = scanResults.getUncalibratedIntensity()[csvIndex];
-            float absorb = (-1) * (float) Math.log10((double) scanResults.getUncalibratedIntensity()[csvIndex] / (double) scanResults.getIntensity()[csvIndex]);
+            float absorb = (-1) * (float) Math.log10((double) scanResults.getUncalibratedIntensity()[csvIndex] / (double) getIntensity()[csvIndex]);
             //float reflect = (float) Scan_Spectrum_Data.getUncalibratedIntensity()[csvIndex] / Scan_Spectrum_Data.getIntensity()[csvIndex];
-            float reference = (float) Scan_Spectrum_Data.getIntensity()[csvIndex];
+            float reference = (float) getIntensity()[csvIndex];
             data.add(new String[]{String.valueOf(waves), String.valueOf(absorb), String.valueOf(reference), String.valueOf(intens)});
         }
 
@@ -1716,7 +1897,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 Log.d(TAG, "扫描页-扫描结果：" + Arrays.toString(strings));
             }
         });
-
+        return data;
 //            if (isExtendVer_PLUS)
 //                data = WriteADCNotTimeStamp_PLUS(data, CSV);
 //            else if ((!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_5) == 0)
@@ -2002,10 +2183,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 for (int i = 0; i < Scan_Spectrum_Data.getLength(); i++) {
                     mXValues.add(String.format(getString(R.string.scan_wave_length), ISCNIRScanSDK.ScanResults.getSpatialFreq(mContext, Scan_Spectrum_Data.getWavelength()[i])));
                     mIntensityFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i]));
-                    mAbsorbanceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (-1) * (float) Math.log10((double) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / (double) Scan_Spectrum_Data.getIntensity()[i])));
-                    mReflectanceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / Scan_Spectrum_Data.getIntensity()[i]));
+                    mAbsorbanceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (-1) * (float) Math.log10((double) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / (double) getIntensity()[i])));
+                    mReflectanceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / getIntensity()[i]));
                     mWavelengthFloat.add((float) Scan_Spectrum_Data.getWavelength()[i]);
-                    mReferenceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getIntensity()[i]));
+                    mReferenceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) getIntensity()[i]));
                 }
                 // 初始化图表横、纵坐标的范围
                 initializesTableRange();
@@ -2019,6 +2200,40 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 } else {
                     // 开始获取设备信息。
                     ISCNIRScanSDK.GetDeviceStatus();
+                }
+                // 当用户替换参比时
+                if (currentScanMethod == ScanMethod.Maintain) {
+                    List<Integer> referenceIntensity = new ArrayList<>();
+                    for (int i = 0; i < Scan_Spectrum_Data.getLength(); i++) {
+                        referenceIntensity.add(Scan_Spectrum_Data.getUncalibratedIntensity()[i]);
+                    }
+                    localReferenceIntensity = new LocalReferenceIntensity(current_scanConf, referenceIntensity, deviceItem.getDeviceMac(), new Date());
+                    if (!localReferenceIntensity.isEmpty()) {
+                        // 将采集到的参比数据保存到本地
+                        saveReferenceIntensityToFile();
+                        // 更新参比更新时间
+                        loadDeviceStatus();
+                        // TODO: 2024/7/17 弹窗提示用户已经完成参比更新，然后切换到其他选项
+                        functionList.get(2).setSelected(false);
+                        functionList.get(1).setSelected(true);
+                        functionList.get(3).setSelected(false);
+                        functionListAdapter.notifyItemChanged(2);
+                        functionListAdapter.notifyItemChanged(1);
+                        functionListAdapter.notifyItemChanged(3);
+                        GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+                                GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK,
+                                getString(R.string.reference_update_success_dialog_tile),
+                                getString(R.string.reference_update_success_dialog_content)
+                        );
+                        dialogFragment.setDialogFinishActivity(false);
+                        if (!isFinishing() && !isDestroyed() && !isStopped) {
+                            dialogFragment.show(getSupportFragmentManager(), "参比更新成功！");
+                        }
+                    }
+                } else if (currentScanMethod == ScanMethod.ScanAndPredict || currentScanMethod == ScanMethod.ScanOnly) {
+                    // 初始化用于存储光谱数据的对象
+                    nirSpectralData = new NirSpectralData(deviceItem.getDeviceMac(), mIntensityFloat,
+                            mAbsorbanceFloat, mReferenceFloat, mWavelengthFloat, predictSessionUUID);
                 }
             }
         }
@@ -2081,6 +2296,46 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 maxReference = 1000;
             }
         }
+    }
+
+    private int[] getIntensity() {
+        if (!useFactoryReference) {
+            int[] intensity = new int[localReferenceIntensity.getReferenceIntensity().size()];
+            for (int i = 0; i < localReferenceIntensity.getReferenceIntensity().size(); i++) {
+                intensity[i] = localReferenceIntensity.getReferenceIntensity().get(i);
+            }
+            return intensity;
+        } else {
+            return Scan_Spectrum_Data.getIntensity();
+        }
+    }
+
+    // TODO: 2024/7/17 增加主动删除参比的功能
+    private void saveReferenceIntensityToFile() {
+        try (FileOutputStream fos = openFileOutput("localReferenceIntensity.ser", MODE_PRIVATE);
+             ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+            oos.writeObject(localReferenceIntensity);
+            Log.d(TAG, "扫描页-设备用户参比文件已写入本地文件。");
+        } catch (IOException e) {
+            Log.e(TAG, "扫描页-saveReferenceIntensityToFile，写入文件失败！");
+        }
+    }
+
+    private LocalReferenceIntensity loadReferenceIntensityFromFile() {
+        try (FileInputStream fis = openFileInput("localReferenceIntensity.ser");
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            Log.d(TAG, "扫描页-loadReferenceIntensityFromFile 成功");
+            LocalReferenceIntensity referenceIntensity = (LocalReferenceIntensity) ois.readObject();
+            // 仅在设备mac地址相同时才读取
+            if (referenceIntensity.getDeviceMAC().equals(deviceItem.getDeviceMac())) {
+                return referenceIntensity;
+            } else {
+                return null;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            Log.e(TAG, "扫描页-loadReferenceIntensityFromFile，文件不存在！" + e);
+        }
+        return null;
     }
 
     private void showLoadAnimation(boolean enable) {

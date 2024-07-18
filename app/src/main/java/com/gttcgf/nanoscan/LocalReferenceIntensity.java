@@ -12,11 +12,13 @@ public class LocalReferenceIntensity implements Serializable {
     private final Date upDateTime;
     private List<Integer> referenceIntensity = new ArrayList<>();
     private final ISCNIRScanSDK.ScanConfiguration referenceInformation;
+    private final String deviceMAC;
 
-    public LocalReferenceIntensity(ISCNIRScanSDK.ScanConfiguration referenceInformation, List<Integer> referenceIntensity, Date upDateTime) {
+    public LocalReferenceIntensity(ISCNIRScanSDK.ScanConfiguration referenceInformation, List<Integer> referenceIntensity, String deviceMAC, Date upDateTime) {
         this.referenceInformation = referenceInformation;
         this.referenceIntensity = referenceIntensity;
         this.upDateTime = upDateTime;
+        this.deviceMAC = deviceMAC;
     }
 
     public boolean isEmpty() {
@@ -29,6 +31,10 @@ public class LocalReferenceIntensity implements Serializable {
 
     public Date getUpDateTime() {
         return upDateTime;
+    }
+
+    public String getDeviceMAC() {
+        return deviceMAC;
     }
 
     public ISCNIRScanSDK.ScanConfiguration getReferenceInformation() {
