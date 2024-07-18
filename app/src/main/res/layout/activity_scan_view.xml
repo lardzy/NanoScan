@@ -294,6 +294,7 @@
                     android:id="@+id/pb_load_calibration"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
+                    android:alpha="0.7"
                     android:padding="20dp"
                     android:paddingHorizontal="6dp"
                     android:paddingVertical="6dp"

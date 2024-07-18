@@ -1,7 +1,6 @@
 package com.gttcgf.nanoscan.tools;
 
 import android.content.Context;
-import android.util.Base64;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -10,31 +9,25 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
-import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.UUID;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 public class RSAEncrypt {
 
-    private RSAEncrypt(){}
+    private RSAEncrypt() {
+    }
+
     public static String encryptData(String data, String publicKeyStr) throws Exception {
         Security.removeProvider("BC");
         Security.addProvider(new BouncyCastleProvider());
-//        try {
-//            Class bcProviderClass = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
-//            Provider bcProvider = (Provider) bcProviderClass.newInstance();
-//            Security.insertProviderAt(bcProvider, 1);
-//        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-//            throw new RuntimeException(e);
-//        }
 
         // 生成公钥对象
         byte[] publicKeyBytes = java.util.Base64.getDecoder().decode(publicKeyStr);
@@ -51,23 +44,32 @@ public class RSAEncrypt {
         Cipher rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding", "BC");
         rsaCipher.init(Cipher.ENCRYPT_MODE, publicKey);
         byte[] encSessionKey = rsaCipher.doFinal(sessionKey.getEncoded());
-
+        // 以上验证没问题
         // 使用 AES 会话密钥加密数据
+//        Cipher aesCipher = Cipher.getInstance("AES/EAX/NoPadding", "BC");
         Cipher aesCipher = Cipher.getInstance("AES/EAX/NoPadding", "BC");
-        aesCipher.init(Cipher.ENCRYPT_MODE, sessionKey);
+
+        byte[] nonce = new byte[16];
+        new SecureRandom().nextBytes(nonce);
+
+        aesCipher.init(Cipher.ENCRYPT_MODE, sessionKey, new javax.crypto.spec.GCMParameterSpec(128, nonce));
         byte[] ciphertext = aesCipher.doFinal(data.getBytes(StandardCharsets.UTF_8));
 
-        // 获取 tag 和 nonce
-        byte[] tag = aesCipher.doFinal();
-        byte[] nonce = aesCipher.getIV();
+        // 获取 tag
+        byte[] tag = new byte[16];
+        System.arraycopy(ciphertext, ciphertext.length - 16, tag, 0, 16);
+
+        byte[] encryptedData = new byte[ciphertext.length - 16];
+        System.arraycopy(ciphertext, encryptedData.length - 16, encryptedData, 0, encryptedData.length);
+
         // 拼接加密数据
-        byte[] combined = new byte[encSessionKey.length + nonce.length + tag.length + ciphertext.length];
+        byte[] combined = new byte[encSessionKey.length + nonce.length + tag.length + encryptedData.length];
         System.arraycopy(encSessionKey, 0, combined, 0, encSessionKey.length);
         System.arraycopy(nonce, 0, combined, encSessionKey.length, nonce.length);
         System.arraycopy(tag, 0, combined, encSessionKey.length + nonce.length, tag.length);
-        System.arraycopy(ciphertext, 0, combined, encSessionKey.length + nonce.length + tag.length, ciphertext.length);
+        System.arraycopy(encryptedData, 0, combined, encSessionKey.length + nonce.length + tag.length, encryptedData.length);
 
-        return Base64.encodeToString(combined, Base64.DEFAULT);
+        return Base64.getEncoder().encodeToString(combined);
     }
 //        return "FFm1b61gTgp9i1CdtsB6S2Yriy/EjBCzk+XJeV7d7Mv1MNcYLdVF1f4zdCarpaKbp/Zli8fhCDWh6wHjAbGp/MLQCnbl2q/qlqnLfYnoKGUZHgg51Lz+pRGvXONunNCJRcgJdqvV15154K8ism0+uVzF/1vqGiVHAQ7K3CWCGMek0oXF/prGNTR+rgSRB+bIuqxpqU/rMI0ewrn5/97dqoDYsmvemA3UQMxweiQ5NcuVvSH2QyfZku5OhrUGIgwJsFVD1vu2ScQISjc7AjsDJ+ZVNo5fv7XW24cNO2xSyzX6MNsZ81av+ngFDTuLDmfKKEwn9TSc7QcMoXAgvr//9j69gxqy+IQrpvDtSAdX9YhDLl2hRXuMZQa2RuoQfov4hdK3fx/sYCbtilavb1Jk9b8=";
 
@@ -82,13 +84,12 @@ public class RSAEncrypt {
         br.close();
 
         String publicKeyPEM = sb.toString();
-        publicKeyPEM = publicKeyPEM.replaceAll("\\n", "")
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "");
+        publicKeyPEM = publicKeyPEM.replaceAll("\\n", "").replace("-----BEGIN PUBLIC KEY-----", "").replace("-----END PUBLIC KEY-----", "");
 
         return publicKeyPEM;
     }
-    public static String getUUID(){
-        return UUID.randomUUID().toString().replace("-","");
+
+    public static String getUUID() {
+        return UUID.randomUUID().toString().replace("-", "");
     }
 }
