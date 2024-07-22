@@ -195,7 +195,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             });
             Log.d(TAG, "登录界面-用户当前ipv4地址:" + pref_user_ipAddress);
         } catch (IOException e) {
-//            throw new RuntimeException(e);
             Log.e(TAG, "登录界面-获取用户当前ipv4地址失败！\n" + e);
         }
         userHasEditedPassword = true;

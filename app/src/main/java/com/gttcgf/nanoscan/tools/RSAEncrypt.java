@@ -45,7 +45,7 @@ public class RSAEncrypt {
         kenGen.init(128);
         SecretKey sessionKey = kenGen.generateKey();
 
-        // 使用 RSA 公钥加密会话密钥
+        // 使用 公钥 使用 RSA 加密 会话密钥
         Cipher rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding", "BC");
         rsaCipher.init(Cipher.ENCRYPT_MODE, publicKey);
         byte[] encSessionKey = rsaCipher.doFinal(sessionKey.getEncoded());
@@ -53,7 +53,7 @@ public class RSAEncrypt {
         // 使用 AES 会话密钥加密数据
 //        Cipher aesCipher = Cipher.getInstance("AES/EAX/NoPadding", "BC");
 //        Cipher aesCipher = Cipher.getInstance("AES/EAX/PKCS7Padding", "BC");
-        Cipher aesCipher = Cipher.getInstance("AES/EAX/NoPadding", "BC");
+//        Cipher aesCipher = Cipher.getInstance("AES/EAX/NoPadding", "BC");
 
         byte[] nonce = new byte[16];
         new SecureRandom().nextBytes(nonce);

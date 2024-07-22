@@ -14,6 +14,8 @@
     <string name="pref_device_totalLampTime">totalLampTime</string>
     <string name="pref_app_reference_update_time">referenceUpdateTime</string>
 
+    <string name="file_deviceItem">deviceItem.ser</string>
+
 
     <string name="user_agreement">用户协议</string>
     <string name="accept">同意并继续</string>
@@ -189,5 +191,12 @@
     <string name="button_continue">继续</string>
     <string name="reference_update_success_dialog_tile">参比更新成功</string>
     <string name="reference_update_success_dialog_content">本地参比更新成功，下一次扫描生效。</string>
-
+    
+    <string name="user_profile_account_icon_content_description">用户头像</string>
+    <string name="user_profile_welcome_title">欢迎使用 NanoScan！</string>
+    <string name="user_profile_account">账户：%s</string>
+    <string name="user_profile_item_logout">退出登录</string>
+    <string name="user_profile_item_device_manage">设备管理</string>
+    <string name="user_profile_item_about">关于..</string>
+    <string name="imageview_default_description">背景</string>
 </resources>

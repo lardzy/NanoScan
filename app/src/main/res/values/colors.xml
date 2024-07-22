@@ -5,6 +5,7 @@
     <color name="red">#FFFF0000</color>
     <color name="gray">#FF808080</color>
     <color name="background">#F0F4F2</color>
+    <color name="background_type_1">#FAFCFF</color>
     <color name="statusBarColor">#F0F4F2</color>
     <color name="forgetPassword">#257ef4</color>
     <color name="main_color">#257ef4</color>
@@ -19,5 +20,7 @@
     <color name="scan_btn_background_color">#257ef4</color>
     <color name="preheat_toggle_text">#8CBEFF</color>
     <color name="row_nano_scan_item_background">#f7fcfc</color>
+    <color name="account_icon_background">#2196F3</color>
+    <color name="circle_background">#ECF7FF</color>
 
 </resources>

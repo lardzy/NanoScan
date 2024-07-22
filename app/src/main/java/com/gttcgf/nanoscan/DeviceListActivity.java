@@ -197,7 +197,7 @@ public class DeviceListActivity extends AppCompatActivity {
 
     // 将设备列表List对象保存至本地。
     private void itemListChangedToFile() {
-        try (FileOutputStream fos = openFileOutput("deviceItem.ser", MODE_PRIVATE);
+        try (FileOutputStream fos = openFileOutput(getString(R.string.file_deviceItem), MODE_PRIVATE);
              ObjectOutputStream oos = new ObjectOutputStream(fos)) {
             oos.writeObject(itemList);
             Log.d(TAG, "设备列表配置文件已写入本地");
@@ -205,9 +205,10 @@ public class DeviceListActivity extends AppCompatActivity {
             Toast.makeText(this, "配置信息写入失败，请检查设备存储空间！", Toast.LENGTH_SHORT).show();
         }
     }
+
     // 将本地设备列表List对象读取至对象。
     private void loadItemListFromFile() {
-        try (FileInputStream fis = openFileInput("deviceItem.ser");
+        try (FileInputStream fis = openFileInput(getString(R.string.file_deviceItem));
              ObjectInputStream ois = new ObjectInputStream(fis)) {
             itemList = (List<DeviceItem>) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {

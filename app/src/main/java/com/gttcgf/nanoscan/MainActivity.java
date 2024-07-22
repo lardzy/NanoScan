@@ -79,8 +79,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initComponent();
         // 检查用户是否是第一次使用、检查用户是否已登录
         checkIsFirstTimeUse();
-//        checkUserLoginStatus();
-//        checkFirstRunOrUserAgreement();
         // 应用窗口边缘到边缘的设置
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -119,17 +117,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.e(TAG, "主界面-initializeData called");
         // 读取本地文件
         sharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
-
         this.deviceItem = loadDataFromFiles();
         Log.d(TAG, "主界面-设备列表文件读取长度为：" + deviceItem.size());
         updateEmptyState();
-
         // todo:增加获取消息列表的功能
     }
 
     // 从本地序列化文件读取设备集合对象
     private List<DeviceItem> loadDataFromFiles() {
-        try (FileInputStream fis = openFileInput("deviceItem.ser"); ObjectInputStream ois = new ObjectInputStream(fis)) {
+        try (FileInputStream fis = openFileInput(getString(R.string.file_deviceItem));
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
             Log.d(TAG, "主界面-设备列表文件读取成功！");
             return (List<DeviceItem>) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
@@ -155,6 +152,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         et_search.setEnabled(false);
         ib_shutdown.setOnClickListener(this);
         ib_add_device.setOnClickListener(this);
+        ib_account.setOnClickListener(this);
 
         pb_news.setVisibility(View.INVISIBLE);
         tv_nes_empty.setVisibility(View.VISIBLE);
@@ -393,6 +391,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             finish();
         } else if (view.getId() == R.id.ib_add_device) {
             Intent i = new Intent(MainActivity.this, DeviceListActivity.class);
+            startActivity(i);
+        } else if (view.getId() == R.id.ib_account) {
+            // TODO: 2024/7/20 完成用户界面，界面包括：用户账号名称、用户会员等级（后续推出充值界面）、用户退出登录按钮。 
+            Intent i = new Intent(MainActivity.this, UserProfileActivity.class);
             startActivity(i);
         }
     }

@@ -1,5 +1,6 @@
 package com.gttcgf.nanoscan;
 
+import android.annotation.SuppressLint;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -108,12 +109,13 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
         }
     }
     // 更新适配器数据并通知数据集变化
+    @SuppressLint("NotifyDataSetChanged")
     public void filterList(List<DeviceItem> filteredList) {
         deviceItemList = filteredList;
         notifyDataSetChanged();
     }
 
-    interface OnItemClickListener {
+    public interface OnItemClickListener {
         void OnItemClick(int position);
     }
 

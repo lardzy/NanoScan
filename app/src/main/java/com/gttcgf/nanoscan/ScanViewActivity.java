@@ -71,7 +71,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.security.PublicKey;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1476,52 +1475,54 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Log.d(TAG, "扫描页-scanComplete called.isDeviceScanning:true");
             // 将采集的数据转换为csv格式文本
             List<String[]> scanResultCSV = writeCSV(Scan_Spectrum_Data);
-            // 将结果发送至服务器，获得预测结果
-            // 设备MAC数据加密
-            String testCode = "";
-            try {
-                testCode = RSAEncrypt.encryptData(deviceItem.getDeviceMac(), RSAEncrypt.loadPublicKey(this, R.raw.public_pem));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            // 整合csv数据
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < scanResultCSV.size(); i++) {
-                for (int i1 = 0; i1 < scanResultCSV.get(i).length; i1++) {
-                    sb.append(scanResultCSV.get(i)[i1]).append(",");
+            if (currentScanMethod == ScanMethod.ScanAndPredict) {
+                // 将结果发送至服务器，获得预测结果
+                // 设备MAC数据加密
+                String testCode = "";
+                try {
+                    testCode = RSAEncrypt.encryptData(deviceItem.getDeviceMac(), RSAEncrypt.loadPublicKey(this, R.raw.public_pem));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
-                sb.append("\n");
-            }
-            // 将当次扫描的UUID上传服务器。
-            String UUID = predictSessionUUID;
-            // 将扫描数据汇总
-            String inData = sb.toString();
-            try {
-                ServerPredictResult(testCode, UUID, inData, new ServerPredictResultCallback() {
-                    @Override
-                    public void onSuccess() {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(mContext, "成功", Toast.LENGTH_SHORT).show();
-                            }
-                        });
+                // 整合csv数据
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < scanResultCSV.size(); i++) {
+                    for (int i1 = 0; i1 < scanResultCSV.get(i).length; i1++) {
+                        sb.append(scanResultCSV.get(i)[i1]).append(",");
                     }
+                    sb.append("\n");
+                }
+                // 将当次扫描的UUID上传服务器。
+                String UUID = predictSessionUUID;
+                // 将扫描数据汇总
+                String inData = sb.toString();
+                try {
+                    ServerPredictResult(testCode, UUID, inData, new ServerPredictResultCallback() {
+                        @Override
+                        public void onSuccess() {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(mContext, "成功", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
 
-                    @Override
-                    public void onFailed(String msg) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(mContext, "失败", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
-                });
-            } catch (JSONException e) {
-//                throw new RuntimeException(e);
-                Log.e(TAG, "扫描页-ServerPredictResultCallback JSON解析失败！");
+                        @Override
+                        public void onFailed(String msg) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(mContext, "失败", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+                    });
+                } catch (JSONException e) {
+                    Log.e(TAG, "扫描页-ServerPredictResultCallback JSON解析失败！");
+                }
             }
+
             // 更新4张图表
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_ABSORBANCE, mAbsorbanceFloat);
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_REFLECTANCE, mReflectanceFloat);
@@ -1578,6 +1579,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                             } catch (NumberFormatException e) {
 //                                throw new RuntimeException(e);
                                 // TODO: 2024/7/17 提示用户解析异常
+                            }
+                            if (!material.isEmpty() && percentage < 100 && percentage > 0) {
+                                new PredictResult(material, percentage, predictSessionUUID);
                             }
 
                         }
