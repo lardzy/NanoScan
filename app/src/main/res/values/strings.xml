@@ -14,7 +14,7 @@
     <string name="pref_device_totalLampTime">totalLampTime</string>
     <string name="pref_app_reference_update_time">referenceUpdateTime</string>
 
-    <string name="file_deviceItem">deviceItem.ser</string>
+    <string name="file_deviceItem">%s_deviceItem.ser</string>
 
 
     <string name="user_agreement">用户协议</string>

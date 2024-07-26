@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:layout_marginStart="8dp"
     android:layout_marginTop="8dp"
-    android:layout_marginEnd="48dp"
+    android:layout_marginEnd="12dp"
     android:layout_marginBottom="12dp"
     android:background="@drawable/rounded_rectangle_for_devices_card"
     android:elevation="4dp">

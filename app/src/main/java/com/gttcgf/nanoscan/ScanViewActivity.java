@@ -531,6 +531,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             } else if (currentScanMethod == ScanMethod.ScanAndPredict) {
                 // 当采集模式为采集光谱并预测
                 Toast.makeText(this, "马上开发好", Toast.LENGTH_SHORT).show();
+                PerformScan(1000);
+                // 防止重复点击
+                enableAllComponent(false);
+                pb_scanning.setVisibility(View.VISIBLE);
             } else if (currentScanMethod == ScanMethod.Maintain) {
                 // 当采集模式为维护模式，即更新本地参比
                 ConfirmUpdateLocalReferenceDialogFragment confirmDialog = ConfirmUpdateLocalReferenceDialogFragment.newInstance();
@@ -1480,7 +1484,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 // 设备MAC数据加密
                 String testCode = "";
                 try {
-                    testCode = RSAEncrypt.encryptData(deviceItem.getDeviceMac(), RSAEncrypt.loadPublicKey(this, R.raw.public_pem));
+                    testCode = RSAEncrypt.encryptData(deviceItem.getDeviceMac(), RSAEncrypt.loadPublicKey(this, R.raw.p_key));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

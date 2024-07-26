@@ -1,7 +1,9 @@
 package com.gttcgf.nanoscan;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -43,6 +46,8 @@ public class DeviceListActivity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> activityResultLauncher;
     private DeviceListAdapter adapter;
     private static final String TAG = "DeviceListActivity";
+    private SharedPreferences sharedPreferences;
+    private String userPhoneNumber;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +74,11 @@ public class DeviceListActivity extends AppCompatActivity {
                         String deviceMac = data.getStringExtra("MAC");
                         String deviceToken = data.getStringExtra("DEVICE_TOKEN");
                         // 将选中的设备添加进集合
-                        addDevice(new DeviceItem(R.drawable.equipment_front, deviceName, "便携式近红外光谱仪", deviceMac, deviceToken));
+                        if (userPhoneNumber.isEmpty()) {
+                            Log.e(TAG, "设备列表界面-未读取到用户手机号，设备添加失败！");
+                            return;
+                        }
+                        addDevice(new DeviceItem(userPhoneNumber, R.drawable.equipment_front, deviceName, "便携式近红外光谱仪", deviceMac, deviceToken));
                     }
                 }
             }
@@ -77,10 +86,19 @@ public class DeviceListActivity extends AppCompatActivity {
     }
 
     private void initializeData() {
+        sharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
+        userPhoneNumber = sharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
         itemList = new ArrayList<>();
         // 获取本地的序列化数据
         loadItemListFromFile();
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪", "22:22:22:22:22:22", "abc"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备2", "便携式近红外光谱仪", "22:22:22:22:22:23", "abc"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备3", "便携式近红外光谱仪", "22:22:22:22:22:24", "abc"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备4", "便携式近红外光谱仪", "22:22:22:22:22:25", "abc"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备5", "便携式近红外光谱仪", "22:22:22:22:22:26", "abc"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备6", "便携式近红外光谱仪", "22:22:22:22:22:27", "abc"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备7", "便携式近红外光谱仪", "22:22:22:22:22:28", "abc"));
+//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备8", "便携式近红外光谱仪", "22:22:22:22:22:29", "abc"));
     }
 
     private void initialComponent() {
@@ -197,10 +215,10 @@ public class DeviceListActivity extends AppCompatActivity {
 
     // 将设备列表List对象保存至本地。
     private void itemListChangedToFile() {
-        try (FileOutputStream fos = openFileOutput(getString(R.string.file_deviceItem), MODE_PRIVATE);
+        try (FileOutputStream fos = openFileOutput(getString(R.string.file_deviceItem, userPhoneNumber), MODE_PRIVATE);
              ObjectOutputStream oos = new ObjectOutputStream(fos)) {
             oos.writeObject(itemList);
-            Log.d(TAG, "设备列表配置文件已写入本地");
+            Log.d(TAG, "设备列表界面-设备列表配置文件已写入本地");
         } catch (IOException e) {
             Toast.makeText(this, "配置信息写入失败，请检查设备存储空间！", Toast.LENGTH_SHORT).show();
         }
@@ -208,11 +226,21 @@ public class DeviceListActivity extends AppCompatActivity {
 
     // 将本地设备列表List对象读取至对象。
     private void loadItemListFromFile() {
-        try (FileInputStream fis = openFileInput(getString(R.string.file_deviceItem));
+        List<DeviceItem> loadedDeviceList = new ArrayList<>();
+        try (FileInputStream fis = openFileInput(getString(R.string.file_deviceItem, userPhoneNumber));
              ObjectInputStream ois = new ObjectInputStream(fis)) {
-            itemList = (List<DeviceItem>) ois.readObject();
+            loadedDeviceList = (List<DeviceItem>) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            Log.e(TAG, "设备列表文件读取失败");
+            Log.e(TAG, "设备列表界面-设备列表文件读取失败");
+        }
+        // 只读取当前用户的设备
+        if (!loadedDeviceList.isEmpty()) {
+            for (int i = 0; i < loadedDeviceList.size(); i++) {
+                DeviceItem deviceItem = loadedDeviceList.get(i);
+                if (deviceItem.getUser().equals(userPhoneNumber)) {
+                    itemList.add(loadedDeviceList.get(i));
+                }
+            }
         }
     }
 }

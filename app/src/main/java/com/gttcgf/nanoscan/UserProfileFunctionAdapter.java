@@ -17,7 +17,7 @@ import java.util.Objects;
 public class UserProfileFunctionAdapter extends RecyclerView.Adapter<UserProfileFunctionAdapter.UserProfileFunctionViewHolder> {
     private static final String TAG = "UserProfileFunctionAdapter";
     private List<UserProfileFunctionItem> functionItems;
-    private boolean isClickable = false;
+    private boolean isClickable = true;
     private OnItemClickListener onItemClickListener;
 
     public UserProfileFunctionAdapter(List<UserProfileFunctionItem> functionItems, OnItemClickListener onItemClickListener) {
