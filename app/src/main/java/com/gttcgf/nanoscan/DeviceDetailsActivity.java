@@ -3,6 +3,7 @@ package com.gttcgf.nanoscan;
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
@@ -26,6 +27,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class DeviceDetailsActivity extends AppCompatActivity implements View.OnClickListener {
@@ -43,6 +46,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
     private Handler handler;
     private boolean warmUp = false;
     private SharedPreferences sharedPreferences;
+    private List<DeviceDetailMenuItems> menuItems;
     // region 设备状态
     // todo:完成状态信息共享
     private int battery;
@@ -200,6 +204,12 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         // 初始化数据
         deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
         sharedPreferences = this.getSharedPreferences(Objects.requireNonNull(deviceItem).getDeviceMac(), Context.MODE_PRIVATE);
+
+        menuItems = new ArrayList<>();
+        menuItems.add(new DeviceDetailMenuItems("设备详情"));
+        menuItems.add(new DeviceDetailMenuItems("删除本地参比"));
+        menuItems.add(new DeviceDetailMenuItems("检索光谱"));
+        menuItems.add(new DeviceDetailMenuItems("连接设备"));
     }
 
     @Override
@@ -226,6 +236,14 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         } else if (view.getId() == R.id.imageButton_menu) {
             // 点击了菜单按钮
             Log.d("DeviceDetailsActivity", "点击了菜单按钮");
+            /* TODO: 2024/8/1 下方弹出抽屉式视图（DialogFragment实现），功能列表有：
+                 1.清除本地参比；
+                 2.检索光谱；
+                 3.设备详情（可以查看设备信息）；
+                 4.连接设备；
+            */
+            DeviceDetailsMenuDialogFragment menuDialogFragment = new DeviceDetailsMenuDialogFragment(menuItems, deviceItem);
+            menuDialogFragment.show(getSupportFragmentManager(), "DeviceDetailsMenuDialogFragment");
         }
     }
 

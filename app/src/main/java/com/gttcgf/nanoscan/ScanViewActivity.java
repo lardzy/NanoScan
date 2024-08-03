@@ -267,6 +267,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private boolean useFactoryReference = true;
     private LocalReferenceIntensity localReferenceIntensity;
     private OkHttpClient client;
+    // 预测会话唯一UUID，避免在用户多次预测时，预测结果混淆
     private String predictSessionUUID;
     private NirSpectralData nirSpectralData;
 
@@ -444,14 +445,18 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             storeStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, deviceItem.getDeviceName());
         } else {
             Log.e(TAG, "扫描页-获取到传入的设备对象deviceItem为NULL！");
-            GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
-                    GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+            showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
                     getString(R.string.device_information_cannot_be_obtained_dialog_title),
                     getString(R.string.device_information_cannot_be_obtained)
-            );
-            if (!isFinishing() && !isDestroyed() && !isStopped) {
-                dialogFragment.show(getSupportFragmentManager(), getString(R.string.device_information_cannot_be_obtained));
-            }
+                    , true, "获取到传入的设备对象deviceItem为NULL");
+//            GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+//                    GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+//                    getString(R.string.device_information_cannot_be_obtained_dialog_title),
+//                    getString(R.string.device_information_cannot_be_obtained)
+//            );
+//            if (!isFinishing() && !isDestroyed() && !isStopped) {
+//                dialogFragment.show(getSupportFragmentManager(), getString(R.string.device_information_cannot_be_obtained));
+//            }
         }
         // todo: 后续根据是否存储了参比数据判断要不要默认选择使用出厂参比，使用设备MAC作为区分-ok
         sharedPreferences = this.getSharedPreferences(deviceItem.getDeviceMac(), Context.MODE_PRIVATE);
@@ -511,14 +516,16 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 // 将useFactoryReference选项改回去
                 functionList.get(3).setSelected(true);
                 functionListAdapter.notifyItemChanged(3);
-
-                GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
-                        GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
                         "本地未存储参比",
-                        "本地未存储参比，请先‘更新参比’再进行此操作！"
-                );
-                dialogFragment.setDialogFinishActivity(false);
-                dialogFragment.show(getSupportFragmentManager(), "本地未存储参比");
+                        "本地未存储参比，请先‘更新参比’再进行此操作！", false, "本地未存储参比");
+//                GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+//                        GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+//                        "本地未存储参比",
+//                        "本地未存储参比，请先‘更新参比’再进行此操作！"
+//                );
+//                dialogFragment.setDialogFinishActivity(false);
+//                dialogFragment.show(getSupportFragmentManager(), "本地未存储参比");
                 // 不执行后续操作
                 return;
             }
@@ -1397,13 +1404,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 enableAllComponent(true);
                 completeDeviceConnection = false;
                 // 弹窗提醒连接成功
-                if (!isFinishing() && !isDestroyed() && !isStopped) {
-                    GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
-                            GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK, getString(R.string.connection_successful_dialog_title),
-                            getString(R.string.connection_successful_dialog_content));
-                    dialogFragment.setDialogFinishActivity(false);
-                    dialogFragment.show(getSupportFragmentManager(), "Device connection successful!");
-                }
+                showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK, getString(R.string.connection_successful_dialog_title),
+                        getString(R.string.connection_successful_dialog_content), false, "Device connection successful!");
+//                if (!isFinishing() && !isDestroyed() && !isStopped) {
+//                    GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+//                            GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK, getString(R.string.connection_successful_dialog_title),
+//                            getString(R.string.connection_successful_dialog_content));
+//                    dialogFragment.setDialogFinishActivity(false);
+//                    dialogFragment.show(getSupportFragmentManager(), "Device connection successful!");
+//                }
             }
             // 当前设备Tivarev:2.4.7、fw_level_standard：LEVEL_3、isExtendVer_PLUS:false、isExtendVer:false
             // 请求获取灯源ADC
@@ -1542,6 +1551,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
     // 对采集结果进行预测
     private void ServerPredictResult(String testCode, String testID, String inData, ServerPredictResultCallback resultCallback) throws JSONException {
+        Log.d(TAG, "扫描页-ServerPredictResult called");
         String url = serverUrl + "/test";
         MediaType mediaType = MediaType.get("application/json");
         JSONObject jsonObject = new JSONObject();
@@ -1549,7 +1559,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         jsonObject.put("test_id", testID);
         jsonObject.put("indata", inData);
         String json = jsonObject.toString();
-//        Log.d(TAG, "扫描页-预测结果请求体内容已经构建完成：\n" + json);
         System.out.println(json);
         RequestBody body = RequestBody.create(json, mediaType);
         Request request = new Request.Builder()
@@ -1569,7 +1578,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
                     // 预测成功！
                     // 解析响应结果
-                    Log.e(TAG, "扫描页-预测成功：" + response.body().string());
+                    Log.e(TAG, "扫描页-预测成功。");
                     try {
                         JSONArray jsonArray = new JSONArray(response.body().string());
                         for (int i = 0; i < jsonArray.length(); i++) {
@@ -1581,26 +1590,57 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                             try {
                                 percentage = Float.parseFloat(percentageString);
                             } catch (NumberFormatException e) {
-//                                throw new RuntimeException(e);
-                                // TODO: 2024/7/17 提示用户解析异常
+                                // 提示用户解析异常
+                                showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                                        "预测结果异常", "返回成分含量异常，请重试！",
+                                        false, "Dialog NumberFormatException!");
                             }
                             if (!material.isEmpty() && percentage < 100 && percentage > 0) {
-                                new PredictResult(material, percentage, predictSessionUUID);
+                                PredictResult predictResult = new PredictResult(material, percentage, predictSessionUUID);
+                                Log.d(TAG, "扫描页-获得预测结果-" + (i + 1) + ":" + predictResult.toString());
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(mContext, predictResult.toString(), Toast.LENGTH_SHORT).show();
+                                    }
+                                });
                             }
 
                         }
                     } catch (JSONException e) {
                         // TODO: 2024/7/17 json 解析失败，弹窗提醒。
-                        throw new RuntimeException(e);
+                        showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                                "预测结果异常", "返回结果解析异常，请重试！",
+                                false, "Dialog JSONException!");
                     }
 
                 } else {
                     if (response.body() != null) {
-                        String string = response.body().string();
-                        Log.e(TAG, "扫描页-服务器请求成功，但是预测不成功:" + string);
+                        String errorMsg = response.body().string();
+                        String msg = getErrString(errorMsg);
+                        showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                                "预测失败", "预测失败，请重试！\n" + msg,
+                                false, "Dialog JSONException!");
+                        Log.e(TAG, "扫描页-服务器请求成功，但是预测不成功:" + errorMsg);
                     }
                 }
 
+            }
+
+            private @NonNull String getErrString(String errorMsg) {
+                String msg = "";
+                try {
+                    JSONObject errMsg = new JSONObject(errorMsg);
+                    JSONArray errors = errMsg.getJSONArray("errors");
+                    StringBuilder msgBuilder = new StringBuilder();
+                    for (int i = 0; i < errors.length(); i++) {
+                        msgBuilder.append(errors.getString(i));
+                    }
+                    msg = msgBuilder.toString();
+                } catch (JSONException e) {
+                    msg = errorMsg;
+                }
+                return msg;
             }
         });
     }
@@ -1847,15 +1887,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             CSV[26][10] = errorByteTransfer();
             csvOS = prefix + "_" + configname + "_" + currentTime + "_Error_Detected" + ".csv";
             // todo:设备异常时提醒用户，并在数据列表中体现
-            GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
-                    GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
-                    "发生错误",
-                    "设备报告了一个错误，错误信息：" + CSV[26][10]
-            );
-            dialogFragment.setDialogFinishActivity(false);
-            if (!isDestroyed() && !isFinishing() && !isStopped) {
-                dialogFragment.show(getSupportFragmentManager(), "设备报错");
-            }
+            showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, "发生错误",
+                    "设备报告了一个错误，错误信息：" + CSV[26][10], false, "设备报错");
+//            GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+//                    GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+//                    "发生错误",
+//                    "设备报告了一个错误，错误信息：" + CSV[26][10]
+//            );
+//            dialogFragment.setDialogFinishActivity(false);
+//            if (!isDestroyed() && !isFinishing() && !isStopped) {
+//                dialogFragment.show(getSupportFragmentManager(), "设备报错");
+//            }
         } else {
             CSV[26][10] = "Not Found,";
             csvOS = prefix + "_" + configname + "_" + currentTime + ".csv";
@@ -1890,21 +1932,18 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             WriteADCNotTimeStamp(data, CSV);
         } else {
             // TODO: 2024/7/16 提示设备固件过低，然后不写入ADC
-            GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
-                    GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, "设备固件版本与软件不匹配",
-                    "设备固件版本与软件不匹配，测量结果将忽略ADC数据");
-            if (!isFinishing() && !isDestroyed() && isStopped) {
-                dialogFragment.setDialogFinishActivity(false);
-                dialogFragment.show(getSupportFragmentManager(), "fw_level_standard not comparable!");
-            }
+            showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, "设备固件版本与软件不匹配",
+                    "设备固件版本与软件不匹配，测量结果将忽略ADC数据", false, "fw_level_standard not comparable!");
+//            GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+//                    GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, "设备固件版本与软件不匹配",
+//                    "设备固件版本与软件不匹配，测量结果将忽略ADC数据");
+//            if (!isFinishing() && !isDestroyed() && isStopped) {
+//                dialogFragment.setDialogFinishActivity(false);
+//                dialogFragment.show(getSupportFragmentManager(), "fw_level_standard not comparable!");
+//            }
         }
 
-        data.forEach(new Consumer<String[]>() {
-            @Override
-            public void accept(String[] strings) {
-                Log.d(TAG, "扫描页-扫描结果：" + Arrays.toString(strings));
-            }
-        });
+        data.forEach(strings -> Log.d(TAG, "扫描页-扫描结果：" + Arrays.toString(strings)));
         return data;
 //            if (isExtendVer_PLUS)
 //                data = WriteADCNotTimeStamp_PLUS(data, CSV);
@@ -2228,15 +2267,18 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                         functionListAdapter.notifyItemChanged(2);
                         functionListAdapter.notifyItemChanged(1);
                         functionListAdapter.notifyItemChanged(3);
-                        GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
-                                GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK,
+                        showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK,
                                 getString(R.string.reference_update_success_dialog_tile),
-                                getString(R.string.reference_update_success_dialog_content)
-                        );
-                        dialogFragment.setDialogFinishActivity(false);
-                        if (!isFinishing() && !isDestroyed() && !isStopped) {
-                            dialogFragment.show(getSupportFragmentManager(), "参比更新成功！");
-                        }
+                                getString(R.string.reference_update_success_dialog_content), false, "参比更新成功！");
+//                        GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+//                                GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK,
+//                                getString(R.string.reference_update_success_dialog_tile),
+//                                getString(R.string.reference_update_success_dialog_content)
+//                        );
+//                        dialogFragment.setDialogFinishActivity(false);
+//                        if (!isFinishing() && !isDestroyed() && !isStopped) {
+//                            dialogFragment.show(getSupportFragmentManager(), "参比更新成功！");
+//                        }
                     }
                 } else if (currentScanMethod == ScanMethod.ScanAndPredict || currentScanMethod == ScanMethod.ScanOnly) {
                     // 初始化用于存储光谱数据的对象
@@ -2503,12 +2545,14 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             public void run() {
                 if (isConnectionTimeout) {
                     Toast.makeText(mContext, "连接意外中断，请重试！", Toast.LENGTH_LONG).show();
-                    // 使用弹窗
+                    // 使用弹窗告知用户连接超时
                     if (!isFinishing() && !isDestroyed() && !isStopped) {
-                        GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
-                                GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, getString(R.string.connection_interruption_dialog_title),
-                                getString(R.string.connection_interruption_dialog_content));
-                        dialogFragment.show(getSupportFragmentManager(), "Unexpected connection interruption!");
+                        showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, getString(R.string.connection_interruption_dialog_title),
+                                getString(R.string.connection_interruption_dialog_content), true, "Unexpected connection interruption!");
+//                        GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+//                                GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, getString(R.string.connection_interruption_dialog_title),
+//                                getString(R.string.connection_interruption_dialog_content));
+//                        dialogFragment.show(getSupportFragmentManager(), "Unexpected connection interruption!");
                     } else {
                         finish();
                     }
@@ -2516,6 +2560,19 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
             }
         }, CONNECTION_TIMEOUT);
+    }
+
+    // 弹出抽屉式的弹窗
+    private void showDialog(int messageType, String title, String content, boolean isFinishActivity, String tag) {
+        GeneralMessageDialogFragment dialogFragment = GeneralMessageDialogFragment.newInstance(
+                messageType,
+                title,
+                content
+        );
+        dialogFragment.setDialogFinishActivity(isFinishActivity);
+        if (!isDestroyed() && !isFinishing() && !isStopped) {
+            dialogFragment.show(getSupportFragmentManager(), "showDialog called.");
+        }
     }
 
 }

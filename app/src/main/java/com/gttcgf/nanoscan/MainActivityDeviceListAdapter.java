@@ -28,7 +28,6 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
     @Override
     public MainActivityDeviceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.card_layout_for_main, parent, false);
-
         return new MainActivityDeviceViewHolder(view);
     }
 
@@ -39,14 +38,11 @@ public class MainActivityDeviceListAdapter extends RecyclerView.Adapter<MainActi
         holder.tv_main_nano_name.setText(currentItem.getDeviceName());
         holder.tv_main_nano_mac.setText(currentItem.getDeviceMac());
 
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                int currentPosition = holder.getAdapterPosition();
-                // 当项目条在视野内，并且isClickable为true时，绑定点击事件
-                if (currentPosition != RecyclerView.NO_POSITION && isClickable) {
-                    onItemClickListener.OnItemClick(holder.getAdapterPosition());
-                }
+        holder.itemView.setOnClickListener(view -> {
+            int currentPosition = holder.getAdapterPosition();
+            // 当项目条在视野内，并且isClickable为true时，绑定点击事件
+            if (currentPosition != RecyclerView.NO_POSITION && isClickable) {
+                onItemClickListener.OnItemClick(holder.getAdapterPosition());
             }
         });
     }

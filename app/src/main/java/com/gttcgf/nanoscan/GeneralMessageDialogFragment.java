@@ -138,6 +138,7 @@ public class GeneralMessageDialogFragment extends DialogFragment implements View
     public void setDialogFinishActivity(boolean dialogFinishActivity) {
         isDialogFinishActivity = dialogFinishActivity;
     }
+
     @Override
     public void onDismiss(@NonNull DialogInterface dialog) {
         View view = getView();
@@ -145,7 +146,8 @@ public class GeneralMessageDialogFragment extends DialogFragment implements View
             Animation slideOutAnimation = AnimationUtils.loadAnimation(getContext(), R.anim.slide_out_down);
             slideOutAnimation.setAnimationListener(new Animation.AnimationListener() {
                 @Override
-                public void onAnimationStart(Animation animation) {}
+                public void onAnimationStart(Animation animation) {
+                }
 
                 @Override
                 public void onAnimationEnd(Animation animation) {
@@ -153,20 +155,21 @@ public class GeneralMessageDialogFragment extends DialogFragment implements View
                 }
 
                 @Override
-                public void onAnimationRepeat(Animation animation) {}
+                public void onAnimationRepeat(Animation animation) {
+                }
             });
             view.startAnimation(slideOutAnimation);
         } else {
             super.onDismiss(dialog);
         }
     }
+
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.btn_accept) {
             if (isDialogFinishActivity) {
                 requireActivity().finish();
             } else {
-//                dismiss();
                 onDismiss(Objects.requireNonNull(getDialog()));
             }
         }

@@ -1,5 +1,7 @@
 package com.gttcgf.nanoscan;
 
+import androidx.annotation.NonNull;
+
 import java.io.Serializable;
 import java.util.Objects;
 
@@ -31,5 +33,15 @@ public class PredictResult implements Comparable<PredictResult>, Serializable {
     @Override
     public int compareTo(PredictResult predictResult) {
         return Float.compare(this.percentage, predictResult.percentage);
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return "PredictResult{" +
+                "material='" + material + '\'' +
+                ", percentage=" + percentage +
+                ", predictSessionUUID='" + predictSessionUUID + '\'' +
+                '}';
     }
 }
