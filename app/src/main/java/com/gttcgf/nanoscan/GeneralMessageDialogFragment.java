@@ -34,6 +34,7 @@ public class GeneralMessageDialogFragment extends DialogFragment implements View
     private ImageView iv_icon;
     private TextView tv_title, tv_message_content;
     private Button btn_accept;
+    private boolean clickable = true;
     //endregion
 
     public static GeneralMessageDialogFragment newInstance(int MESSAGE_TYPE, String titleContent, String informationContent) {
@@ -108,6 +109,7 @@ public class GeneralMessageDialogFragment extends DialogFragment implements View
         } else {
             btn_accept.setOnClickListener(this);
         }
+        clickable = true;
     }
 
     @Override
@@ -143,6 +145,7 @@ public class GeneralMessageDialogFragment extends DialogFragment implements View
     public void onDismiss(@NonNull DialogInterface dialog) {
         View view = getView();
         if (view != null) {
+            // 这个动画写得一坨...背景似乎不会跟着下降
             Animation slideOutAnimation = AnimationUtils.loadAnimation(getContext(), R.anim.slide_out_down);
             slideOutAnimation.setAnimationListener(new Animation.AnimationListener() {
                 @Override
@@ -166,12 +169,21 @@ public class GeneralMessageDialogFragment extends DialogFragment implements View
 
     @Override
     public void onClick(View view) {
-        if (view.getId() == R.id.btn_accept) {
+        if (view.getId() == R.id.btn_accept && clickable) {
+            clickable = false;
             if (isDialogFinishActivity) {
                 requireActivity().finish();
             } else {
                 onDismiss(Objects.requireNonNull(getDialog()));
             }
         }
+    }
+
+    public boolean isClickable() {
+        return clickable;
+    }
+
+    public void setClickable(boolean clickable) {
+        this.clickable = clickable;
     }
 }

@@ -207,23 +207,53 @@
         <LinearLayout
             android:id="@+id/ll_predict_result"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
-            android:layout_weight="0.2"
             android:background="@drawable/rounded_rectangle"
-            android:baselineAligned="false"
             android:elevation="4dp"
-            android:orientation="horizontal"
-            android:visibility="gone">
+            android:orientation="vertical"
+            android:visibility="visible">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_predict_result_list"
+            <TextView
+                android:id="@+id/tv_predict_result_title"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="12dp" />
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="预测结果"
+                android:textColor="@color/gray"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <net.cachapa.expandablelayout.ExpandableLayout
+                android:id="@+id/expandable_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:el_duration="500"
+                app:el_expanded="true"
+                app:el_parallax="0.5">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_predict_result_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="80dp">
+
+                    <TextView
+                        android:id="@+id/tv_test"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="展开测试内容\n长度测试\n长度测试\n长度测试\n长度测试"
+                        android:textColor="@color/black"
+                        android:textSize="32sp"
+                        android:textStyle="bold" />
+                </ScrollView>
+
+            </net.cachapa.expandablelayout.ExpandableLayout>
 
 
         </LinearLayout>
@@ -369,9 +399,9 @@
                 android:id="@+id/tv_load_calibration"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:gravity="center"
                 android:text="@string/please_wait"
-                android:layout_marginTop="12dp"
                 android:textColor="@color/main_color"
                 android:textSize="18sp"
                 android:textStyle="bold"

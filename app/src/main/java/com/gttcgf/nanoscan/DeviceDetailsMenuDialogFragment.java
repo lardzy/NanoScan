@@ -44,7 +44,6 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        setCancelable(true);
         deviceDetailMenuAdapter = new DeviceDetailMenuAdapter(menuItems);
     }
 
@@ -53,7 +52,6 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         Dialog dialog = super.onCreateDialog(savedInstanceState);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-//        dialog.setCanceledOnTouchOutside(true);
         return dialog;
     }
 
@@ -83,11 +81,16 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
                     deviceDetailMenuAdapter.setClickable(false);
                     break;
                 case 2:
-                    Toast.makeText(getContext(), "点击了检索光谱", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "点击了删除当前设备", Toast.LENGTH_SHORT).show();
                     startDismissAnimation();
                     deviceDetailMenuAdapter.setClickable(false);
                     break;
                 case 3:
+                    Toast.makeText(getContext(), "点击了检索光谱", Toast.LENGTH_SHORT).show();
+                    startDismissAnimation();
+                    deviceDetailMenuAdapter.setClickable(false);
+                    break;
+                case 4:
                     Toast.makeText(getContext(), "点击了连接设备", Toast.LENGTH_SHORT).show();
                     startDismissAnimation();
                     deviceDetailMenuAdapter.setClickable(false);
@@ -109,7 +112,7 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
                 WindowManager.LayoutParams params = window.getAttributes();
                 window.setWindowAnimations(R.style.DialogAnimation);
                 params.gravity = Gravity.BOTTOM;
-                params.height = (int) (getResources().getDisplayMetrics().heightPixels * 0.4);
+                params.height = (int) (getResources().getDisplayMetrics().heightPixels * 0.45);
                 params.width = getResources().getDisplayMetrics().widthPixels;
 
                 window.setAttributes(params);
@@ -128,7 +131,7 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
 
                 @Override
                 public void onAnimationEnd(Animation animation) {
-//                    dismissAllowingStateLoss(); // 这里在动画结束时调用 dismiss
+                    // 这里在动画结束时调用 dismiss
                     dismiss();
                 }
 
@@ -141,6 +144,7 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
             dismissAllowingStateLoss(); // 如果视图为空，直接关闭对话框
         }
     }
+
     @Override
     public void onCancel(@NonNull DialogInterface dialog) {
         super.onCancel(dialog);

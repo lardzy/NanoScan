@@ -3,7 +3,6 @@ package com.gttcgf.nanoscan;
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
@@ -208,6 +207,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         menuItems = new ArrayList<>();
         menuItems.add(new DeviceDetailMenuItems("设备详情"));
         menuItems.add(new DeviceDetailMenuItems("删除本地参比"));
+        menuItems.add(new DeviceDetailMenuItems("删除当前设备"));
         menuItems.add(new DeviceDetailMenuItems("检索光谱"));
         menuItems.add(new DeviceDetailMenuItems("连接设备"));
     }

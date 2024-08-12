@@ -91,14 +91,6 @@ public class DeviceListActivity extends AppCompatActivity {
         itemList = new ArrayList<>();
         // 获取本地的序列化数据
         loadItemListFromFile();
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备1", "便携式近红外光谱仪", "22:22:22:22:22:22", "abc"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备2", "便携式近红外光谱仪", "22:22:22:22:22:23", "abc"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备3", "便携式近红外光谱仪", "22:22:22:22:22:24", "abc"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备4", "便携式近红外光谱仪", "22:22:22:22:22:25", "abc"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备5", "便携式近红外光谱仪", "22:22:22:22:22:26", "abc"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备6", "便携式近红外光谱仪", "22:22:22:22:22:27", "abc"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备7", "便携式近红外光谱仪", "22:22:22:22:22:28", "abc"));
-//        itemList.add(new DeviceItem(R.drawable.equipment_front, "演示设备8", "便携式近红外光谱仪", "22:22:22:22:22:29", "abc"));
     }
 
     private void initialComponent() {
@@ -166,7 +158,7 @@ public class DeviceListActivity extends AppCompatActivity {
             itemList.get(position).setDeviceName(device_name_input.getText().toString());
             adapter.notifyItemChanged(position);
             Toast.makeText(DeviceListActivity.this, "修改成功", Toast.LENGTH_SHORT).show();
-
+            // 将修改后的数据写入文件
             itemListChangedToFile();
         });
         builder.setNeutralButton("删除设备", (dialog, which) -> {
@@ -174,7 +166,7 @@ public class DeviceListActivity extends AppCompatActivity {
             adapter.notifyItemRemoved(position);
             adapter.notifyItemRangeChanged(position, itemList.size() - position);
             Toast.makeText(DeviceListActivity.this, "删除成功", Toast.LENGTH_SHORT).show();
-            // 更新
+            // 更新数据并保存到文件
             itemListChangedToFile();
             updateEmptyState();
         });
@@ -182,7 +174,7 @@ public class DeviceListActivity extends AppCompatActivity {
         });
         // 创建AlertDialog
         AlertDialog dialog = builder.create();
-        // 设置自定义背景
+        // 设置自定义背景（圆角）
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawableResource(R.drawable.rounded_rectangle);
         // 显示AlertDialog
         dialog.show();
@@ -191,10 +183,13 @@ public class DeviceListActivity extends AppCompatActivity {
 
     // 添加设备，更新列表和本地配置文件
     private void addDevice(DeviceItem newItem) {
+        // TODO: 2024/8/5 这里需要调整，由于校验设备已经刷新了设备token，此处就算设备已存在，也要更新信息
         // 检查列表中是否有重复设备，使用mac地址校验。
         for (DeviceItem deviceItem : itemList) {
             if (deviceItem.getDeviceMac().equals(newItem.getDeviceMac())) {
                 Toast.makeText(this, "设备已在列表中！", Toast.LENGTH_SHORT).show();
+                // 仅更新设备token
+                deviceItem.setDeviceToken(newItem.getDeviceToken());
                 return;
             }
         }

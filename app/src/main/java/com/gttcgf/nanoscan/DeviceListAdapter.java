@@ -75,7 +75,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         this.myItemClickListener = myItemClickListener;
     }
 
-    interface OnItemClickListener {
+    public interface OnItemClickListener {
         void OnItemClick(int position);
 
         void OnItemLongClick(int position);

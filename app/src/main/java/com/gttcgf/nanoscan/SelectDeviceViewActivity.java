@@ -70,6 +70,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
                     Manifest.permission.ACCESS_COARSE_LOCATION
             };
         } else { // Android 6.0 到 Android 11
+            // 问题来了，只测过9.0-11，其他版本没有测过，不知道会不会有问题
             return new String[]{
                     Manifest.permission.BLUETOOTH,
                     Manifest.permission.BLUETOOTH_ADMIN,
