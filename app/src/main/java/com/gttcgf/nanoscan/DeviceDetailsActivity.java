@@ -242,7 +242,14 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
                  3.设备详情（可以查看设备信息）；
                  4.连接设备；
             */
+            imageButton_menu.setEnabled(false);
             DeviceDetailsMenuDialogFragment menuDialogFragment = new DeviceDetailsMenuDialogFragment(menuItems, deviceItem);
+            menuDialogFragment.setOnMenuCloseListener(new DeviceDetailsMenuDialogFragment.OnMenuCloseListener() {
+                @Override
+                public void onClose() {
+                    imageButton_menu.setEnabled(true);
+                }
+            });
             menuDialogFragment.show(getSupportFragmentManager(), "DeviceDetailsMenuDialogFragment");
         }
     }

@@ -128,7 +128,7 @@
     <string name="spectral_reference_update_time">参比更新时间</string>
     <string name="spectral_reference_update_date_value">N/A</string>
     <string name="spectral_reference_update_time_value">%s</string>
-    <string name="number_of_spectra_collected">设备已采集光谱数量：</string>
+    <string name="number_of_spectra_collected">设备已保存光谱数量：</string>
     <string name="number_of_spectra_collected_value">N/A</string>
     <string name="preheat_light_source_switch">是否预热光源</string>
     <string name="preheat_toggle">预热光源</string>
@@ -199,4 +199,7 @@
     <string name="user_profile_item_device_manage">设备管理</string>
     <string name="user_profile_item_about">关于..</string>
     <string name="imageview_default_description">背景</string>
+    <string name="result_title">参考预测结果</string>
+    <string name="scan_result_list">%1$s:%2$s</string>
+    <string name="ib_predict_result_save_contentDescription">保存光谱及预测结果</string>
 </resources>

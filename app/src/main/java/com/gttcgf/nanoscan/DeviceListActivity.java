@@ -190,6 +190,7 @@ public class DeviceListActivity extends AppCompatActivity {
                 Toast.makeText(this, "设备已在列表中！", Toast.LENGTH_SHORT).show();
                 // 仅更新设备token
                 deviceItem.setDeviceToken(newItem.getDeviceToken());
+                itemListChangedToFile();
                 return;
             }
         }

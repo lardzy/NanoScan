@@ -35,6 +35,18 @@ public class PredictResult implements Comparable<PredictResult>, Serializable {
         return Float.compare(this.percentage, predictResult.percentage);
     }
 
+    public String getMaterial() {
+        return material;
+    }
+
+    public float getPercentage() {
+        return percentage;
+    }
+
+    public String getPredictSessionUUID() {
+        return predictSessionUUID;
+    }
+
     @NonNull
     @Override
     public String toString() {

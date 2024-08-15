@@ -215,43 +215,129 @@
             android:orientation="vertical"
             android:visibility="visible">
 
-            <TextView
-                android:id="@+id/tv_predict_result_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="预测结果"
-                android:textColor="@color/gray"
-                android:textSize="24sp"
-                android:textStyle="bold" />
-
             <net.cachapa.expandablelayout.ExpandableLayout
-                android:id="@+id/expandable_layout"
+                android:id="@+id/el_result"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:el_duration="500"
-                app:el_expanded="true"
+                app:el_expanded="false"
                 app:el_parallax="0.5">
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_predict_result_list"
+                <LinearLayout
+                    android:id="@+id/ll_result"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
-                <ScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="80dp">
-
-                    <TextView
-                        android:id="@+id/tv_test"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:text="展开测试内容\n长度测试\n长度测试\n长度测试\n长度测试"
-                        android:textColor="@color/black"
-                        android:textSize="32sp"
-                        android:textStyle="bold" />
-                </ScrollView>
+                        android:layout_marginTop="6dp"
+                        android:layout_marginBottom="6dp"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:id="@+id/iv_result_indicator"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="start|center"
+                            android:layout_marginStart="12dp"
+                            android:scaleType="fitCenter"
+                            android:scaleX="1.5"
+                            android:scaleY="1.5"
+                            android:src="@drawable/baseline_arrow_right_24" />
+
+                        <TextView
+                            android:id="@+id/tv_predict_result_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:gravity="start"
+                            android:text="@string/result_title"
+                            android:textColor="@color/gray"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+
+                    <net.cachapa.expandablelayout.ExpandableLayout
+                        android:id="@+id/el_result_detail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:el_duration="500"
+                        app:el_expanded="false"
+                        app:el_parallax="0.5">
+
+                        <androidx.constraintlayout.widget.ConstraintLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/rv_predict_result_list"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                app:layout_constraintBottom_toBottomOf="parent"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="parent"
+                                app:layout_constraintWidth_default="percent"
+                                app:layout_constraintWidth_percent="0.75" />
+
+                            <ImageButton
+                                android:id="@+id/ib_predict_result_save"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:background="@color/zxing_transparent"
+                                android:contentDescription="@string/ib_predict_result_save_contentDescription"
+                                android:scaleType="fitCenter"
+                                android:scaleX="1.5"
+                                android:scaleY="1.5"
+                                android:src="@drawable/baseline_save_alt_24"
+                                app:layout_constraintBottom_toBottomOf="parent"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintStart_toEndOf="@+id/rv_predict_result_list"
+                                app:layout_constraintTop_toTopOf="parent"
+                                app:layout_constraintWidth_default="percent"
+                                app:layout_constraintWidth_percent="0.25" />
+
+                            <com.mikhaellopez.circularprogressbar.CircularProgressBar
+                                android:id="@+id/pb_predict_result_saving"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:visibility="invisible"
+                                app:cpb_background_progressbar_color="@color/preheat_toggle_text"
+                                app:cpb_background_progressbar_width="8dp"
+                                app:cpb_indeterminate_mode="true"
+                                app:cpb_progress_direction="to_right"
+                                app:cpb_progressbar_color="@color/main_color"
+                                app:cpb_round_border="true"
+                                app:layout_constraintBottom_toBottomOf="parent"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintStart_toEndOf="@+id/rv_predict_result_list"
+                                app:layout_constraintTop_toTopOf="parent"
+                                app:layout_constraintWidth_percent="0.15" />
+
+
+                        </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+                        <!--                        <ScrollView-->
+                        <!--                            android:layout_width="match_parent"-->
+                        <!--                            android:layout_height="80dp">-->
+
+                        <!--                            <TextView-->
+                        <!--                                android:id="@+id/tv_test"-->
+                        <!--                                android:layout_width="match_parent"-->
+                        <!--                                android:layout_height="wrap_content"-->
+                        <!--                                android:gravity="center"-->
+                        <!--                                android:text="展开测试内容\n长度测试\n长度测试\n长度测试\n长度测试"-->
+                        <!--                                android:textColor="@color/black"-->
+                        <!--                                android:textSize="32sp"-->
+                        <!--                                android:textStyle="bold" />-->
+                        <!--                        </ScrollView>-->
+
+                    </net.cachapa.expandablelayout.ExpandableLayout>
+                </LinearLayout>
+
 
             </net.cachapa.expandablelayout.ExpandableLayout>
 

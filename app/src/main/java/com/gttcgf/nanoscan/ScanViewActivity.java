@@ -81,7 +81,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import okhttp3.Call;
@@ -148,7 +147,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private Button start_scan_button;
     private CircularProgressBarView pb_load_calibration, pb_load_calibration_inside;
     private TextView tv_load_calibration, tv_load_calibration_value, tv_battery_level_value, tv_update_time, tv_predict_result_title;
-    private ExpandableLayout expandable_layout;
+    private ExpandableLayout expandable_layout, el_result;
     private ViewPager2 vp_chart_pages;
     private ChartPagerAdapter chartPagerAdapter;
     private TabLayout tabLayout;
@@ -157,13 +156,14 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private RecyclerView rv_function_list;
     private FunctionListAdapter functionListAdapter;
     private List<FunctionItem> functionList = new ArrayList<>();
-    private Animation fadeIn, fadeOut;
+    private Animation fadeIn, fadeOut, outsideFadeout;
     private ImageView iv_battery, iv_device;
     private CircularProgressBar pb_scanning;
     private LinearLayout ll_predict_result;
     private RecyclerView rv_predict_result_list;
     private int progressOfProgressbarOutside = 0;
     private int progressOfProgressbarInside = 0;
+    private List<PredictResult> predictResults = new ArrayList<>();  // 预测结果
     // endregion
     private DeviceItem deviceItem;
     private ISCNIRScanSDK mNanoBLEService;
@@ -352,14 +352,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         tv_battery_level_value = findViewById(R.id.tv_battery_level_value);
         tv_update_time = findViewById(R.id.tv_update_time);
         tv_predict_result_title = findViewById(R.id.tv_predict_result_title);
-        expandable_layout = findViewById(R.id.expandable_layout);
+        expandable_layout = findViewById(R.id.el_result_detail);
+        el_result = findViewById(R.id.el_result);
         iv_battery = findViewById(R.id.iv_battery);
         iv_device = findViewById(R.id.iv_device);
         vp_chart_pages = findViewById(R.id.vp_chart_pages);
         tabLayout = findViewById(R.id.tabLayout);
         pb_scanning = findViewById(R.id.pb_scanning);
         ll_predict_result = findViewById(R.id.ll_predict_result);
-        rv_predict_result_list = findViewById(R.id.rv_predict_result_list);
+//        rv_predict_result_list = findViewById(R.id.rv_predict_result_list);
 
         tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
         tv_update_time.setText("-");
@@ -373,6 +374,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
         fadeIn = AnimationUtils.loadAnimation(this, R.anim.fade_in);
         fadeOut = AnimationUtils.loadAnimation(this, R.anim.fade_out);
+        outsideFadeout = AnimationUtils.loadAnimation(this, R.anim.fade_out);
         start_scan_button.setEnabled(false);
 
         // 初始化功能列表
@@ -416,6 +418,44 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 }
             }
         }).attach();
+        outsideFadeout.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                pb_load_calibration.setVisibility(View.INVISIBLE);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+        fadeOut.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+
+                pb_load_calibration.setVisibility(View.GONE);
+                pb_load_calibration_inside.setVisibility(View.GONE);
+                iv_device.setVisibility(View.GONE);
+                tv_load_calibration.setVisibility(View.GONE);
+                tv_load_calibration_value.setVisibility(View.GONE);
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
     }
 
 
@@ -531,6 +571,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             } else if (currentScanMethod == ScanMethod.ScanAndPredict) {
                 // 当采集模式为采集光谱并预测
                 Toast.makeText(this, "马上开发好", Toast.LENGTH_SHORT).show();
+
                 PerformScan(1000);
                 // 防止重复点击
                 enableAllComponent(false);
@@ -554,6 +595,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 confirmDialog.show(getSupportFragmentManager(), "用户尝试更新本地参比。");
             }
         } else if (view.getId() == R.id.tv_predict_result_title) {
+            // 点击了预测结果
+
             if (expandable_layout.isExpanded()) {
                 expandable_layout.collapse();
             } else {
@@ -570,6 +613,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             isDeviceScanning = true;
             // 刷新会话UUID
             predictSessionUUID = RSAEncrypt.getUUID();
+            // 清空预测结果集合
+            predictResults.clear();
             // 发送广播 START_SCAN 将触发扫描
             ISCNIRScanSDK.StartScan();
         }, delayTime);
@@ -984,7 +1029,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             if (warmUp) {
                 // UI
                 showLoadAnimation(true);
-
                 ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.ON);
                 lampInfo = LampInfo.WarmDevice;
                 // 注册ReturnSetLampReceiver以执行下一步
@@ -1013,6 +1057,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     // 本地获取到校准系数、矩阵，进度设置为100.
                     progressOfProgressbarOutside = 100;
                     pb_load_calibration.setProgress(progressOfProgressbarOutside, 1000);
+                    mHandler.postDelayed(() -> runOnUiThread(() -> pb_load_calibration.startAnimation(outsideFadeout)), 1000);
+
                     tv_load_calibration.setText(getString(R.string.calibration_coefficient_and_matrix_read_from_local));
 
                 } else {
@@ -1060,7 +1106,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 Log.d(TAG, "扫描页-RefCoeffDataProgressReceiver中EXTRA_REF_CAL_COEFF_SIZE_PACKET为false，当前数据包大小为：" + currentSize);
             }
             if (refCoeffDataProgressCurrentProgress == refCoeffDataProgressTotalSize) {
-//                pb_load_calibration.setProgress(progressOfProgressbarOutside, 1000);
                 tv_load_calibration.setAnimation(fadeIn);
                 tv_load_calibration.startAnimation(fadeIn);
                 tv_load_calibration.setText(getString(R.string.calibration_coefficient_received));
@@ -1099,6 +1144,9 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
             if (calMatrixDataProgressCurrentProgress == calMatrixDataProgressTotalSize) {
                 pb_load_calibration.setProgress(progressOfProgressbarOutside, 1000);
+
+                mHandler.postDelayed(() -> runOnUiThread(() -> pb_load_calibration.startAnimation(outsideFadeout)), 1000);
+
                 tv_load_calibration.setText(getString(R.string.calibration_matrix_received));
                 tv_load_calibration.setAnimation(fadeIn);
                 tv_load_calibration.startAnimation(fadeIn);
@@ -1556,8 +1604,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
-                    // 预测成功！
-                    // 解析响应结果
+                    // 预测成功，开始解析响应结果
                     Log.e(TAG, "扫描页-预测成功。");
                     try {
                         JSONArray jsonArray = new JSONArray(response.body().string());
@@ -1575,17 +1622,20 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                                         "预测结果异常", "返回成分含量异常，请重试！",
                                         false, "Dialog NumberFormatException!");
                             }
-                            if (!material.isEmpty() && percentage < 100 && percentage > 0) {
+                            if (!material.isEmpty() && percentage <= 100 && percentage > 0) {
+                                // 仅当会话UUID相同时，才加入结果集合
                                 PredictResult predictResult = new PredictResult(material, percentage, predictSessionUUID);
-                                Log.d(TAG, "扫描页-获得预测结果-" + (i + 1) + ":" + predictResult.toString());
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(mContext, predictResult.toString(), Toast.LENGTH_SHORT).show();
-                                    }
-                                });
+                                if (testID.equals(predictSessionUUID)) {
+                                    Log.d(TAG, "扫描页-获得预测结果-" + (i + 1) + ":" + predictResult.toString() + "predictResults size:" + predictResults.size());
+                                    predictResults.add(predictResult);
+                                }
+
                             }
 
+                        }
+                        // TODO: 2024/8/15 仅当预测成功，且结果不为空时展开预测结果栏
+                        if (testID.equals(predictSessionUUID) && !predictResults.isEmpty()) {
+                            runOnUiThread(() -> el_result.expand());
                         }
                     } catch (JSONException e) {
                         // TODO: 2024/7/17 json 解析失败，弹窗提醒。
@@ -1599,9 +1649,15 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     if (response.body() != null) {
                         String errorMsg = response.body().string();
                         String msg = getErrString(errorMsg);
-                        showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
-                                "预测失败", "预测失败，请重试！\n" + msg,
-                                false, "Dialog JSONException!");
+                        if (response.code() == 403) {
+                            showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                                    "设备授权过期", "请在设备管理界面重新添加设备！\n" + msg,
+                                    false, "Dialog JSONException!");
+                        } else {
+                            showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                                    "预测失败", "预测失败，请重试！\n" + msg,
+                                    false, "Dialog JSONException!");
+                        }
                         Log.e(TAG, "扫描页-服务器请求成功，但是预测不成功:" + errorMsg);
                     }
                 }
@@ -2362,31 +2418,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             tv_load_calibration.setAnimation(fadeIn);
             tv_load_calibration.startAnimation(fadeIn);
         } else {
-            fadeOut.setAnimationListener(new Animation.AnimationListener() {
-                @Override
-                public void onAnimationStart(Animation animation) {
-
-                }
-
-                @Override
-                public void onAnimationEnd(Animation animation) {
-
-                    pb_load_calibration.setVisibility(View.GONE);
-                    pb_load_calibration_inside.setVisibility(View.GONE);
-                    iv_device.setVisibility(View.GONE);
-                    tv_load_calibration.setVisibility(View.GONE);
-                    tv_load_calibration_value.setVisibility(View.GONE);
-
-                }
-
-                @Override
-                public void onAnimationRepeat(Animation animation) {
-
-                }
-            });
-
             iv_device.startAnimation(fadeOut);
-            pb_load_calibration.startAnimation(fadeOut);
             pb_load_calibration_inside.startAnimation(fadeOut);
             tv_load_calibration.startAnimation(fadeOut);
             tv_load_calibration_value.startAnimation(fadeOut);
@@ -2525,6 +2557,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         if (!isDestroyed() && !isFinishing() && !isStopped) {
             dialogFragment.show(getSupportFragmentManager(), "showDialog called.");
         }
+    }
+
+    private void updatePredictsUI() {
+
     }
 
     public class DisconnectedReceiver extends BroadcastReceiver {

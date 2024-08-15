@@ -28,6 +28,7 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
     private RecyclerView recyclerView;
     private DeviceDetailMenuAdapter deviceDetailMenuAdapter;
     private DeviceItem deviceItem;
+    private OnMenuCloseListener onMenuCloseListener;
 
     public static DeviceDetailsMenuDialogFragment newInstance(ArrayList<DeviceDetailMenuItems> menuItem, DeviceItem deviceItem) {
         Bundle args = new Bundle();
@@ -149,5 +150,21 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
     public void onCancel(@NonNull DialogInterface dialog) {
         super.onCancel(dialog);
         startDismissAnimation(); // 当对话框取消时启动动画
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (onMenuCloseListener != null) {
+            onMenuCloseListener.onClose();
+        }
+    }
+
+    public void setOnMenuCloseListener(OnMenuCloseListener onMenuCloseListener) {
+        this.onMenuCloseListener = onMenuCloseListener;
+    }
+
+    public interface OnMenuCloseListener {
+        void onClose();
     }
 }
