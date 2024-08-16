@@ -28,6 +28,8 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.gttcgf.nanoscan.tools.SpectralDataUtils;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -108,7 +110,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void updateData() {
         Log.d(TAG, "主界面-正在尝试更新数据到newDeviceItemList...");
-        newDeviceItemList = loadDataFromFiles();
+        newDeviceItemList = SpectralDataUtils.readDeviceListFromFile(this, userPhoneNumber);
         if (newDeviceItemList != null) {
             Log.d(TAG, "主界面-新数据不为null，正在更新到设备列表Adapter；newDeviceItemList size：" + newDeviceItemList.size());
             deviceListAdapter.updateDeviceList(newDeviceItemList);
@@ -124,35 +126,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // 读取本地文件
         sharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
         userPhoneNumber = sharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
-        this.deviceItem = loadDataFromFiles();
+        this.deviceItem = SpectralDataUtils.readDeviceListFromFile(this, userPhoneNumber);
         Log.d(TAG, "主界面-设备列表文件读取长度为：" + deviceItem.size());
         updateEmptyState();
         // todo:增加获取消息列表的功能
-    }
-
-    // 从本地序列化文件读取设备集合对象
-    // TODO: 2024/7/22 增加判断账号 ，先循环遍历设备列表，只有符合账号的返回
-    private List<DeviceItem> loadDataFromFiles() {
-        List<DeviceItem> loadedDeviceList = new ArrayList<>();
-        List<DeviceItem> itemList = new ArrayList<>();
-
-        try (FileInputStream fis = openFileInput(getString(R.string.file_deviceItem, userPhoneNumber));
-             ObjectInputStream ois = new ObjectInputStream(fis)) {
-            Log.d(TAG, "主界面-设备列表文件读取成功！");
-            loadedDeviceList = (List<DeviceItem>) ois.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            Log.e(TAG, "主界面-设备列表文件不存在或读取失败！");
-        }
-        // 只读取当前用户的设备
-        if (!loadedDeviceList.isEmpty()) {
-            for (int i = 0; i < loadedDeviceList.size(); i++) {
-                DeviceItem deviceItem = loadedDeviceList.get(i);
-                if (deviceItem.getUser().equals(userPhoneNumber)) {
-                    itemList.add(loadedDeviceList.get(i));
-                }
-            }
-        }
-        return itemList;
     }
 
     private void initComponent() {

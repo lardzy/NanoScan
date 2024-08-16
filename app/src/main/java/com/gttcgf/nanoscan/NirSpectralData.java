@@ -23,8 +23,8 @@ public class NirSpectralData implements Serializable {
     // 波长范围
     private final ArrayList<Float> mWavelengthFloat;
     private ArrayList<PredictResult> predictResults = new ArrayList<>();
-    private PredictResult predictResult;
     private final String predictSessionUUID;
+    private String fileNamePrefix;
 
     public NirSpectralData(String deviceMAC, ArrayList<Entry> mIntensityFloat, ArrayList<Entry> mAbsorbanceFloat, ArrayList<Entry> mReferenceFloat, ArrayList<Float> mWavelengthFloat, String predictSessionUUID) {
         this.deviceMAC = deviceMAC;
@@ -40,13 +40,22 @@ public class NirSpectralData implements Serializable {
         Date date = new Date();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
         String formatDate = simpleDateFormat.format(date);
+        fileNamePrefix = deviceMAC + "_" + formatDate;
     }
 
-    public PredictResult getPredictResult() {
-        return predictResult;
+    public String getDeviceMAC() {
+        return deviceMAC;
     }
 
-    public void setPredictResult(PredictResult predictResult) {
-        this.predictResult = predictResult;
+    public ArrayList<PredictResult> getPredictResults() {
+        return predictResults;
+    }
+
+    public void setPredictResults(ArrayList<PredictResult> predictResults) {
+        this.predictResults = predictResults;
+    }
+
+    public String getFileNamePrefix() {
+        return fileNamePrefix;
     }
 }

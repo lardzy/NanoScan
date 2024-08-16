@@ -24,12 +24,14 @@ public class ChartPagerAdapter extends FragmentStateAdapter {
     public Fragment createFragment(int position) {
         return chartFragmentList.get(position);
     }
+
     public void updateChartData(int position, ArrayList<Entry> newData) {
         ScanResultLineChartFragment chartFragment = chartFragmentList.get(position);
         if (chartFragment != null && newData != null) {
             chartFragment.updateChart(newData);
         }
     }
+
     @Override
     public int getItemCount() {
         return chartFragmentList.size();

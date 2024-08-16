@@ -381,6 +381,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         imageButton_back.setOnClickListener(this);
         start_scan_button.setOnClickListener(this);
         tv_predict_result_title.setOnClickListener(this);
+        ib_predict_result_save.setOnClickListener(this);
+        ib_predict_result_save.setVisibility(View.INVISIBLE);
 
         fadeIn = AnimationUtils.loadAnimation(this, R.anim.fade_in);
         fadeOut = AnimationUtils.loadAnimation(this, R.anim.fade_out);
@@ -591,6 +593,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 el_result_detail.collapse();
                 el_result.collapse();
                 iv_result_indicator.setImageResource(R.drawable.baseline_arrow_right_24);
+                // 隐藏保存预测结果按钮
+                ib_predict_result_save.setVisibility(View.INVISIBLE);
                 // 开始扫描
                 PerformScan(1000);
                 // 清空预测结果集合
@@ -628,6 +632,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 el_result_detail.expand();
                 iv_result_indicator.setImageResource(R.drawable.baseline_arrow_drop_down_24);
             }
+        } else if (view.getId() == R.id.ib_predict_result_save) {
+            // TODO: 2024/8/16 将预测结果、扫描光谱保存到本地
         }
     }
 
@@ -1571,13 +1577,12 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-//                                    Toast.makeText(mContext, "成功", Toast.LENGTH_SHORT).show();
-                                    // 启用所有组件
-                                    enableAllComponent(true);
                                     // 预测成功，结果解析成功，且预测结果不为空，更新预测结果UI显示
                                     if (UUID.equals(predictSessionUUID)) {
                                         updatePredictsUI(UUID);
                                     }
+                                    // 启用所有组件
+                                    enableAllComponent(true);
                                 }
                             });
                         }
@@ -1685,7 +1690,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                             // 对结果集合进行排序
                             predictResults.sort(Collections.reverseOrder());
                             Log.d(TAG, "扫描页-预测结果排序后:" + predictResults.toString());
-                            // 返回
+                            // 预测成功
                             resultCallback.onSuccess();
                         }
                     } catch (JSONException e) {
@@ -2615,8 +2620,11 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // TODO: 2024/8/15 完成预测结果更新逻辑
     private void updatePredictsUI(String currentUUID) {
         if (currentUUID.equals(predictSessionUUID)) {
+            // 更新预测结果列表
             predictResultListAdapter.notifyItemRangeInserted(0, predictResults.size());
             el_result.expand();
+            // 显示保存按钮
+            ib_predict_result_save.setVisibility(View.VISIBLE);
         }
     }
 

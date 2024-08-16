@@ -77,7 +77,6 @@ public class ScanResultLineChartFragment extends Fragment {
     private void setupChart() {
         lineDataSet = new LineDataSet(chartData, getTabText());
         lineData = new LineData(lineDataSet);
-
         lineChart.setNoDataText("当前无数据");
         lineChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
         lineChart.getAxisRight().setEnabled(false);

@@ -26,6 +26,8 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.gttcgf.nanoscan.tools.SpectralDataUtils;
+
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -90,7 +92,7 @@ public class DeviceListActivity extends AppCompatActivity {
         userPhoneNumber = sharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
         itemList = new ArrayList<>();
         // 获取本地的序列化数据
-        loadItemListFromFile();
+        itemList = SpectralDataUtils.readDeviceListFromFile(this, userPhoneNumber);
     }
 
     private void initialComponent() {
@@ -159,7 +161,7 @@ public class DeviceListActivity extends AppCompatActivity {
             adapter.notifyItemChanged(position);
             Toast.makeText(DeviceListActivity.this, "修改成功", Toast.LENGTH_SHORT).show();
             // 将修改后的数据写入文件
-            itemListChangedToFile();
+            SpectralDataUtils.writeDeviceListToFile(this, userPhoneNumber, itemList);
         });
         builder.setNeutralButton("删除设备", (dialog, which) -> {
             itemList.remove(position);
@@ -167,7 +169,7 @@ public class DeviceListActivity extends AppCompatActivity {
             adapter.notifyItemRangeChanged(position, itemList.size() - position);
             Toast.makeText(DeviceListActivity.this, "删除成功", Toast.LENGTH_SHORT).show();
             // 更新数据并保存到文件
-            itemListChangedToFile();
+            SpectralDataUtils.writeDeviceListToFile(this, userPhoneNumber, itemList);
             updateEmptyState();
         });
         builder.setNegativeButton("取消", (dialog, which) -> {
@@ -190,14 +192,14 @@ public class DeviceListActivity extends AppCompatActivity {
                 Toast.makeText(this, "设备已在列表中！", Toast.LENGTH_SHORT).show();
                 // 仅更新设备token
                 deviceItem.setDeviceToken(newItem.getDeviceToken());
-                itemListChangedToFile();
+                SpectralDataUtils.writeDeviceListToFile(this, userPhoneNumber, itemList);
                 return;
             }
         }
         itemList.add(newItem);
         adapter.notifyItemInserted(itemList.size() - 1);
         updateEmptyState();
-        itemListChangedToFile();
+        SpectralDataUtils.writeDeviceListToFile(this, userPhoneNumber, itemList);
     }
 
     // 更新列表是否为空的状态
@@ -209,34 +211,4 @@ public class DeviceListActivity extends AppCompatActivity {
         }
     }
 
-    // 将设备列表List对象保存至本地。
-    private void itemListChangedToFile() {
-        try (FileOutputStream fos = openFileOutput(getString(R.string.file_deviceItem, userPhoneNumber), MODE_PRIVATE);
-             ObjectOutputStream oos = new ObjectOutputStream(fos)) {
-            oos.writeObject(itemList);
-            Log.d(TAG, "设备列表界面-设备列表配置文件已写入本地");
-        } catch (IOException e) {
-            Toast.makeText(this, "配置信息写入失败，请检查设备存储空间！", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    // 将本地设备列表List对象读取至对象。
-    private void loadItemListFromFile() {
-        List<DeviceItem> loadedDeviceList = new ArrayList<>();
-        try (FileInputStream fis = openFileInput(getString(R.string.file_deviceItem, userPhoneNumber));
-             ObjectInputStream ois = new ObjectInputStream(fis)) {
-            loadedDeviceList = (List<DeviceItem>) ois.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            Log.e(TAG, "设备列表界面-设备列表文件读取失败");
-        }
-        // 只读取当前用户的设备
-        if (!loadedDeviceList.isEmpty()) {
-            for (int i = 0; i < loadedDeviceList.size(); i++) {
-                DeviceItem deviceItem = loadedDeviceList.get(i);
-                if (deviceItem.getUser().equals(userPhoneNumber)) {
-                    itemList.add(loadedDeviceList.get(i));
-                }
-            }
-        }
-    }
 }

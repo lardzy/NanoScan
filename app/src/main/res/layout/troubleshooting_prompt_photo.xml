@@ -8,8 +8,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitCenter"
-        android:scaleY="0.75"
-        android:scaleX="0.75"
+        android:scaleY="0.55"
+        android:scaleX="0.55"
         android:src="@drawable/check_device_front" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
