@@ -31,7 +31,7 @@ public class PredictResultListAdapter extends RecyclerView.Adapter<PredictResult
 
     @Override
     public void onBindViewHolder(@NonNull PredictResultViewHolder holder, int position) {
-        holder.tv_result.setText(mContext.getString(R.string.scan_result_list,
+        holder.tv_result.setText(mContext.getString(R.string.scan_result_list, String.valueOf(position + 1),
                 predictResults.get(position).getMaterial(),
                 String.valueOf(predictResults.get(position).getPercentage())));
     }

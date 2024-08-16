@@ -200,6 +200,6 @@
     <string name="user_profile_item_about">关于..</string>
     <string name="imageview_default_description">背景</string>
     <string name="result_title">参考预测结果</string>
-    <string name="scan_result_list">%1$s:%2$s</string>
+    <string name="scan_result_list">%1$s.%2$s:%3$s</string>
     <string name="ib_predict_result_save_contentDescription">保存光谱及预测结果</string>
 </resources>

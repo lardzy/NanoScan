@@ -270,7 +270,7 @@
 
                         <androidx.constraintlayout.widget.ConstraintLayout
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content">
+                            android:layout_height="80dp">
 
                             <androidx.recyclerview.widget.RecyclerView
                                 android:id="@+id/rv_predict_result_list"

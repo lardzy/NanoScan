@@ -13,6 +13,7 @@ import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -76,6 +77,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -147,7 +149,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private Button start_scan_button;
     private CircularProgressBarView pb_load_calibration, pb_load_calibration_inside;
     private TextView tv_load_calibration, tv_load_calibration_value, tv_battery_level_value, tv_update_time, tv_predict_result_title;
-    private ExpandableLayout expandable_layout, el_result;
     private ViewPager2 vp_chart_pages;
     private ChartPagerAdapter chartPagerAdapter;
     private TabLayout tabLayout;
@@ -159,11 +160,17 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private Animation fadeIn, fadeOut, outsideFadeout;
     private ImageView iv_battery, iv_device;
     private CircularProgressBar pb_scanning;
-    private LinearLayout ll_predict_result;
-    private RecyclerView rv_predict_result_list;
     private int progressOfProgressbarOutside = 0;
     private int progressOfProgressbarInside = 0;
+    // 预测结果部分
+    private ExpandableLayout el_result_detail, el_result;
+    private LinearLayout ll_predict_result;  // 预测结果部分
+    private RecyclerView rv_predict_result_list;  // 预测结果列表
     private List<PredictResult> predictResults = new ArrayList<>();  // 预测结果
+    private PredictResultListAdapter predictResultListAdapter;  // 预测结果列表适配器
+    private ImageView iv_result_indicator;  // 页面展开指示器
+    private ImageButton ib_predict_result_save;  // 预测结果保存按钮
+    private CircularProgressBar pb_predict_result_saving; // 预测结果保存进度
     // endregion
     private DeviceItem deviceItem;
     private ISCNIRScanSDK mNanoBLEService;
@@ -352,7 +359,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         tv_battery_level_value = findViewById(R.id.tv_battery_level_value);
         tv_update_time = findViewById(R.id.tv_update_time);
         tv_predict_result_title = findViewById(R.id.tv_predict_result_title);
-        expandable_layout = findViewById(R.id.el_result_detail);
+        el_result_detail = findViewById(R.id.el_result_detail);
         el_result = findViewById(R.id.el_result);
         iv_battery = findViewById(R.id.iv_battery);
         iv_device = findViewById(R.id.iv_device);
@@ -360,7 +367,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         tabLayout = findViewById(R.id.tabLayout);
         pb_scanning = findViewById(R.id.pb_scanning);
         ll_predict_result = findViewById(R.id.ll_predict_result);
-//        rv_predict_result_list = findViewById(R.id.rv_predict_result_list);
+        rv_predict_result_list = findViewById(R.id.rv_predict_result_list);
+        iv_result_indicator = findViewById(R.id.iv_result_indicator);
+        ib_predict_result_save = findViewById(R.id.ib_predict_result_save);
+        pb_predict_result_saving = findViewById(R.id.pb_predict_result_saving);
 
         tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
         tv_update_time.setText("-");
@@ -418,6 +428,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 }
             }
         }).attach();
+        // 初始化动画
         outsideFadeout.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
@@ -456,6 +467,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
             }
         });
+        predictResultListAdapter = new PredictResultListAdapter(predictResults, this);
+        rv_predict_result_list.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+        rv_predict_result_list.setAdapter(predictResultListAdapter);
+
     }
 
 
@@ -547,8 +562,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.imageButton_back) {
+            // 返回上一页
             finish();
         } else if (view.getId() == R.id.start_scan_button) {
+            // 开始扫描
             // todo:判断选中的采集模式、设备功能、参比使用
             upDateScanMethod();
             // TODO: 2024/7/16 如果用户没有选中”使用出厂参比“，并且软件未存储本地参比，则弹窗提醒，并取消用户操作
@@ -570,9 +587,16 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 pb_scanning.setVisibility(View.VISIBLE);
             } else if (currentScanMethod == ScanMethod.ScanAndPredict) {
                 // 当采集模式为采集光谱并预测
-                Toast.makeText(this, "马上开发好", Toast.LENGTH_SHORT).show();
-
+                // 收起预测结果栏
+                el_result_detail.collapse();
+                el_result.collapse();
+                iv_result_indicator.setImageResource(R.drawable.baseline_arrow_right_24);
+                // 开始扫描
                 PerformScan(1000);
+                // 清空预测结果集合
+                int size = predictResults.size();
+                predictResults.clear();
+                predictResultListAdapter.notifyItemRangeRemoved(0, size);
                 // 防止重复点击
                 enableAllComponent(false);
                 pb_scanning.setVisibility(View.VISIBLE);
@@ -595,12 +619,14 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 confirmDialog.show(getSupportFragmentManager(), "用户尝试更新本地参比。");
             }
         } else if (view.getId() == R.id.tv_predict_result_title) {
-            // 点击了预测结果
-
-            if (expandable_layout.isExpanded()) {
-                expandable_layout.collapse();
+            // TODO: 2024/8/16 展开前判断是否有内容、内容是否最新
+            // 展开或折叠预测结果
+            if (el_result_detail.isExpanded()) {
+                el_result_detail.collapse();
+                iv_result_indicator.setImageResource(R.drawable.baseline_arrow_right_24);
             } else {
-                expandable_layout.expand();
+                el_result_detail.expand();
+                iv_result_indicator.setImageResource(R.drawable.baseline_arrow_drop_down_24);
             }
         }
     }
@@ -613,8 +639,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             isDeviceScanning = true;
             // 刷新会话UUID
             predictSessionUUID = RSAEncrypt.getUUID();
-            // 清空预测结果集合
-            predictResults.clear();
             // 发送广播 START_SCAN 将触发扫描
             ISCNIRScanSDK.StartScan();
         }, delayTime);
@@ -1516,6 +1540,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             Log.d(TAG, "扫描页-scanComplete called.isDeviceScanning:true");
             // 将采集的数据转换为csv格式文本
             List<String[]> scanResultCSV = writeCSV(Scan_Spectrum_Data);
+
+            // 当前扫描方法为ScanAndPredict时，将结果发送至服务器，获得预测结果
             if (currentScanMethod == ScanMethod.ScanAndPredict) {
                 // 将结果发送至服务器，获得预测结果
                 // 设备MAC数据加密
@@ -1523,7 +1549,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 try {
                     testCode = RSAEncrypt.encryptData(deviceItem.getDeviceMac(), RSAEncrypt.loadPublicKey(this, R.raw.p_key));
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, "数据加密失败",
+                            "数据加密失败，请重新安装软件！", true, "扫描页-数据加密失败！");
                 }
                 // 整合csv数据
                 StringBuilder sb = new StringBuilder();
@@ -1533,7 +1560,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     }
                     sb.append("\n");
                 }
-                // 将当次扫描的UUID上传服务器。
+                // 将当次扫描的会话UUID上传服务器。
                 String UUID = predictSessionUUID;
                 // 将扫描数据汇总
                 String inData = sb.toString();
@@ -1544,7 +1571,13 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Toast.makeText(mContext, "成功", Toast.LENGTH_SHORT).show();
+//                                    Toast.makeText(mContext, "成功", Toast.LENGTH_SHORT).show();
+                                    // 启用所有组件
+                                    enableAllComponent(true);
+                                    // 预测成功，结果解析成功，且预测结果不为空，更新预测结果UI显示
+                                    if (UUID.equals(predictSessionUUID)) {
+                                        updatePredictsUI(UUID);
+                                    }
                                 }
                             });
                         }
@@ -1554,13 +1587,27 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Toast.makeText(mContext, "失败", Toast.LENGTH_SHORT).show();
+                                    // 启用所有组件
+                                    enableAllComponent(true);
+                                    if (!msg.isEmpty()) {
+                                        showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                                                "预测失败", "预测请求失败，网络或服务器可能出现问题\n" + msg, false, "扫描页-预测失败");
+                                    }
                                 }
                             });
                         }
                     });
                 } catch (JSONException e) {
                     Log.e(TAG, "扫描页-ServerPredictResultCallback JSON解析失败！");
+                    // 启用所有组件
+                    enableAllComponent(true);
+                }
+            } else {
+                // 启用所有组件
+                enableAllComponent(true);
+                // 扫描方法并非扫描并预测，关闭预测结果栏
+                if (el_result != null) {
+                    el_result.collapse();
                 }
             }
 
@@ -1569,8 +1616,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_REFLECTANCE, mReflectanceFloat);
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_INTENSITY, mIntensityFloat);
             chartPagerAdapter.updateChartData(ScanResultLineChartFragment.CHART_REFERENCE, mReferenceFloat);
-            // 启用所有组件
-            enableAllComponent(true);
             // 是否处于扫描过程中-设置为否
             isDeviceScanning = false;
         }
@@ -1603,6 +1648,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                // 请求成功
                 if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
                     // 预测成功，开始解析响应结果
                     Log.e(TAG, "扫描页-预测成功。");
@@ -1621,6 +1667,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                                 showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
                                         "预测结果异常", "返回成分含量异常，请重试！",
                                         false, "Dialog NumberFormatException!");
+                                resultCallback.onFailed("");
                             }
                             if (!material.isEmpty() && percentage <= 100 && percentage > 0) {
                                 // 仅当会话UUID相同时，才加入结果集合
@@ -1633,15 +1680,20 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                             }
 
                         }
-                        // TODO: 2024/8/15 仅当预测成功，且结果不为空时展开预测结果栏
+                        // TODO: 2024/8/15 仅当预测成功，且结果不为空时
                         if (testID.equals(predictSessionUUID) && !predictResults.isEmpty()) {
-                            runOnUiThread(() -> el_result.expand());
+                            // 对结果集合进行排序
+                            predictResults.sort(Collections.reverseOrder());
+                            Log.d(TAG, "扫描页-预测结果排序后:" + predictResults.toString());
+                            // 返回
+                            resultCallback.onSuccess();
                         }
                     } catch (JSONException e) {
                         // TODO: 2024/7/17 json 解析失败，弹窗提醒。
                         showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
                                 "预测结果异常", "返回结果解析异常，请重试！",
                                 false, "Dialog JSONException!");
+                        resultCallback.onFailed("");
                     }
 
                 } else {
@@ -1660,6 +1712,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                         }
                         Log.e(TAG, "扫描页-服务器请求成功，但是预测不成功:" + errorMsg);
                     }
+                    resultCallback.onFailed("");
                 }
 
             }
@@ -2559,8 +2612,12 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
-    private void updatePredictsUI() {
-
+    // TODO: 2024/8/15 完成预测结果更新逻辑
+    private void updatePredictsUI(String currentUUID) {
+        if (currentUUID.equals(predictSessionUUID)) {
+            predictResultListAdapter.notifyItemRangeInserted(0, predictResults.size());
+            el_result.expand();
+        }
     }
 
     public class DisconnectedReceiver extends BroadcastReceiver {
