@@ -314,6 +314,22 @@
                                 app:layout_constraintEnd_toEndOf="parent"
                                 app:layout_constraintStart_toEndOf="@+id/rv_predict_result_list"
                                 app:layout_constraintTop_toTopOf="parent"
+                                app:layout_constraintWidth_percent="0.1" />
+
+                            <ImageView
+                                android:id="@+id/iv_predict_result_saved"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:scaleType="fitCenter"
+                                android:scaleX="1.5"
+                                android:scaleY="1.5"
+                                android:src="@drawable/baseline_check_24"
+                                android:visibility="invisible"
+                                app:layout_constraintBottom_toBottomOf="parent"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintStart_toEndOf="@+id/rv_predict_result_list"
+                                app:layout_constraintTop_toTopOf="parent"
+                                app:layout_constraintWidth_default="percent"
                                 app:layout_constraintWidth_percent="0.15" />
 
 

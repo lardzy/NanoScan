@@ -2,7 +2,6 @@ package com.gttcgf.nanoscan.tools;
 
 import android.content.Context;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.gttcgf.nanoscan.DeviceItem;
 import com.gttcgf.nanoscan.NirSpectralData;
@@ -10,27 +9,31 @@ import com.gttcgf.nanoscan.R;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 public class SpectralDataUtils {
     private static final String TAG = "SpectralDataUtils";
-    public static HashMap<String, String> userSpectralFileMap = new HashMap<>();
+    public static final int STORAGE_MAXIMUM = 10000;
+    // Map集合中，键为手机号，值为光谱文件全名
+    public static LinkedHashSet<String> userSpectralFileSet = new LinkedHashSet<>();
 
     private SpectralDataUtils() {
         throw new UnsupportedOperationException("Utility class");
     }
 
-    public static void saveSpectrumFileToLocal(Context context, String userPhoneNumber, NirSpectralData nirSpectralData) {
+    // 同时保存光谱文件、光谱索引文件
+    public static boolean saveSpectrumFileToLocal(Context context, String userPhoneNumber, NirSpectralData nirSpectralData) {
         // 将光谱数据保存至本地
         if (userPhoneNumber.isEmpty() || nirSpectralData == null) {
-            return;
+            return false;
         }
 
         try {
@@ -39,42 +42,99 @@ public class SpectralDataUtils {
             if (!userDir.exists()) {
                 if (!userDir.mkdirs()) {
                     Log.e(TAG, "Failed to create directory for user: " + userPhoneNumber);
-                    return;
+                    return false;
                 }
+                Log.d(TAG, "saveSpectrumFileToLocal: 文件夹创建成功。");
             }
             // 获得光谱文件名
             String fileName = nirSpectralData.getFileNamePrefix();
             if (fileName != null && !fileName.isEmpty()) {
                 // 创建光谱file对象，指定路径和文件名
-                File file = new File(userDir, fileName + ".ser");
-                File userSpectralFileMapFile = new File(context.getFilesDir(), userPhoneNumber + "_"
-                        + nirSpectralData.getDeviceMAC() + "_userSpectralFileMap.ser");
+                File spectrumFile = new File(userDir, context.getString(R.string.file_nirSpectralData, fileName));
+                File userSpectralFileMapFile = new File(context.getFilesDir(), context.getString(R.string.file_userSpectralFileSet, userPhoneNumber,
+                        nirSpectralData.getDeviceMAC()));
 
-                try (FileOutputStream fos = new FileOutputStream(file);
-                     FileOutputStream fos_map = new FileOutputStream(userSpectralFileMapFile);
-                     ObjectOutputStream oos = new ObjectOutputStream(fos);
-                     ObjectOutputStream oos_map = new ObjectOutputStream(fos_map)) {
-                    if (!file.exists()) {
+                if (!spectrumFile.exists()) {
+                    try (FileOutputStream fos = new FileOutputStream(spectrumFile);
+                         FileOutputStream fos_map = new FileOutputStream(userSpectralFileMapFile);
+                         ObjectOutputStream oos = new ObjectOutputStream(fos);
+                         ObjectOutputStream oos_map = new ObjectOutputStream(fos_map)) {
+                        // 当达到设定上限
+                        if (userSpectralFileSet.size() == STORAGE_MAXIMUM) {
+                            // 获得最早元素
+                            String earliest = userSpectralFileSet.iterator().next();
+                            // 索引集合中删除元素
+                            userSpectralFileSet.remove(earliest);
+                            // 本地文件中删除该文件
+                            File earliestFile = new File(userDir, context.getString(R.string.file_nirSpectralData, earliest));
+                            boolean deleted = earliestFile.delete();
+                            Log.e(TAG, "saveSpectrumFileToLocal: 由于超出本地保存光谱上限，现删除：" + earliest + "，删除结果：" + deleted);
+                        }
                         // 写入光谱序列化对象
                         oos.writeObject(nirSpectralData);
-                        // 将光谱用户手机和文件名称保存到map集合中
-                        userSpectralFileMap.put(userPhoneNumber, fileName);
-                        oos_map.writeObject(userSpectralFileMap);
-                        if (file.exists() && userSpectralFileMapFile.exists()) {
-                            Log.d(TAG, "saveSpectrumFileToLocal: 光谱保存成功！" + file.getAbsoluteFile());
+                        // 将光谱文件名称保存到set集合中
+                        userSpectralFileSet.add(fileName);
+                        // 写入光谱索引序列化对象
+                        oos_map.writeObject(userSpectralFileSet);
+                        if (spectrumFile.exists() && userSpectralFileMapFile.exists()) {
+                            Log.d(TAG, "saveSpectrumFileToLocal: 光谱保存成功！" + spectrumFile.getAbsoluteFile());
+                            return true;
                         }
-                    } else {
-                        Log.e(TAG, "saveSpectrumFileToLocal: 存在同名光谱文件", new Exception());
+                    } catch (IOException e) {
+                        // 出现错误则删除集合中光谱索引、删除本地光谱文件。
+                        userSpectralFileSet.remove(fileName);
+                        boolean deleted = spectrumFile.delete();
+                        Log.e(TAG, "saveSpectrumFileToLocal: 保存光谱文件失败,尝试删除光谱、并清除集合数据：" + deleted, e);
+                        return false;
                     }
-                } catch (IOException e) {
-                    userSpectralFileMap.remove(userPhoneNumber);
-                    boolean deleted = file.delete();
-                    Log.e(TAG, "saveSpectrumFileToLocal: 保存光谱文件失败,尝试删除光谱、并清除集合数据：" + deleted, e);
+                } else {
+                    Log.e(TAG, "saveSpectrumFileToLocal: 存在同名光谱文件", new Exception());
+                    return false;
                 }
+
+
             }
 
         } catch (Exception e) {
             Log.e(TAG, "Error saving spectrum");
+            return false;
+        }
+        return false;
+    }
+    // 从本地反序列化光谱索引集合
+    public static void LoadSpectralFileMapFromFile(Context context, String phoneNumber, String deviceMac) {
+        if (phoneNumber.isEmpty() || deviceMac.isEmpty()) {
+            return;
+        }
+        try (FileInputStream fis = context.openFileInput(context.getString(R.string.file_userSpectralFileSet, phoneNumber, deviceMac));
+             ObjectInputStream ois = new ObjectInputStream(fis)
+        ) {
+            userSpectralFileSet = (LinkedHashSet<String>) ois.readObject();
+//            userSpectralFileSet.clear();
+//            userSpectralFileSet.putAll((LinkedHashMap<String, String>) ois.readObject());
+            Log.d(TAG, "LoadSpectralFileMapFromFile: 读取本地光谱索引成功！");
+        } catch (IOException | ClassNotFoundException e) {
+            Log.e(TAG, "LoadSpectralFileMapFromFile: 读取本地光谱索引失败！文件不存在或读取失败");
+        }
+    }
+
+    // 根据手机号、文件全名，读取红外光谱文件（文件包含图谱、预测结果）
+    public static NirSpectralData readNirSpectralDataFromFile(Context context, String userPhoneNumber, String fileName) {
+        // 光谱文件夹路径名称格式为手机号
+        if (!userPhoneNumber.isEmpty() && !fileName.isEmpty()) {
+            File userDir = new File(context.getFilesDir(), userPhoneNumber);
+            File NirSpectralDataFile = new File(userDir, context.getString(R.string.file_nirSpectralData, fileName));
+            try (
+                    FileInputStream fis = new FileInputStream(NirSpectralDataFile);
+                    ObjectInputStream ois = new ObjectInputStream(fis)
+            ) {
+                return (NirSpectralData) ois.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                Log.e(TAG, "readNirSpectralDataFromFile: 未根据索引找到光谱文件");
+                return null;
+            }
+        } else {
+            return null;
         }
     }
 

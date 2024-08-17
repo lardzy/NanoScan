@@ -15,6 +15,8 @@
     <string name="pref_app_reference_update_time">referenceUpdateTime</string>
 
     <string name="file_deviceItem">%s_deviceItem.ser</string>
+    <string name="file_nirSpectralData">%s.ser</string>
+    <string name="file_userSpectralFileSet">%1$s_%2$s_userSpectralFileSet.ser</string>
 
 
     <string name="user_agreement">用户协议</string>
@@ -202,4 +204,7 @@
     <string name="result_title">参考预测结果</string>
     <string name="scan_result_list">%1$s.%2$s:%3$s</string>
     <string name="ib_predict_result_save_contentDescription">保存光谱及预测结果</string>
+    <string name="storage_spectrum_reach_maximum">本地保存光谱数据即将到达上限，当前(%1$s/%2$s)</string>
+    <string name="storage_spectrum_reached_maximum_1">本地保存光谱数据已达上限，当前(%1$s/%2$s)</string>
+    <string name="storage_spectrum_reached_maximum_2">保存当前光谱将会导致最早保存光谱被删除</string>
 </resources>

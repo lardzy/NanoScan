@@ -13,7 +13,6 @@ import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -60,6 +59,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.gttcgf.nanoscan.tools.PasswordUtils;
 import com.gttcgf.nanoscan.tools.RSAEncrypt;
+import com.gttcgf.nanoscan.tools.SpectralDataUtils;
 import com.mikhaellopez.circularprogressbar.CircularProgressBar;
 
 import net.cachapa.expandablelayout.ExpandableLayout;
@@ -152,12 +152,12 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private ViewPager2 vp_chart_pages;
     private ChartPagerAdapter chartPagerAdapter;
     private TabLayout tabLayout;
-    private SharedPreferences sharedPreferences;
+    private SharedPreferences sharedPreferences, defaultSharedPreferences;
     private List<ScanResultLineChartFragment> charts = new ArrayList<>();
     private RecyclerView rv_function_list;
     private FunctionListAdapter functionListAdapter;
     private List<FunctionItem> functionList = new ArrayList<>();
-    private Animation fadeIn, fadeOut, outsideFadeout;
+    private Animation fadeIn, fadeOut, outsideFadeout, checkFlagFadeout;
     private ImageView iv_battery, iv_device;
     private CircularProgressBar pb_scanning;
     private int progressOfProgressbarOutside = 0;
@@ -168,9 +168,10 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     private RecyclerView rv_predict_result_list;  // 预测结果列表
     private List<PredictResult> predictResults = new ArrayList<>();  // 预测结果
     private PredictResultListAdapter predictResultListAdapter;  // 预测结果列表适配器
-    private ImageView iv_result_indicator;  // 页面展开指示器
+    private ImageView iv_result_indicator, iv_predict_result_saved;  // 页面展开指示器
     private ImageButton ib_predict_result_save;  // 预测结果保存按钮
     private CircularProgressBar pb_predict_result_saving; // 预测结果保存进度
+    private String userPhoneNumber = "";
     // endregion
     private DeviceItem deviceItem;
     private ISCNIRScanSDK mNanoBLEService;
@@ -371,6 +372,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         iv_result_indicator = findViewById(R.id.iv_result_indicator);
         ib_predict_result_save = findViewById(R.id.ib_predict_result_save);
         pb_predict_result_saving = findViewById(R.id.pb_predict_result_saving);
+        iv_predict_result_saved = findViewById(R.id.iv_predict_result_saved);
 
         tv_battery_level_value.setText(getString(R.string.battery_level, String.valueOf(battery) + "%"));
         tv_update_time.setText("-");
@@ -387,6 +389,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         fadeIn = AnimationUtils.loadAnimation(this, R.anim.fade_in);
         fadeOut = AnimationUtils.loadAnimation(this, R.anim.fade_out);
         outsideFadeout = AnimationUtils.loadAnimation(this, R.anim.fade_out);
+        checkFlagFadeout = AnimationUtils.loadAnimation(this, R.anim.fade_out);
         start_scan_button.setEnabled(false);
 
         // 初始化功能列表
@@ -430,51 +433,14 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 }
             }
         }).attach();
-        // 初始化动画
-        outsideFadeout.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
+        // 初始化动画及监听器
+        initialAnimation();
 
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-                pb_load_calibration.setVisibility(View.INVISIBLE);
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
-        });
-        fadeOut.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-
-                pb_load_calibration.setVisibility(View.GONE);
-                pb_load_calibration_inside.setVisibility(View.GONE);
-                iv_device.setVisibility(View.GONE);
-                tv_load_calibration.setVisibility(View.GONE);
-                tv_load_calibration_value.setVisibility(View.GONE);
-
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
-        });
         predictResultListAdapter = new PredictResultListAdapter(predictResults, this);
         rv_predict_result_list.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
         rv_predict_result_list.setAdapter(predictResultListAdapter);
 
     }
-
 
     // 初始化各类数据
     private void initialData() {
@@ -517,10 +483,11 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         }
         // todo: 后续根据是否存储了参比数据判断要不要默认选择使用出厂参比，使用设备MAC作为区分-ok
         sharedPreferences = this.getSharedPreferences(deviceItem.getDeviceMac(), Context.MODE_PRIVATE);
-
+        defaultSharedPreferences = this.getSharedPreferences("default", Context.MODE_PRIVATE);
         // 读取本地设备状态数据
         loadDeviceStatus();
-
+        // 读取用户账户信息
+        userPhoneNumber = defaultSharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
         // 判断设备连接过程是否已经完成
         completeDeviceConnection = false;
         // TODO: 2024/7/16 存储参比信息到本地、从本地文件读取参比信息
@@ -531,6 +498,66 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         mAbsorbanceFloat = new ArrayList<>();
         mReferenceFloat = new ArrayList<>();
     }
+
+    // region 初始化动画，这段写得很烂，建议折叠
+    // 初始化动画监听器
+    private void initialAnimation() {
+        outsideFadeout.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                pb_load_calibration.setVisibility(View.INVISIBLE);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+        fadeOut.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+
+                pb_load_calibration.setVisibility(View.GONE);
+                pb_load_calibration_inside.setVisibility(View.GONE);
+                iv_device.setVisibility(View.GONE);
+                tv_load_calibration.setVisibility(View.GONE);
+                tv_load_calibration_value.setVisibility(View.GONE);
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+        checkFlagFadeout.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                iv_predict_result_saved.setVisibility(View.INVISIBLE);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+    }
+    // endregion
 
     @Override
     protected void onResume() {
@@ -604,6 +631,18 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 // 防止重复点击
                 enableAllComponent(false);
                 pb_scanning.setVisibility(View.VISIBLE);
+                // 提示到达光谱存储上限
+                int storageSpectralNumber = SpectralDataUtils.userSpectralFileSet.size();
+                if (storageSpectralNumber > (SpectralDataUtils.STORAGE_MAXIMUM * 0.9) && storageSpectralNumber < SpectralDataUtils.STORAGE_MAXIMUM) {
+                    // 即将到达光谱存储上限
+                    Toast.makeText(this, getString(R.string.storage_spectrum_reach_maximum, String.valueOf(storageSpectralNumber),
+                            String.valueOf(SpectralDataUtils.STORAGE_MAXIMUM)), Toast.LENGTH_SHORT).show();
+                } else if (storageSpectralNumber >= SpectralDataUtils.STORAGE_MAXIMUM) {
+                    // 已经到达光谱存储上限
+                    Toast.makeText(this, getString(R.string.storage_spectrum_reached_maximum_1, String.valueOf(storageSpectralNumber),
+                            String.valueOf(SpectralDataUtils.STORAGE_MAXIMUM)), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.storage_spectrum_reached_maximum_2), Toast.LENGTH_SHORT).show();
+                }
             } else if (currentScanMethod == ScanMethod.Maintain) {
                 // 当采集模式为维护模式，即更新本地参比
                 // 显示警告弹窗，确保用户不是意外点击
@@ -633,7 +672,29 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 iv_result_indicator.setImageResource(R.drawable.baseline_arrow_drop_down_24);
             }
         } else if (view.getId() == R.id.ib_predict_result_save) {
-            // TODO: 2024/8/16 将预测结果、扫描光谱保存到本地
+            // TODO: 2024/8/16 将预测结果、扫描光谱保存到本地、将本地光谱上限设置为9999。
+            ib_predict_result_save.setVisibility(View.INVISIBLE);
+            pb_predict_result_saving.setVisibility(View.VISIBLE);
+            if (nirSpectralData != null && predictSessionUUID.equals(nirSpectralData.getPredictSessionUUID())
+                    && SpectralDataUtils.saveSpectrumFileToLocal(this, userPhoneNumber, nirSpectralData)) {
+                Log.d(TAG, "扫描页-onClick: 光谱保存成功！");
+                // 动画播放
+                mHandler.postDelayed(() -> {
+                    pb_predict_result_saving.setVisibility(View.INVISIBLE);
+                    iv_predict_result_saved.setVisibility(View.VISIBLE);
+                }, 1000);
+                mHandler.postDelayed(() ->
+                        iv_predict_result_saved.startAnimation(checkFlagFadeout), 2000);
+            } else {
+                // 通常不会发生..
+                // 提示用户发生异常
+                showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                        "保存失败", "预期外的保存失败，请重试！", false,
+                        "扫描页-光谱由于会话UUID不一致、光谱文件夹创建失败或存在重名光谱导致保存失败！请检查log文件。");
+                ib_predict_result_save.setVisibility(View.VISIBLE);
+                pb_predict_result_saving.setVisibility(View.INVISIBLE);
+            }
+
         }
     }
 
@@ -1580,6 +1641,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                                     // 预测成功，结果解析成功，且预测结果不为空，更新预测结果UI显示
                                     if (UUID.equals(predictSessionUUID)) {
                                         updatePredictsUI(UUID);
+                                        // 将预测结果写入nirSpectralData对象
+                                        nirSpectralData.setPredictResults(predictResults);
                                     }
                                     // 启用所有组件
                                     enableAllComponent(true);
@@ -2306,13 +2369,28 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 mReferenceFloat.clear();
                 mWavelengthFloat.clear();
 
+                // 用于序列化光谱数据
+                ArrayList<mEntry> mIntensityFloatArray = new ArrayList<>();
+                ArrayList<mEntry> mAbsorbanceFloatArray = new ArrayList<>();
+                ArrayList<mEntry> mReflectanceFloatArray = new ArrayList<>();
+                ArrayList<mEntry> mReferenceFloatArray = new ArrayList<>();
+
+
                 for (int i = 0; i < Scan_Spectrum_Data.getLength(); i++) {
                     mXValues.add(String.format(getString(R.string.scan_wave_length), ISCNIRScanSDK.ScanResults.getSpatialFreq(mContext, Scan_Spectrum_Data.getWavelength()[i])));
                     mIntensityFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i]));
+                    mIntensityFloatArray.add(new mEntry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i]));
+
                     mAbsorbanceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (-1) * (float) Math.log10((double) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / (double) getIntensity()[i])));
+                    mAbsorbanceFloatArray.add(new mEntry((float) Scan_Spectrum_Data.getWavelength()[i], (-1) * (float) Math.log10((double) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / (double) getIntensity()[i])));
+
                     mReflectanceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / getIntensity()[i]));
+                    mReflectanceFloatArray.add(new mEntry((float) Scan_Spectrum_Data.getWavelength()[i], (float) Scan_Spectrum_Data.getUncalibratedIntensity()[i] / getIntensity()[i]));
+
                     mWavelengthFloat.add((float) Scan_Spectrum_Data.getWavelength()[i]);
+
                     mReferenceFloat.add(new Entry((float) Scan_Spectrum_Data.getWavelength()[i], (float) getIntensity()[i]));
+                    mReferenceFloatArray.add(new mEntry((float) Scan_Spectrum_Data.getWavelength()[i], (float) getIntensity()[i]));
                 }
                 // 初始化图表横、纵坐标的范围
                 initializesTableRange();
@@ -2352,8 +2430,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     }
                 } else if (currentScanMethod == ScanMethod.ScanAndPredict || currentScanMethod == ScanMethod.ScanOnly) {
                     // 初始化用于存储光谱数据的对象
-                    nirSpectralData = new NirSpectralData(deviceItem.getDeviceMac(), mIntensityFloat,
-                            mAbsorbanceFloat, mReferenceFloat, mWavelengthFloat, predictSessionUUID);
+                    nirSpectralData = new NirSpectralData(deviceItem.getDeviceMac(), mXValues, mIntensityFloatArray, mReflectanceFloatArray,
+                            mIntensityFloatArray, mReferenceFloatArray, predictSessionUUID);
                 }
             }
         }

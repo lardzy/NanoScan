@@ -25,14 +25,20 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.gttcgf.nanoscan.tools.SpectralDataUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+// TODO: 2024/8/17 完成光谱的读取、删除
+
 public class DeviceDetailsActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "DeviceDetailsActivity";
     private static String DEVICE_NAME = "NIR";
+    // region UI布局
     private ToggleButton not_preheat_toggle;
     private ImageButton scan, imageButton_back, imageButton_menu;
     private ConstraintLayout device_connection_layout;
@@ -41,18 +47,20 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
             tv_device_name, connect_text, spectral_reference_update_date_value, number_of_spectra_collected_value;
     private ProgressBar scan_progressbar, progressBar;
     private ImageView connect_btn, battery_image;
+    private RecyclerView recent_spectral_data_list;
+    // endregion
     private Animation fadeIn, fadeOut;
     private Handler handler;
     private boolean warmUp = false;
-    private SharedPreferences sharedPreferences;
+    private SharedPreferences sharedPreferences, userProfileSharedPreferences;
     private List<DeviceDetailMenuItems> menuItems;
     // region 设备状态
-    // todo:完成状态信息共享
     private int battery;
     private String totalLampTime = "";
     private String referenceUpdateDate = "-";
     private int numberOfSpectraCollected = 0;
     // endregion
+    private String userPhoneNumber, deviceMac;
 
 
     @Override
@@ -97,6 +105,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         connect_btn = findViewById(R.id.connect_btn);
         battery_image = findViewById(R.id.battery_image);
         connect_text = findViewById(R.id.connect_text);
+        recent_spectral_data_list = findViewById(R.id.recent_spectral_data_list);
         spectral_reference_update_date_value = findViewById(R.id.spectral_reference_update_date_value);
         number_of_spectra_collected_value = findViewById(R.id.number_of_spectra_collected_value);
 
@@ -164,6 +173,8 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
         connect_text.startAnimation(fadeOut);
         connect_text.setVisibility(View.GONE);
         // 读取本地数据
+        // 更新本地光谱数量
+        numberOfSpectraCollected = SpectralDataUtils.userSpectralFileSet.size();
         battery = sharedPreferences.getInt(getString(R.string.pref_device_battery), -1);
         totalLampTime = sharedPreferences.getString(getString(R.string.pref_device_totalLampTime), "-");
         referenceUpdateDate = sharedPreferences.getString(getString(R.string.pref_app_reference_update_time), "-");
@@ -199,10 +210,19 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
 
     private void initialData() {
         Log.d(TAG, "设备详情页-initialData called!");
+//        SpectralDataUtils.LoadSpectralFileMapFromFile();
         handler = new Handler();
         // 初始化数据
         deviceItem = (DeviceItem) getIntent().getSerializableExtra("deviceItem");
         sharedPreferences = this.getSharedPreferences(Objects.requireNonNull(deviceItem).getDeviceMac(), Context.MODE_PRIVATE);
+        // 从本地文件读取光谱索引数据
+        userProfileSharedPreferences = this.getSharedPreferences("default", MODE_PRIVATE);
+        userPhoneNumber = userProfileSharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
+        deviceMac = deviceItem.getDeviceMac();
+        SpectralDataUtils.LoadSpectralFileMapFromFile(this, userPhoneNumber, deviceMac);
+
+        // 更新光谱数量
+        numberOfSpectraCollected = SpectralDataUtils.userSpectralFileSet.size();
 
         menuItems = new ArrayList<>();
         menuItems.add(new DeviceDetailMenuItems("设备详情"));
