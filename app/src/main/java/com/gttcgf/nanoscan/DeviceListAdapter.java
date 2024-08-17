@@ -33,7 +33,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         DeviceItem currentItem = deviceItems.get(position);
         // 设备只有一种时，为避免ImageResource为动态值而导致图像显示错误，先不进行图片id的更新。
         // todo:不使用动态的资源id，避免图像显示错误
-//        holder.card_image.setImageResource(currentItem.getImageResource());
         holder.card_title.setText(currentItem.getDeviceName());
         holder.card_title_1.setText(currentItem.getDeviceType());
         holder.card_id.setText(String.valueOf(position + 1));
@@ -66,7 +65,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
             super(itemView);
             card_image = itemView.findViewById(R.id.card_image);
             card_title = itemView.findViewById(R.id.tv_nano_name);
-            card_title_1 = itemView.findViewById(R.id.card_mac_address);
+            card_title_1 = itemView.findViewById(R.id.tv_device_type);
             card_id = itemView.findViewById(R.id.card_id);
         }
     }

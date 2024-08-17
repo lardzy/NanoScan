@@ -24,7 +24,7 @@ public class NirSpectralData implements Serializable {
     private final ArrayList<mEntry> mReferenceFloat;
     private List<PredictResult> predictResults = new ArrayList<>();
     private final String predictSessionUUID;
-    private String fileNamePrefix;
+    private String fileNamePrefix, dateTime;
 
 
     public NirSpectralData(String deviceMAC, ArrayList<String> mXValues, ArrayList<mEntry> mAbsorbanceFloat, ArrayList<mEntry> mReflectanceFloat, ArrayList<mEntry> mIntensityFloat, ArrayList<mEntry> mReferenceFloat, String predictSessionUUID) {
@@ -42,6 +42,7 @@ public class NirSpectralData implements Serializable {
         Date date = new Date();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
         String formatDate = simpleDateFormat.format(date);
+        dateTime = formatDate;
         fileNamePrefix = deviceMAC + "_" + formatDate;
     }
 
@@ -85,4 +86,21 @@ public class NirSpectralData implements Serializable {
         this.predictResults = predictResults;
     }
 
+    public String getDateTime() {
+        return dateTime;
+    }
+
+    public String getPredictResultsDescription() {
+        if (predictResults != null) {
+            StringBuilder sb = new StringBuilder();
+            for (PredictResult predictResult : predictResults) {
+                sb.append(predictResult.getMaterial());
+                sb.append(":");
+                sb.append(predictResult.getPercentage());
+            }
+            return sb.toString();
+        } else {
+            return null;
+        }
+    }
 }

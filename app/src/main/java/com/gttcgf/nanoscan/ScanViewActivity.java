@@ -632,8 +632,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 enableAllComponent(false);
                 pb_scanning.setVisibility(View.VISIBLE);
                 // 提示到达光谱存储上限
-                int storageSpectralNumber = SpectralDataUtils.userSpectralFileSet.size();
-                if (storageSpectralNumber > (SpectralDataUtils.STORAGE_MAXIMUM * 0.9) && storageSpectralNumber < SpectralDataUtils.STORAGE_MAXIMUM) {
+                int storageSpectralNumber = SpectralDataUtils.userSpectralFileMap.size();
+                if (storageSpectralNumber > (SpectralDataUtils.STORAGE_MAXIMUM * 0.95) && storageSpectralNumber < SpectralDataUtils.STORAGE_MAXIMUM) {
                     // 即将到达光谱存储上限
                     Toast.makeText(this, getString(R.string.storage_spectrum_reach_maximum, String.valueOf(storageSpectralNumber),
                             String.valueOf(SpectralDataUtils.STORAGE_MAXIMUM)), Toast.LENGTH_SHORT).show();

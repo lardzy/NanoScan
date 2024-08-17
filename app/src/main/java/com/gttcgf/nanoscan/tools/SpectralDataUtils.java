@@ -5,6 +5,7 @@ import android.util.Log;
 
 import com.gttcgf.nanoscan.DeviceItem;
 import com.gttcgf.nanoscan.NirSpectralData;
+import com.gttcgf.nanoscan.PredictionResultDescription;
 import com.gttcgf.nanoscan.R;
 
 import java.io.File;
@@ -22,8 +23,8 @@ import java.util.Map;
 public class SpectralDataUtils {
     private static final String TAG = "SpectralDataUtils";
     public static final int STORAGE_MAXIMUM = 10000;
-    // Map集合中，键为手机号，值为光谱文件全名
-    public static LinkedHashSet<String> userSpectralFileSet = new LinkedHashSet<>();
+    // Set集合中，值为光谱文件全名
+    public static LinkedHashMap<String, PredictionResultDescription> userSpectralFileMap = new LinkedHashMap<>();
 
     private SpectralDataUtils() {
         throw new UnsupportedOperationException("Utility class");
@@ -51,7 +52,7 @@ public class SpectralDataUtils {
             if (fileName != null && !fileName.isEmpty()) {
                 // 创建光谱file对象，指定路径和文件名
                 File spectrumFile = new File(userDir, context.getString(R.string.file_nirSpectralData, fileName));
-                File userSpectralFileMapFile = new File(context.getFilesDir(), context.getString(R.string.file_userSpectralFileSet, userPhoneNumber,
+                File userSpectralFileMapFile = new File(context.getFilesDir(), context.getString(R.string.file_userSpectralFileMap, userPhoneNumber,
                         nirSpectralData.getDeviceMAC()));
 
                 if (!spectrumFile.exists()) {
@@ -60,29 +61,30 @@ public class SpectralDataUtils {
                          ObjectOutputStream oos = new ObjectOutputStream(fos);
                          ObjectOutputStream oos_map = new ObjectOutputStream(fos_map)) {
                         // 当达到设定上限
-                        if (userSpectralFileSet.size() == STORAGE_MAXIMUM) {
+                        if (userSpectralFileMap.size() == STORAGE_MAXIMUM) {
                             // 获得最早元素
-                            String earliest = userSpectralFileSet.iterator().next();
+                            Map.Entry<String, PredictionResultDescription> earliest = userSpectralFileMap.entrySet().iterator().next();
                             // 索引集合中删除元素
-                            userSpectralFileSet.remove(earliest);
+                            userSpectralFileMap.remove(earliest.getKey());
                             // 本地文件中删除该文件
-                            File earliestFile = new File(userDir, context.getString(R.string.file_nirSpectralData, earliest));
+                            File earliestFile = new File(userDir, context.getString(R.string.file_nirSpectralData, earliest.getKey()));
                             boolean deleted = earliestFile.delete();
                             Log.e(TAG, "saveSpectrumFileToLocal: 由于超出本地保存光谱上限，现删除：" + earliest + "，删除结果：" + deleted);
                         }
                         // 写入光谱序列化对象
                         oos.writeObject(nirSpectralData);
                         // 将光谱文件名称保存到set集合中
-                        userSpectralFileSet.add(fileName);
+                        userSpectralFileMap.put(fileName, new PredictionResultDescription(nirSpectralData.getDateTime(),
+                                nirSpectralData.getPredictResultsDescription()));
                         // 写入光谱索引序列化对象
-                        oos_map.writeObject(userSpectralFileSet);
+                        oos_map.writeObject(userSpectralFileMap);
                         if (spectrumFile.exists() && userSpectralFileMapFile.exists()) {
                             Log.d(TAG, "saveSpectrumFileToLocal: 光谱保存成功！" + spectrumFile.getAbsoluteFile());
                             return true;
                         }
                     } catch (IOException e) {
                         // 出现错误则删除集合中光谱索引、删除本地光谱文件。
-                        userSpectralFileSet.remove(fileName);
+                        userSpectralFileMap.remove(fileName);
                         boolean deleted = spectrumFile.delete();
                         Log.e(TAG, "saveSpectrumFileToLocal: 保存光谱文件失败,尝试删除光谱、并清除集合数据：" + deleted, e);
                         return false;
@@ -101,17 +103,17 @@ public class SpectralDataUtils {
         }
         return false;
     }
+
     // 从本地反序列化光谱索引集合
     public static void LoadSpectralFileMapFromFile(Context context, String phoneNumber, String deviceMac) {
         if (phoneNumber.isEmpty() || deviceMac.isEmpty()) {
             return;
         }
-        try (FileInputStream fis = context.openFileInput(context.getString(R.string.file_userSpectralFileSet, phoneNumber, deviceMac));
+        try (FileInputStream fis = context.openFileInput(context.getString(R.string.file_userSpectralFileMap, phoneNumber, deviceMac));
              ObjectInputStream ois = new ObjectInputStream(fis)
         ) {
-            userSpectralFileSet = (LinkedHashSet<String>) ois.readObject();
-//            userSpectralFileSet.clear();
-//            userSpectralFileSet.putAll((LinkedHashMap<String, String>) ois.readObject());
+            userSpectralFileMap.clear();
+            userSpectralFileMap.putAll((LinkedHashMap<String, PredictionResultDescription>) ois.readObject());
             Log.d(TAG, "LoadSpectralFileMapFromFile: 读取本地光谱索引成功！");
         } catch (IOException | ClassNotFoundException e) {
             Log.e(TAG, "LoadSpectralFileMapFromFile: 读取本地光谱索引失败！文件不存在或读取失败");
@@ -165,7 +167,7 @@ public class SpectralDataUtils {
         return itemList;
     }
 
-    //
+    // 将设备列表写入文件
     public static boolean writeDeviceListToFile(Context context, String
             userPhoneNumber, List<DeviceItem> itemList) {
         try (FileOutputStream fos = context.openFileOutput(context.getString(R.string.file_deviceItem, userPhoneNumber), 0);
