@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">NanoScan</string>
-    <string name="welcome_message_on_homepage">纺织品近红外光谱分析(开发中)</string>
+    <string name="app_name">纺织品近红外光谱分析</string>
+    <string name="welcome_message_on_homepage">纺织品近红外光谱分析</string>
     <string name="app_version_name">v0.9.0</string>
     <string name="pref_first_run">isFirstRun</string>
     <string name="pref_user_agreed">userAgreed</string>

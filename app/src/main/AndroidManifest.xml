@@ -56,9 +56,6 @@
             android:name=".DeviceListActivity"
             android:exported="false" />
         <activity
-            android:name=".guidingSteps.FirstStepAragment"
-            android:exported="false" />
-        <activity
             android:name=".guidingSteps.IntroGuideActivity"
             android:exported="false" />
         <activity
