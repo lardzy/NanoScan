@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -34,9 +33,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -59,7 +56,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private List<DeviceItem> deviceItem, newDeviceItemList;
     private MainActivityDeviceListAdapter deviceListAdapter;
     private OkHttpClient client;
-    private Context mcontext;
+    private Context mContext;
     private String username, loginToken, userPhoneNumber;
     private SharedPreferences sharedPreferences;
 
@@ -81,7 +78,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
                 .build();
 
-        mcontext = this;
+        mContext = this;
 
         initializeData();
         initComponent();

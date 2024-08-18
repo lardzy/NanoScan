@@ -97,6 +97,7 @@ public class NirSpectralData implements Serializable {
                 sb.append(predictResult.getMaterial());
                 sb.append(":");
                 sb.append(predictResult.getPercentage());
+                sb.append(";");
             }
             return sb.toString();
         } else {

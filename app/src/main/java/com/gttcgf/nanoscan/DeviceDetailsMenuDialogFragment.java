@@ -29,6 +29,7 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
     private DeviceDetailMenuAdapter deviceDetailMenuAdapter;
     private DeviceItem deviceItem;
     private OnMenuCloseListener onMenuCloseListener;
+    private ActivityOnItemClickListener activityOnItemClickListener;
 
     public static DeviceDetailsMenuDialogFragment newInstance(ArrayList<DeviceDetailMenuItems> menuItem, DeviceItem deviceItem) {
         Bundle args = new Bundle();
@@ -72,29 +73,33 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
         deviceDetailMenuAdapter.setOnItemClickListener(position -> {
             switch (position) {
                 case 0:
-                    Toast.makeText(getContext(), "点击了设备详情", Toast.LENGTH_SHORT).show();
                     startDismissAnimation();
                     deviceDetailMenuAdapter.setClickable(false);
+                    activityOnItemClickListener.onClick(position);
                     break;
                 case 1:
-                    Toast.makeText(getContext(), "点击了删除本地参比", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(getContext(), "点击了删除本地参比", Toast.LENGTH_SHORT).show();
                     startDismissAnimation();
                     deviceDetailMenuAdapter.setClickable(false);
+                    activityOnItemClickListener.onClick(position);
                     break;
                 case 2:
-                    Toast.makeText(getContext(), "点击了删除当前设备", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(getContext(), "点击了删除当前设备", Toast.LENGTH_SHORT).show();
                     startDismissAnimation();
                     deviceDetailMenuAdapter.setClickable(false);
+                    activityOnItemClickListener.onClick(position);
                     break;
                 case 3:
-                    Toast.makeText(getContext(), "点击了检索光谱", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "检索光谱即将加入...", Toast.LENGTH_SHORT).show();
                     startDismissAnimation();
                     deviceDetailMenuAdapter.setClickable(false);
+                    activityOnItemClickListener.onClick(position);
                     break;
                 case 4:
-                    Toast.makeText(getContext(), "点击了连接设备", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(getContext(), "点击了连接设备", Toast.LENGTH_SHORT).show();
                     startDismissAnimation();
                     deviceDetailMenuAdapter.setClickable(false);
+                    activityOnItemClickListener.onClick(position);
                     break;
             }
         });
@@ -166,5 +171,13 @@ public class DeviceDetailsMenuDialogFragment extends DialogFragment {
 
     public interface OnMenuCloseListener {
         void onClose();
+    }
+
+    public void setActivityOnItemClickListener(ActivityOnItemClickListener activityOnItemClickListener) {
+        this.activityOnItemClickListener = activityOnItemClickListener;
+    }
+
+    public interface ActivityOnItemClickListener{
+        void onClick(int position);
     }
 }

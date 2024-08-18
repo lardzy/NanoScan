@@ -675,6 +675,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             // TODO: 2024/8/16 将预测结果、扫描光谱保存到本地、将本地光谱上限设置为9999。
             ib_predict_result_save.setVisibility(View.INVISIBLE);
             pb_predict_result_saving.setVisibility(View.VISIBLE);
+            enableAllComponent(false);
             if (nirSpectralData != null && predictSessionUUID.equals(nirSpectralData.getPredictSessionUUID())
                     && SpectralDataUtils.saveSpectrumFileToLocal(this, userPhoneNumber, nirSpectralData)) {
                 Log.d(TAG, "扫描页-onClick: 光谱保存成功！");
@@ -684,7 +685,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     iv_predict_result_saved.setVisibility(View.VISIBLE);
                 }, 1000);
                 mHandler.postDelayed(() ->
-                        iv_predict_result_saved.startAnimation(checkFlagFadeout), 2000);
+                        iv_predict_result_saved.startAnimation(checkFlagFadeout), 1000);
             } else {
                 // 通常不会发生..
                 // 提示用户发生异常
@@ -694,6 +695,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 ib_predict_result_save.setVisibility(View.VISIBLE);
                 pb_predict_result_saving.setVisibility(View.INVISIBLE);
             }
+            enableAllComponent(true);
 
         }
     }
@@ -2430,7 +2432,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     }
                 } else if (currentScanMethod == ScanMethod.ScanAndPredict || currentScanMethod == ScanMethod.ScanOnly) {
                     // 初始化用于存储光谱数据的对象
-                    nirSpectralData = new NirSpectralData(deviceItem.getDeviceMac(), mXValues, mIntensityFloatArray, mReflectanceFloatArray,
+                    nirSpectralData = new NirSpectralData(deviceItem.getDeviceMac(), mXValues, mAbsorbanceFloatArray, mReflectanceFloatArray,
                             mIntensityFloatArray, mReferenceFloatArray, predictSessionUUID);
                 }
             }

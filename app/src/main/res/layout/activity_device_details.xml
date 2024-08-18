@@ -292,6 +292,7 @@
         android:id="@+id/recent_spectral_data_list_empty"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:visibility="visible"
         android:text="@string/recent_spectral_data_list_empty"
         android:textColor="@color/gray"
         android:textSize="14sp"

@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">NanoScan</string>
     <string name="welcome_message_on_homepage">纺织品近红外光谱分析(开发中)</string>
-    <string name="app_version_name">v0.0.1</string>
+    <string name="app_version_name">v0.9.0</string>
     <string name="pref_first_run">isFirstRun</string>
     <string name="pref_user_agreed">userAgreed</string>
     <string name="pref_user_phone_number">userPhoneNumber</string>
@@ -86,7 +86,7 @@
     <string name="user_agreement_content">
 <![CDATA[
 <h1>用户协议</h1>
-<p>感谢您选择ISC_NIRScan_Android应用程序（以下简称“本应用”）。在您使用本应用之前，请仔细阅读本用户协议（以下简称“协议”）中的条款和条件。通过下载、安装或使用本应用，您表示您接受本协议的条款。如果您不同意本协议的条款，请不要下载、安装或使用本应用。</p>
+<p>感谢您选择NanoScan应用程序（以下简称"本应用"）。在您使用本应用之前，请仔细阅读本用户协议（以下简称"协议"）中的条款和条件。通过下载、安装或使用本应用，您表示您接受本协议的条款。如果您不同意本协议的条款，请不要下载、安装或使用本应用。</p>
 
 <h2>兼容性声明</h2>
 <p>本应用已在以下智能手机上进行了测试：</p>
@@ -99,18 +99,18 @@
 <p>请注意，本应用的性能可能因设备而异，我们不能保证本应用在所有设备上的兼容性。</p>
 
 <h2>许可证信息</h2>
-<p>本应用使用了多个开源软件，包括但不限于由InnoSpectra Corporation、KS Technologies, LLC、以及其他方提供的软件。这些软件均根据其各自的许可证发布。</p>
+<p>本应用使用了多个开源软件，包括但不限于由广检集团材料检测中心以及其他方提供的软件。这些软件均根据其各自的许可证发布。</p>
 
 <h3>软件许可协议</h3>
 <p>本应用包含的软件可能受到一种或多种开源许可证的保护，具体许可证信息包括但不限于BSD许可证、Apache许可证2.0等。使用本应用意味着您同意遵守这些许可证的条款。</p>
 
 <h2>免责声明</h2>
-<p>本应用及其包含的所有软件均按“现状”提供，不提供任何形式的明示或暗示保证。使用本应用的风险由您自行承担。在任何情况下，本应用的开发者或贡献者均不对因使用或无法使用本应用造成的任何直接、间接、偶然、特殊、示范性或后果性损害负责。</p>
+<p>本应用及其包含的所有软件均按"现状"提供，不提供任何形式的明示或暗示保证。使用本应用的风险由您自行承担。在任何情况下，广检集团材料检测中心或本应用的开发者或贡献者均不对因使用或无法使用本应用造成的任何直接、间接、偶然、特殊、示范性或后果性损害负责。</p>
 
 <h2>同意</h2>
 <p>通过使用本应用，您表示您已阅读、理解并同意接受本协议的条款。我们保留随时修改本协议条款的权利，且无需另行通知。您继续使用本应用将被视为您接受了这些修改。</p>
 
-<p>© 2023 ISC_NIRScan_Android. 版权所有。</p>
+<p>© 2023 广检集团材料检测中心。版权所有。</p>
 ]]>
 </string>
     <string name="version_number">内测版本 v0.0.1</string>
@@ -208,5 +208,7 @@
     <string name="storage_spectrum_reached_maximum_1">本地保存光谱数据已达上限，当前(%1$s/%2$s)</string>
     <string name="storage_spectrum_reached_maximum_2">保存当前光谱将会导致最早保存光谱被删除</string>
     <string name="spectrum_date">采集日期：%s</string>
-    <string name="spectrum_predict_result">预测结果：%s</string>
+    <string name="spectrum_predict_result">结果参考：%s</string>
+    <string name="spectrum_predict_result_arrow_right">右侧箭头</string>
+    <string name="spectrum_predict_result_preview">采集时间：%1$s\n预测结果：%2$s</string>
 </resources>

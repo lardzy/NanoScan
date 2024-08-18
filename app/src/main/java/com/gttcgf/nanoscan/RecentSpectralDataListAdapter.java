@@ -20,6 +20,7 @@ public class RecentSpectralDataListAdapter extends RecyclerView.Adapter<RecentSp
 
     private List<String> dataList;
     private Context mContext;
+    private RecentSpectralDataListAdapter.OnItemClickListener myItemClickListener;
 
     public RecentSpectralDataListAdapter(Context mContext) {
         this.mContext = mContext;
@@ -46,6 +47,23 @@ public class RecentSpectralDataListAdapter extends RecyclerView.Adapter<RecentSp
         holder.spectrum_id.setText(String.valueOf((position + 1)));
         holder.tv_date.setText(mContext.getString(R.string.spectrum_date, Objects.requireNonNull(SpectralDataUtils.userSpectralFileMap.get(dataList.get(position))).getDateTime()));
         holder.tv_predict_result.setText(mContext.getString(R.string.spectrum_predict_result, Objects.requireNonNull(SpectralDataUtils.userSpectralFileMap.get(dataList.get(position))).getPredictResult()));
+        // 设定监听器
+        int adapterPosition = holder.getAdapterPosition();
+        if (adapterPosition != RecyclerView.NO_POSITION) {
+            holder.itemView.setOnClickListener(view -> {
+                if (myItemClickListener != null) {
+                    myItemClickListener.OnItemClick(adapterPosition, dataList);
+                }
+            });
+            holder.itemView.setOnLongClickListener(view -> {
+                if (myItemClickListener != null) {
+                    myItemClickListener.OnItemLongClick(adapterPosition, dataList);
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+        }
     }
 
     @Override
@@ -62,5 +80,15 @@ public class RecentSpectralDataListAdapter extends RecyclerView.Adapter<RecentSp
             tv_date = itemView.findViewById(R.id.tv_date);
             tv_predict_result = itemView.findViewById(R.id.tv_predict_result);
         }
+    }
+
+    public void setOnItemClickListener(RecentSpectralDataListAdapter.OnItemClickListener myItemClickListener) {
+        this.myItemClickListener = myItemClickListener;
+    }
+
+    public interface OnItemClickListener {
+        void OnItemClick(int position, List<String> dataList);
+
+        void OnItemLongClick(int position, List<String> dataList);
     }
 }

@@ -3,6 +3,8 @@ package com.gttcgf.nanoscan.tools;
 import android.content.Context;
 import android.util.Log;
 
+import com.github.mikephil.charting.data.Entry;
+import com.gttcgf.nanoscan.mEntry;
 import com.gttcgf.nanoscan.DeviceItem;
 import com.gttcgf.nanoscan.NirSpectralData;
 import com.gttcgf.nanoscan.PredictionResultDescription;
@@ -10,13 +12,13 @@ import com.gttcgf.nanoscan.R;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -76,6 +78,7 @@ public class SpectralDataUtils {
                         // 将光谱文件名称保存到set集合中
                         userSpectralFileMap.put(fileName, new PredictionResultDescription(nirSpectralData.getDateTime(),
                                 nirSpectralData.getPredictResultsDescription()));
+                        // TODO: 2024/8/18 提取为方法
                         // 写入光谱索引序列化对象
                         oos_map.writeObject(userSpectralFileMap);
                         if (spectrumFile.exists() && userSpectralFileMapFile.exists()) {
@@ -104,8 +107,33 @@ public class SpectralDataUtils {
         return false;
     }
 
+    // 仅保存光谱索引到本地
+    public static boolean saveSpectrumFileMapToLocal(Context context, String userPhoneNumber, String deviceMac) {
+        if (userPhoneNumber.isEmpty() || deviceMac.isEmpty()) {
+            return false;
+        }
+        // 获得光谱索引File对象
+        File userSpectralFileMapFile = new File(context.getFilesDir(), context.getString(R.string.file_userSpectralFileMap, userPhoneNumber,
+                deviceMac));
+        try (
+                FileOutputStream fos = new FileOutputStream(userSpectralFileMapFile);
+                ObjectOutputStream oos = new ObjectOutputStream(fos)
+        ) {
+            oos.writeObject(userSpectralFileMap);
+            if (userSpectralFileMapFile.exists()) {
+                Log.d(TAG, "saveSpectrumFileMapToLocal: 光谱索引文件保存成功。");
+                return true;
+            }
+        } catch (IOException e) {
+//            throw new RuntimeException(e);
+            Log.e(TAG, "saveSpectrumFileMapToLocal: 光谱索引文件保存失败！");
+            return false;
+        }
+        return false;
+    }
+
     // 从本地反序列化光谱索引集合
-    public static void LoadSpectralFileMapFromFile(Context context, String phoneNumber, String deviceMac) {
+    public static void loadSpectralFileMapFromFile(Context context, String phoneNumber, String deviceMac) {
         if (phoneNumber.isEmpty() || deviceMac.isEmpty()) {
             return;
         }
@@ -137,6 +165,31 @@ public class SpectralDataUtils {
             }
         } else {
             return null;
+        }
+    }
+
+    // 将NirSpectralData里面的mEntry对象ArrayList集合，转换为图表的Entry对象ArrayList集合。
+    public static ArrayList<Entry> nirSpectralDataProcessor(ArrayList<mEntry> mEntries) {
+        if (mEntries != null) {
+            ArrayList<Entry> entry = new ArrayList<>();
+            for (mEntry mEntry : mEntries) {
+                entry.add(new Entry(mEntry.getX(), mEntry.getY()));
+            }
+            return entry;
+        } else {
+            return null;
+        }
+    }
+
+    // 根据手机号、文件名删除本地红外光谱文件
+    public static boolean deleteNirSpectralDataFile(Context context, String phoneNumber, String fileName) {
+        Log.d(TAG, "deleteNirSpectralDataFile: deleteNirSpectralDataFile called.");
+        if (phoneNumber.isEmpty() || fileName.isEmpty()) {
+            return false;
+        } else {
+            File file = new File(context.getFilesDir(), phoneNumber);
+            File NirSpectralDataFile = new File(file, context.getString(R.string.file_nirSpectralData, fileName));
+            return NirSpectralDataFile.delete();
         }
     }
 
