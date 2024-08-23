@@ -2702,6 +2702,8 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         if (currentUUID.equals(predictSessionUUID)) {
             // 更新预测结果列表
             predictResultListAdapter.notifyItemRangeInserted(0, predictResults.size());
+            // 更新预测标题内容
+            tv_predict_result_title.setText(getString(R.string.result_title, String.valueOf(predictResults.size())));
             el_result.expand();
             // 显示保存按钮
             ib_predict_result_save.setVisibility(View.VISIBLE);

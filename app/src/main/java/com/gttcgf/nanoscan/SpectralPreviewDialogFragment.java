@@ -58,12 +58,14 @@ public class SpectralPreviewDialogFragment extends DialogFragment implements Vie
             fileName = bundle.getString("fileName");
         }
         nirSpectralData = SpectralDataUtils.readNirSpectralDataFromFile(mContext, userPhoneNumber, fileName);
+        if (nirSpectralData != null) {
+            // 添加4种图表
+            charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_ABSORBANCE, SpectralDataUtils.nirSpectralDataProcessor(Objects.requireNonNull(nirSpectralData).getmAbsorbanceFloat())));
+            charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_REFLECTANCE, SpectralDataUtils.nirSpectralDataProcessor(Objects.requireNonNull(nirSpectralData).getmReflectanceFloat())));
+            charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_INTENSITY, SpectralDataUtils.nirSpectralDataProcessor(Objects.requireNonNull(nirSpectralData).getmIntensityFloat())));
+            charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_REFERENCE, SpectralDataUtils.nirSpectralDataProcessor(Objects.requireNonNull(nirSpectralData).getmReferenceFloat())));
 
-        // 添加4种图表
-        charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_ABSORBANCE, SpectralDataUtils.nirSpectralDataProcessor(Objects.requireNonNull(nirSpectralData).getmAbsorbanceFloat())));
-        charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_REFLECTANCE, SpectralDataUtils.nirSpectralDataProcessor(Objects.requireNonNull(nirSpectralData).getmReflectanceFloat())));
-        charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_INTENSITY, SpectralDataUtils.nirSpectralDataProcessor(Objects.requireNonNull(nirSpectralData).getmIntensityFloat())));
-        charts.add(ScanResultLineChartFragment.newInstance(ScanResultLineChartFragment.CHART_REFERENCE, SpectralDataUtils.nirSpectralDataProcessor(Objects.requireNonNull(nirSpectralData).getmReferenceFloat())));
+        }
     }
 
     public void updateChartData() {
@@ -120,9 +122,10 @@ public class SpectralPreviewDialogFragment extends DialogFragment implements Vie
                 }
             }
         }).attach();
-        tv_preview_result.setText(getString(R.string.spectrum_predict_result_preview,
-                nirSpectralData.getDateTime(), nirSpectralData.getPredictResultsDescription()));
-
+        if (nirSpectralData != null) {
+            tv_preview_result.setText(getString(R.string.spectrum_predict_result_preview,
+                    nirSpectralData.getDateTime(), nirSpectralData.getPredictResultsDescription()));
+        }
     }
 
     @Override

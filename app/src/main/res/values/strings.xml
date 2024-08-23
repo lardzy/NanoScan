@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">纺织品近红外光谱分析</string>
     <string name="welcome_message_on_homepage">纺织品近红外光谱分析</string>
-    <string name="app_version_name">v0.9.0</string>
+    <string name="app_version_name">v0.9.1</string>
     <string name="pref_first_run">isFirstRun</string>
     <string name="pref_user_agreed">userAgreed</string>
     <string name="pref_user_phone_number">userPhoneNumber</string>
@@ -86,12 +86,11 @@
     <string name="user_agreement_content">
 <![CDATA[
 <h1>用户协议</h1>
-<p>感谢您选择NanoScan应用程序（以下简称"本应用"）。在您使用本应用之前，请仔细阅读本用户协议（以下简称"协议"）中的条款和条件。通过下载、安装或使用本应用，您表示您接受本协议的条款。如果您不同意本协议的条款，请不要下载、安装或使用本应用。</p>
+<p>感谢您选择纺织品近红外光谱分析应用程序（以下简称"本应用"）。在您使用本应用之前，请仔细阅读本用户协议（以下简称"协议"）中的条款和条件。通过下载、安装或使用本应用，您表示您接受本协议的条款。如果您不同意本协议的条款，请不要下载、安装或使用本应用。</p>
 
 <h2>兼容性声明</h2>
 <p>本应用已在以下智能手机上进行了测试：</p>
 <ul>
-<li>Samsung Galaxy J2 prime (SM-G532G), Android版本: 6.0.1</li>
 <li>Samsung Galaxy S8+ (SM-G955FD), Android版本: 9</li>
 <li>Redmi Note 9 Pro, Android版本: 11</li>
 <li>Google Pixel 6a, Android版本: 13</li>
@@ -195,13 +194,13 @@
     <string name="reference_update_success_dialog_content">本地参比更新成功，下一次扫描生效。</string>
     
     <string name="user_profile_account_icon_content_description">用户头像</string>
-    <string name="user_profile_welcome_title">欢迎使用 NanoScan！</string>
+    <string name="user_profile_welcome_title">欢迎使用\n纺织品近红外光谱分析！</string>
     <string name="user_profile_account">账户：%s</string>
     <string name="user_profile_item_logout">退出登录</string>
     <string name="user_profile_item_device_manage">设备管理</string>
     <string name="user_profile_item_about">关于..</string>
     <string name="imageview_default_description">背景</string>
-    <string name="result_title">参考预测结果</string>
+    <string name="result_title">参考预测结果(共%s条)</string>
     <string name="scan_result_list">%1$s.%2$s:%3$s</string>
     <string name="ib_predict_result_save_contentDescription">保存光谱及预测结果</string>
     <string name="storage_spectrum_reach_maximum">本地保存光谱数据即将到达上限，当前(%1$s/%2$s)</string>

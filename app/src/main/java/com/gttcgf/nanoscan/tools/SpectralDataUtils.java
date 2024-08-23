@@ -144,6 +144,7 @@ public class SpectralDataUtils {
             userSpectralFileMap.putAll((LinkedHashMap<String, PredictionResultDescription>) ois.readObject());
             Log.d(TAG, "LoadSpectralFileMapFromFile: 读取本地光谱索引成功！");
         } catch (IOException | ClassNotFoundException e) {
+            userSpectralFileMap.clear();
             Log.e(TAG, "LoadSpectralFileMapFromFile: 读取本地光谱索引失败！文件不存在或读取失败");
         }
     }
