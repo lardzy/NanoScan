@@ -72,7 +72,7 @@ public class UserProfileActivity extends AppCompatActivity {
                         break;
                     case 1:
                         // 打开关于界面
-                        Toast.makeText(mContext, "开发中...", Toast.LENGTH_LONG).show();
+                        Toast.makeText(mContext, "-广检集团材料检测中心开发-", Toast.LENGTH_LONG).show();
                         break;
                     case 2:
                         // 执行登出逻辑

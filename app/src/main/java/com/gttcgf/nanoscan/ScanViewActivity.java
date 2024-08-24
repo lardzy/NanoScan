@@ -1586,13 +1586,13 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     // 扫描完成，开始处理数据
     private void scanComplete() {
         Log.d(TAG, "扫描页-scanComplete called.");
-    /* todo:
+    /*
         1.更新设备物理按钮锁定状态-Ok
-        2.检查设备激活状态，未激活则关闭特定功能-ok
-        3.将扫描数据存储进NirSpectralData对象中
+        todo:2.检查设备激活状态，未激活则关闭特定功能
+        3.将扫描数据存储进NirSpectralData对象中-Ok
         4.获取光谱预测数据-ok
         5.根据选择的采集模式，处理光谱数据，比如：更新参比-ok
-        6.更新UI状态，包括图表、预测结果、是否保存结果等
+        6.更新UI状态，包括图表、预测结果、是否保存结果等-Ok
       */
         boolean isLockButton = getBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton, false);
         if (isLockButton) { // 设定设备按钮状态
@@ -1631,7 +1631,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                 }
                 // 将当次扫描的会话UUID上传服务器。
                 String UUID = predictSessionUUID;
-                // 将扫描数据汇总
+                // 将扫描数据汇总。
                 String inData = sb.toString();
                 try {
                     ServerPredictResult(testCode, UUID, inData, new ServerPredictResultCallback() {
@@ -1702,7 +1702,6 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
         jsonObject.put("test_id", testID);
         jsonObject.put("indata", inData);
         String json = jsonObject.toString();
-        System.out.println(json);
         RequestBody body = RequestBody.create(json, mediaType);
         Request request = new Request.Builder()
                 .url(url)
@@ -1759,7 +1758,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                             resultCallback.onSuccess();
                         }
                     } catch (JSONException e) {
-                        // TODO: 2024/7/17 json 解析失败，弹窗提醒。
+                        // 2024/7/17 json 解析失败，弹窗提醒-ok。
                         showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
                                 "预测结果异常", "返回结果解析异常，请重试！",
                                 false, "Dialog JSONException!");
@@ -1767,7 +1766,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
                     }
 
                 } else {
-                    // TODO: 2024/8/5 当返回的code为403时，通常是设备Token过期，此时刷新设备Token
+                    // TODO: 2024/8/5 当返回的code为403时，通常是设备Token过期，此时主动刷新设备Token
                     if (response.body() != null) {
                         String errorMsg = response.body().string();
                         String msg = getErrString(errorMsg);
@@ -2066,7 +2065,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             buf = new StringBuilder();
         }
         data.add(new String[]{"Wavelength (nm),Absorbance (AU),Reference Signal (unitless),Sample Signal (unitless)"});
-        // TODO: 2024/7/16 如果使用自定义参比，这里需要修改
+        // 2024/7/16 如果使用自定义参比，这里需要修改-ok
         int csvIndex;
         for (csvIndex = 0; csvIndex < scanResults.getLength(); csvIndex++) {
             double waves = scanResults.getWavelength()[csvIndex];
@@ -2082,7 +2081,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
             // 写入ADC数据
             WriteADCNotTimeStamp(data, CSV);
         } else {
-            // TODO: 2024/7/16 提示设备固件过低，然后不写入ADC
+            // 2024/7/16 提示设备固件过低，然后不写入ADC-ok
             showDialog(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, "设备固件版本与软件不匹配",
                     "设备固件版本与软件不匹配，测量结果将忽略ADC数据", false, "fw_level_standard not comparable!");
         }
