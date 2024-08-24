@@ -112,7 +112,7 @@
 <p>© 2023 广检集团材料检测中心。版权所有。</p>
 ]]>
 </string>
-    <string name="version_number">内测版本 v0.0.1</string>
+    <string name="version_number">内测版本 v0.9.1</string>
     <string name="card_id">N/A</string>
     <string name="NA">N/A</string>
     <string name="device_information_dialog_device_name">设备名称：</string>
