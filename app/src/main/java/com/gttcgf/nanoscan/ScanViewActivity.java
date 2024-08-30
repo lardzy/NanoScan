@@ -2511,7 +2511,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
 
     // TODO: 2024/7/17 增加主动删除参比的功能
     private void saveReferenceIntensityToFile() {
-        try (FileOutputStream fos = openFileOutput("localReferenceIntensity.ser", MODE_PRIVATE);
+        try (FileOutputStream fos = openFileOutput(getString(R.string.file_localReferenceIntensity, deviceItem.getDeviceMac()), MODE_PRIVATE);
              ObjectOutputStream oos = new ObjectOutputStream(fos)) {
             oos.writeObject(localReferenceIntensity);
             Log.d(TAG, "扫描页-设备用户参比文件已写入本地文件。");
@@ -2521,7 +2521,7 @@ public class ScanViewActivity extends AppCompatActivity implements View.OnClickL
     }
 
     private LocalReferenceIntensity loadReferenceIntensityFromFile() {
-        try (FileInputStream fis = openFileInput("localReferenceIntensity.ser");
+        try (FileInputStream fis = openFileInput(getString(R.string.file_localReferenceIntensity, deviceItem.getDeviceMac()));
              ObjectInputStream ois = new ObjectInputStream(fis)) {
             Log.d(TAG, "扫描页-loadReferenceIntensityFromFile 成功");
             LocalReferenceIntensity referenceIntensity = (LocalReferenceIntensity) ois.readObject();

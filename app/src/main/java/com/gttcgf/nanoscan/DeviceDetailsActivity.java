@@ -429,7 +429,7 @@ public class DeviceDetailsActivity extends AppCompatActivity implements View.OnC
     }
 
     private void deleteReferenceIntensityFile() {
-        File referenceFile = new File(getFilesDir(), "localReferenceIntensity.ser");
+        File referenceFile = new File(getFilesDir(), getString(R.string.file_localReferenceIntensity, deviceItem.getDeviceMac()));
         boolean deleted = referenceFile.delete();
         if (deleted) {
             Toast.makeText(this, "本地参比已成功删除！", Toast.LENGTH_LONG).show();

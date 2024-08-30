@@ -17,6 +17,7 @@
     <string name="file_deviceItem">%s_deviceItem.ser</string>
     <string name="file_nirSpectralData">%s.ser</string>
     <string name="file_userSpectralFileMap">%1$s_%2$s_userSpectralFileMap.ser</string>
+    <string name="file_localReferenceIntensity">%s_localReferenceIntensity.ser</string>
 
 
     <string name="user_agreement">用户协议</string>
