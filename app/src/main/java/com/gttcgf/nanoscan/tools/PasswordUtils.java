@@ -30,27 +30,13 @@ public class PasswordUtils {
     }
 
     public static String getBytetoString(byte[] configName) {
-        byte[] byteChars = new byte[40];
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        byte[] var3 = byteChars;
-        int i = byteChars.length;
-        for (int var5 = 0; var5 < i; ++var5) {
-            byte b = var3[var5];
-            byteChars[b] = 0;
-        }
-        String s = null;
-        for (i = 0; i < configName.length; ++i) {
-            byteChars[i] = configName[i];
-            if (configName[i] == 0) {
+        for (byte b : configName) {
+            if (b == 0) {
                 break;
             }
-            os.write(configName[i]);
+            os.write(b);
         }
-        try {
-            s = os.toString("UTF-8");
-        } catch (UnsupportedEncodingException var7) {
-            var7.printStackTrace();
-        }
-        return s;
+        return os.toString(StandardCharsets.UTF_8.name());
     }
 }
