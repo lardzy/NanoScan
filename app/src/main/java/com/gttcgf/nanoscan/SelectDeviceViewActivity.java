@@ -179,7 +179,7 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
     @SuppressLint("MissingPermission")
     private void scanLeDevice(boolean enable) {
         if (mBluetoothLeScanner == null) {
-            Toast.makeText(this, "蓝牙未启用！", Toast.LENGTH_SHORT);
+            Toast.makeText(this, "蓝牙未启用！", Toast.LENGTH_SHORT).show();
         } else {
             if (enable) {
                 handler.postDelayed(() -> {
