@@ -111,9 +111,9 @@ public class CircularProgressBarView extends View {
      * @param time     动画时间范围
      */
     public synchronized void setProgress(final int progress, int time) {
+        mProgress = Math.max(0, Math.min(progress, maxProgress));
         anim.setDuration(time);
-        this.startAnimation(anim);
-        this.mProgress = progress;
+        startAnimation(anim);
     }
 
     // 动画
