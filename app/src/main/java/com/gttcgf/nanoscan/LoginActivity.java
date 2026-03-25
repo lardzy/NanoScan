@@ -24,6 +24,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.gttcgf.nanoscan.data.network.ApiClient;
+import com.gttcgf.nanoscan.data.network.ApiErrorParser;
 import com.gttcgf.nanoscan.guidingSteps.IntroGuideActivity;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
 import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
@@ -33,7 +35,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -44,7 +45,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
-    private static final String serverUrl = "https://newnirtechnolgy.top/api";
     private static final String IPIFY_URL = "https://api.ipify.org";
     private static final String TAG = "LoginActivity";
     // todo:登录标志位
@@ -64,11 +64,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        client = new OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
-                .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
-                .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
-                .build();
+        client = ApiClient.getClient();
         context = this;
         // 初始化组件
         initialComponent();
@@ -255,7 +251,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
     // 服务器验证登录信息
     private void serverVerification(ServerLoginVerificationCallback verificationCallback) throws JSONException {
-        String url = serverUrl + "/users/login";
+        String url = ApiClient.BASE_URL + "/users/login";
         MediaType JSON = MediaType.get("application/json");
         JSONObject userObject = new JSONObject();
         userObject.put("username", phone_number.getText().toString());
@@ -304,23 +300,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                     if (response.body() != null) {
                         String string = response.body().string();
                         if (!string.isEmpty()) {
-                            try {
-                                JSONObject jsonObject1 = new JSONObject(string);
-                                JSONArray jsonArray = jsonObject1.getJSONArray("errors");
-                                StringBuilder sb = new StringBuilder(message);
-                                for (int i = 0; i < jsonArray.length(); i++) {
-                                    sb.append(jsonArray.getString(i));
-                                }
-                                message = sb.toString();
-                                Log.e(TAG, "登录界面-服务器验证登录信息失败，错误信息：" + string);
-                            } catch (JSONException e) {
-//                            throw new RuntimeException(e);
-                                Log.e(TAG, "登录界面-服务器验证登录信息失败后，解析返回json中失败原因内容发送错误！\n" + e);
-                                // 添加错误处理代码
-                                runOnUiThread(() -> {
-                                    Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
-                                });
-                            }
+                            message = ApiErrorParser.parse(string);
+                            Log.e(TAG, "登录界面-服务器验证登录信息失败，错误信息：" + string);
                         }
                     }
                     verificationCallback.onFailed(message);

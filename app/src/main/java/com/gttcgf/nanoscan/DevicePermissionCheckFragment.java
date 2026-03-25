@@ -27,26 +27,14 @@ import androidx.fragment.app.FragmentActivity;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+import com.gttcgf.nanoscan.data.common.RepositoryCallback;
+import com.gttcgf.nanoscan.data.repository.DeviceRepository;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
 import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
 import com.gttcgf.nanoscan.tools.PortraitCaptureActivity;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
 public class DevicePermissionCheckFragment extends DialogFragment implements View.OnClickListener {  // 选择蓝牙设备时，弹出的验证弹窗
     private static final String TAG = "DevicePermissionCheckFr";
@@ -56,10 +44,9 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
     private TextView tv_dialog_subtitle;
     private Button buttonCancel, buttonConfirm;
     private ProgressBar button_confirm_progress;
-    private static final String serverUrl = "https://newnirtechnolgy.top/api";
-    private OkHttpClient client;
     private String username, password, pcode, mcode, token, deviceToken;
     private VerifyDevicePermissionCallback permissionCallback;
+    private DeviceRepository deviceRepository;
 
     public static DevicePermissionCheckFragment newInstance(Bundle bundle, VerifyDevicePermissionCallback permissionCallback) {
         DevicePermissionCheckFragment fragment = new DevicePermissionCheckFragment();
@@ -138,7 +125,7 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
     }
 
     // 用于校验“校验码”的内容格式和服务器授权
-    private void verifyCheckCode(String result, VerifyDevicePermission devicePermission) throws JSONException {
+    private void verifyCheckCode(String result, VerifyDevicePermission devicePermission) {
         if (result.isEmpty()) {
             Log.e(TAG, "添加设备授权弹窗-授权码输入为空");
             devicePermission.onFailed();
@@ -153,90 +140,20 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
             return;
         }
 
-        // 授权码格式正确，继续进行服务器授权验证
-
-        String url = serverUrl + "/add_machine";
-        MediaType mediaType = MediaType.get("application/json");
-        JSONObject userObject = new JSONObject();
-        userObject.put("username", username);
-        userObject.put("password", password);
-        userObject.put("deviceauthorizationcode", result);
-        userObject.put("pcode", pcode);
-        userObject.put("mcode", mcode);
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("user", userObject);
-
-        String json = jsonObject.toString();
-
-        Log.d(TAG, "添加设备授权弹窗-请求体内容已经构建完成：\n" + json);
-
-        RequestBody body = RequestBody.create(json, mediaType);
-        Request request = new Request.Builder()
-                .url(url)
-                .addHeader("Authorization", token)
-                .post(body)
-                .build();
-
-        client.newCall(request).enqueue(new Callback() {
+        deviceRepository.authorizeDevice(username, password, pcode, mcode, token, result, new RepositoryCallback<String>() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.e(TAG, "添加设备授权弹窗-服务器请求失败，考虑网络问题");
-                devicePermission.onFailed();
+            public void onSuccess(String data) {
+                deviceToken = data;
+                devicePermission.onSuccess();
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful() && response.code() == 200 && response.body() != null) {
-                    Log.e(TAG, "添加设备授权弹窗-服务器请求成功！\ncode:" + response.code());
-                    // 登录成功！
-                    // 解析响应结果
-                    try {
-                        JSONObject jsonObject = new JSONObject(response.body().string());
-                        JSONObject userObject = jsonObject.getJSONObject("user");
-                        username = userObject.getString("username");
-                        deviceToken = userObject.getString("token");
-
-                        Log.d(TAG, "添加设备授权弹窗-服务器响应体解析成功！\nusername:" + username + "\ndeviceToken:" + deviceToken);
-                        devicePermission.onSuccess();
-                    } catch (JSONException e) {
-//                        throw new RuntimeException(e);
-                        Log.e(TAG, "添加设备授权弹窗-服务器响应体json解析失败！\n" + e);
-                        // 添加错误处理代码
-                        if (getActivity() != null) {
-                            getActivity().runOnUiThread(() -> {
-                                Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
-                            });
-                        }
-                        devicePermission.onFailed();
-                    }
-                } else {
-                    Log.e(TAG, "添加设备授权弹窗-服务器响应代码为错误！\ncode:" + response.code());
-                    String message = "";
-                    if (response.body() != null) {
-                        String string = response.body().string();
-                        if (!string.isEmpty()) {
-                            try {
-                                JSONObject jsonObject1 = new JSONObject(string);
-                                JSONArray jsonArray = jsonObject1.getJSONArray("errors");
-                                StringBuilder sb = new StringBuilder(message);
-                                for (int i = 0; i < jsonArray.length(); i++) {
-                                    sb.append(jsonArray.getString(i));
-                                }
-                                message = sb.toString();
-                            } catch (JSONException e) {
-//                            throw new RuntimeException(e);
-                                Log.e(TAG, "添加设备授权弹窗-服务器响应体json解析失败！\n" + e);
-                                // 添加错误处理代码
-                                if (getActivity() != null) {
-                                    getActivity().runOnUiThread(() -> {
-                                        Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
-                                    });
-                                }
-                            }
-                        }
-                    }
-                    devicePermission.onFailed();
+            public void onError(String message) {
+                FragmentActivity activity = getActivity();
+                if (activity != null && message != null && !message.isEmpty()) {
+                    activity.runOnUiThread(() -> Toast.makeText(context, message, Toast.LENGTH_LONG).show());
                 }
+                devicePermission.onFailed();
             }
         });
     }
@@ -250,38 +167,33 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
             buttonConfirm.setText("");
             button_confirm_progress.setVisibility(View.VISIBLE);
 
-            try {
-                verifyCheckCode(check_code.getText().toString(), new VerifyDevicePermission() {
-                    @Override
-                    public void onSuccess() {
-                        Log.d(TAG, "添加设备授权弹窗-设备授权码验证成功！");
-                        permissionCallback.onSuccess(deviceToken);
-                        if (isResumed()) {
-                            dismiss();
-                        }
+            verifyCheckCode(check_code.getText().toString(), new VerifyDevicePermission() {
+                @Override
+                public void onSuccess() {
+                    Log.d(TAG, "添加设备授权弹窗-设备授权码验证成功！");
+                    permissionCallback.onSuccess(deviceToken);
+                    if (isResumed()) {
+                        dismiss();
                     }
+                }
 
-                    @Override
-                    public void onFailed() {
-                        Log.e(TAG, "添加设备授权弹窗-设备授权码验证失败！");
-                        FragmentActivity activity = getActivity();
-                        if (activity != null) {
-                            activity.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    buttonConfirm.setText(getString(R.string.confirm));
-                                    button_confirm_progress.setVisibility(View.INVISIBLE);
-                                    Toast.makeText(activity, "设备授权失败！请检查授权码是否正确。", Toast.LENGTH_LONG).show();
-                                    EnableAllComponent(true);
-                                }
-                            });
-                        }
+                @Override
+                public void onFailed() {
+                    Log.e(TAG, "添加设备授权弹窗-设备授权码验证失败！");
+                    FragmentActivity activity = getActivity();
+                    if (activity != null) {
+                        activity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                buttonConfirm.setText(getString(R.string.confirm));
+                                button_confirm_progress.setVisibility(View.INVISIBLE);
+                                Toast.makeText(activity, "设备授权失败！请检查授权码是否正确。", Toast.LENGTH_LONG).show();
+                                EnableAllComponent(true);
+                            }
+                        });
                     }
-                });
-            } catch (JSONException e) {
-                // todo:进行异常处理
-                throw new RuntimeException(e);
-            }
+                }
+            });
 
         } else if (view.getId() == R.id.button_cancel) {
             dismiss();
@@ -328,11 +240,7 @@ public class DevicePermissionCheckFragment extends DialogFragment implements Vie
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setCancelable(false);
-        client = new OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
-                .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
-                .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
-                .build();
+        deviceRepository = new DeviceRepository(requireContext().getApplicationContext());
         // 初始化接收到的数据（用户名等）
         initialData();
     }

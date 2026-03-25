@@ -25,25 +25,23 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentActivity;
 
+import com.gttcgf.nanoscan.data.network.ApiClient;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
 public class VerificationCodeDialogFragment extends DialogFragment {
     private static final long fetchCaptchaImage_DELAY = 1000;  // 刷新验证码的间隔时长
     private static final String TAG = "VerificationCodeDialogF";
-    private static final String serverUrl = "https://newnirtechnolgy.top/api";
-    private OkHttpClient client;
     private Context context;
     private String phone_number;
     private ImageView imageViewVerificationCode;
@@ -77,20 +75,12 @@ public class VerificationCodeDialogFragment extends DialogFragment {
 
     // 获取验证码图片
     private void fetchCaptchaImage(String phone_number) {
-        client = new OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
-                .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
-                .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
-                .build();
-//        HttpUrl.Builder urlBuilder = HttpUrl.parse(serverUrl + "/request_digit_code").newBuilder();
-//        urlBuilder.addQueryParameter("phone_number", phone_number);
-//        String url = urlBuilder.toString();
-        String url = serverUrl + "/captcha/" + phone_number;
+        String url = ApiClient.BASE_URL + "/captcha/" + phone_number;
         Request request = new Request.Builder()
                 .url(url)
                 .build();
 
-        client.newCall(request).enqueue(new Callback() {
+        ApiClient.getClient().newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 e.printStackTrace();

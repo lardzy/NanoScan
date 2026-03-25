@@ -31,6 +31,8 @@ import androidx.fragment.app.DialogFragment;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+import com.gttcgf.nanoscan.data.network.ApiClient;
+import com.gttcgf.nanoscan.data.network.ApiErrorParser;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
 import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
 import com.gttcgf.nanoscan.tools.PortraitCaptureActivity;
@@ -41,7 +43,6 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -52,7 +53,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class RegisterActivity extends AppCompatActivity {
-    private static final String serverUrl = "https://newnirtechnolgy.top/api";
     private static final String TAG = "RegisterActivity";
     private EditText phone_number, sms_verification_code, password, check_code;
     private ProgressBar progress;
@@ -86,11 +86,7 @@ public class RegisterActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_register);
         this.context = this;
-        client = new OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时时间
-                .readTimeout(30, TimeUnit.SECONDS) // 读取超时时间
-                .writeTimeout(30, TimeUnit.SECONDS) // 写入超时时间
-                .build();
+        client = ApiClient.getClient();
 
         handler = new Handler(Looper.getMainLooper());
         // 初始化布局组件
@@ -310,7 +306,7 @@ public class RegisterActivity extends AppCompatActivity {
 
     // 将注册信息发送至服务器进行验证。
     private void serverVerification(ServerRegisterVerificationCallback serverRegisterVerificationCallback) throws JSONException {
-        String uri = serverUrl + "/users/register";
+        String uri = ApiClient.BASE_URL + "/users/register";
         MediaType JSON = MediaType.get("application/json");
         JSONObject jsonObject = new JSONObject();
         JSONObject userObject = new JSONObject();
@@ -356,21 +352,7 @@ public class RegisterActivity extends AppCompatActivity {
                     if (response.body() != null) {
                         String string = response.body().string();
                         if (!string.isEmpty()) {
-                            try {
-                                JSONObject jsonObject1 = new JSONObject(string);
-                                JSONArray jsonArray = jsonObject1.getJSONArray("errors");
-                                StringBuilder sb = new StringBuilder(message);
-                                for (int i = 0; i < jsonArray.length(); i++) {
-                                    sb.append(jsonArray.getString(i));
-                                }
-                                message = sb.toString();
-                            } catch (JSONException e) {
-                                Log.e(TAG, "json解析失败！" + e);
-                                // 添加错误处理代码
-                                runOnUiThread(() -> {
-                                    Toast.makeText(context, "服务器返回的数据格式错误，请稍后再试", Toast.LENGTH_LONG).show();
-                                });
-                            }
+                            message = ApiErrorParser.parse(string);
                         }
                     }
                     serverRegisterVerificationCallback.onFailed(message);

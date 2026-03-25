@@ -1,11 +1,8 @@
 package com.gttcgf.nanoscan;
 
-import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -14,17 +11,12 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
-import android.widget.ImageButton;
-import android.widget.ListView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -34,34 +26,33 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.ISCSDK.ISCNIRScanSDK;
+import com.gttcgf.nanoscan.data.model.UserSession;
+import com.gttcgf.nanoscan.databinding.ActivitySelectDeviceViewBinding;
+import com.gttcgf.nanoscan.viewmodel.SelectDeviceViewModel;
 
 import java.util.ArrayList;
 
-public class SelectDeviceViewActivity extends AppCompatActivity implements View.OnClickListener { // 选择蓝牙设备界面
+public class SelectDeviceViewActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "SelectDeviceViewActivit";
     private static final int REQUEST_CODE_PERMISSIONS = 101;
     private static final String[] REQUIRED_PERMISSIONS = getRequiredPermissions();
-    private static String DEVICE_NAME = "NIR";  // 名称前缀
-    public BluetoothLeScanner mBluetoothLeScanner;
-    private ImageButton imageButton_back;
-    private ListView lv_nanoDevices;
-    private TextView tv_loading;
-    private ProgressBar pb_loadDevice;
-    private Context context;
+    private static String DEVICE_NAME = "NIR";
+
+    private ActivitySelectDeviceViewBinding binding;
+    private SelectDeviceViewModel viewModel;
+    private BluetoothLeScanner bluetoothLeScanner;
+    private BluetoothAdapter bluetoothAdapter;
     private Handler handler;
-    private BluetoothAdapter mBluetoothAdapter;
     private ScanCallback scannerCallback;
-    private ArrayList<ISCNIRScanSDK.NanoDevice> nanoDeviceList = new ArrayList<>();
+    private final ArrayList<ISCNIRScanSDK.NanoDevice> nanoDeviceList = new ArrayList<>();
     private NanoScanAdapter nanoScanAdapter;
-    private SharedPreferences sharedPreferences;
-    private String pref_user_phone_number, pref_user_password, pref_user_token, pref_user_ipAddress;
     private boolean isStopped = false;
 
-    // 需要的权限列表，获取位置和蓝牙相关权限。
     private static String[] getRequiredPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             return new String[]{
                     Manifest.permission.BLUETOOTH_SCAN,
                     Manifest.permission.BLUETOOTH_CONNECT,
@@ -69,180 +60,165 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION
             };
-        } else { // Android 6.0 到 Android 11
-            // 问题来了，只测过9.0-11，其他版本没有测过，不知道会不会有问题
-            return new String[]{
-                    Manifest.permission.BLUETOOTH,
-                    Manifest.permission.BLUETOOTH_ADMIN,
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-            };
         }
-
+        return new String[]{
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+        };
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_select_device_view);
-        this.context = this;
+        binding = ActivitySelectDeviceViewBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        viewModel = new ViewModelProvider(this).get(SelectDeviceViewModel.class);
         if (!allPermissionsGranted()) {
-            Toast.makeText(SelectDeviceViewActivity.this, "请授予权限以连接设备！", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "请授予权限以连接设备！", Toast.LENGTH_LONG).show();
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
             finish();
             return;
         }
-        initialData();
-        initialComponent();
 
-        // 获取 BluetoothLeScanner 实例
-        BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        mBluetoothAdapter = bluetoothManager.getAdapter();
-        if (mBluetoothAdapter != null) {
-            mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
-        } else {
-            Toast.makeText(this, "蓝牙未启用！", Toast.LENGTH_SHORT).show();
-        }
-
-        nanoScanAdapter = new NanoScanAdapter(this, nanoDeviceList);
-        lv_nanoDevices.setAdapter(nanoScanAdapter);
-
-        lv_nanoDevices.setOnItemClickListener((adapterView, view, i, l) ->
-                confirmationDialog(nanoDeviceList.get(i).getNanoMac(), nanoDeviceList.get(i).getNanoName()));
-
-        // 实例化handle
+        DEVICE_NAME = ISCNIRScanSDK.getStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.DeviceFilter, "NIR");
         handler = new Handler();
-
-        // 扫描设备
+        initComponent();
+        initBluetooth();
+        observeViewModel();
+        viewModel.onScanStarted();
         scanLeDevice(true);
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.main, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
     }
 
-    private void initialData() {
-        DEVICE_NAME = ISCNIRScanSDK.getStringPref(this, ISCNIRScanSDK.SharedPreferencesKeys.DeviceFilter, "NIR");
-        sharedPreferences = getSharedPreferences("default", MODE_PRIVATE);
-        pref_user_phone_number = sharedPreferences.getString(getString(R.string.pref_user_phone_number), "");
-        pref_user_password = sharedPreferences.getString(getString(R.string.pref_user_password), "");
-        pref_user_token = sharedPreferences.getString(getString(R.string.pref_user_token), "");
-        pref_user_ipAddress = sharedPreferences.getString(getString(R.string.pref_user_ipAddress), "");
-    }
+    private void initComponent() {
+        binding.imageButtonBack.setOnClickListener(this);
+        nanoScanAdapter = new NanoScanAdapter(this, nanoDeviceList);
+        binding.lvNanoDevices.setAdapter(nanoScanAdapter);
+        binding.lvNanoDevices.setOnItemClickListener((adapterView, view, position, l) ->
+                confirmationDialog(nanoDeviceList.get(position).getNanoMac(), nanoDeviceList.get(position).getNanoName()));
 
-    private void initialComponent() {
-        imageButton_back = findViewById(R.id.imageButton_back);
-        lv_nanoDevices = findViewById(R.id.lv_nanoDevices);
-        tv_loading = findViewById(R.id.tv_loading);
-        pb_loadDevice = findViewById(R.id.pb_loadDevice);
-        imageButton_back.setOnClickListener(this);
-
-
-        // 设置扫描回调
         scannerCallback = new ScanCallback() {
-            // 处理单个扫描结果
             @Override
             public void onScanResult(int callbackType, ScanResult result) {
                 super.onScanResult(callbackType, result);
                 BluetoothDevice device = result.getDevice();
-
-                // 如果扫描到的设备名称不为null，且名称中包含设定的名称前缀，且getScanRecord对象不为null!
                 @SuppressLint("MissingPermission")
                 String name = device.getName();
                 if (name != null && name.contains(DEVICE_NAME) && result.getScanRecord() != null) {
-                    boolean isDeviceInList = false;
-                    // 新建ISCNIRScanSDK.NanoDevice对象
                     ISCNIRScanSDK.NanoDevice nanoDevice = new ISCNIRScanSDK.NanoDevice(device, result.getRssi(), result.getScanRecord().getBytes());
-                    // 判断设备是否已在列表中，如果已经在，就该设备更新信号强度。
-                    for (ISCNIRScanSDK.NanoDevice d : nanoDeviceList) {
-                        if (d.getNanoMac().equals(device.getAddress())) {
-                            isDeviceInList = true;
-                            d.setRssi(result.getRssi());
-                            nanoScanAdapter.notifyDataSetChanged();
-                        }
-                    }
-                    // 如果不在设备列表中，则添加到设备集合中，并通知列表更新。
-                    if (!isDeviceInList) {
-                        pb_loadDevice.setVisibility(View.INVISIBLE);
-                        tv_loading.setVisibility(View.INVISIBLE);
-                        nanoDeviceList.add(nanoDevice);
-                        nanoScanAdapter.notifyDataSetChanged();
-                    }
+                    viewModel.onDeviceFound(nanoDevice);
                 }
             }
         };
     }
 
-    @SuppressLint("MissingPermission")
-    private void scanLeDevice(boolean enable) {
-        if (mBluetoothLeScanner == null) {
-            Toast.makeText(this, "蓝牙未启用！", Toast.LENGTH_SHORT).show();
-        } else {
-            if (enable) {
-                handler.postDelayed(() -> {
-                    mBluetoothLeScanner.stopScan(scannerCallback);
-                    pb_loadDevice.setVisibility(View.INVISIBLE);
-                    tv_loading.setVisibility(View.INVISIBLE);
-                    // 当列表依旧为空时，弹窗提示扫描超时
-                    if (nanoDeviceList.isEmpty()) {
-                        if (!isFinishing() && !isDestroyed() && !isStopped) {
-                            GeneralMessageDialogFragment messageDialogFragment = GeneralMessageDialogFragment.newInstance(GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR, getString(R.string.scanning_bluetooth_device_timeout_title)
-                                    , getString(R.string.scanning_bluetooth_device_timeout_content));
-                            messageDialogFragment.show(getSupportFragmentManager(), "DeviceScanTimeout");
-                        } else {
-                            Log.e(TAG, "连接失败弹窗-弹窗时Activity已销毁。");
-                            finish();
-                        }
-                    }
-//                    Toast.makeText(this, "蓝牙设备扫描已停止", Toast.LENGTH_SHORT).show();
-                }, ISCNIRScanSDK.SCAN_PERIOD);  // 6000L
-                Toast.makeText(this, "扫描蓝牙设备中...", Toast.LENGTH_LONG).show();
-                mBluetoothLeScanner.startScan(scannerCallback);
-            } else {
-                mBluetoothLeScanner.startScan(scannerCallback);
-            }
+    private void initBluetooth() {
+        BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        bluetoothAdapter = bluetoothManager.getAdapter();
+        if (bluetoothAdapter != null) {
+            bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+            return;
         }
+        Toast.makeText(this, "蓝牙未启用！", Toast.LENGTH_SHORT).show();
     }
 
-    // 显示弹窗并验证
+    private void observeViewModel() {
+        viewModel.getUiState().observe(this, state -> {
+            nanoDeviceList.clear();
+            nanoDeviceList.addAll(state.getDevices());
+            nanoScanAdapter.notifyDataSetChanged();
+            binding.pbLoadDevice.setVisibility(state.isLoading() ? View.VISIBLE : View.INVISIBLE);
+            binding.tvLoading.setVisibility(state.isLoading() ? View.VISIBLE : View.INVISIBLE);
+        });
+
+        viewModel.getEvents().observe(this, event -> {
+            SelectDeviceViewModel.SelectDeviceAction action = event != null ? event.getContentIfNotHandled() : null;
+            if (action == null) {
+                return;
+            }
+            switch (action.getType()) {
+                case SHOW_TIMEOUT_DIALOG:
+                    if (!isFinishing() && !isDestroyed() && !isStopped) {
+                        GeneralMessageDialogFragment messageDialogFragment = GeneralMessageDialogFragment.newInstance(
+                                GeneralMessageDialogFragment.MESSAGE_TYPE_ERROR,
+                                getString(R.string.scanning_bluetooth_device_timeout_title),
+                                getString(R.string.scanning_bluetooth_device_timeout_content)
+                        );
+                        messageDialogFragment.show(getSupportFragmentManager(), "DeviceScanTimeout");
+                    } else {
+                        finish();
+                    }
+                    break;
+                case SHOW_TOAST:
+                    Toast.makeText(this, action.getMessage(), Toast.LENGTH_LONG).show();
+                    break;
+                case FINISH_WITH_RESULT:
+                    Intent resultIntent = new Intent();
+                    resultIntent.putExtra("NAME", action.getDeviceName());
+                    resultIntent.putExtra("MAC", action.getMacAddress());
+                    resultIntent.putExtra("DEVICE_TOKEN", action.getToken());
+                    setResult(Activity.RESULT_OK, resultIntent);
+                    GeneralMessageDialogFragment messageDialogFragment = GeneralMessageDialogFragment.newInstance(
+                            GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK,
+                            getString(R.string.device_added_successfully),
+                            getString(R.string.device_added_successfully_content, action.getDeviceName())
+                    );
+                    messageDialogFragment.show(getSupportFragmentManager(), "Device added successfully");
+                    break;
+            }
+        });
+    }
+
+    @SuppressLint("MissingPermission")
+    private void scanLeDevice(boolean enable) {
+        if (bluetoothLeScanner == null) {
+            Toast.makeText(this, "蓝牙未启用！", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (enable) {
+            handler.postDelayed(() -> {
+                bluetoothLeScanner.stopScan(scannerCallback);
+                viewModel.onScanFinished(isStopped);
+            }, ISCNIRScanSDK.SCAN_PERIOD);
+            Toast.makeText(this, "扫描蓝牙设备中...", Toast.LENGTH_LONG).show();
+            bluetoothLeScanner.startScan(scannerCallback);
+            return;
+        }
+        bluetoothLeScanner.stopScan(scannerCallback);
+        viewModel.onScanFinished(isStopped);
+    }
+
     public void confirmationDialog(String mac, final String name) {
+        UserSession session = viewModel.getCurrentSession();
         Bundle bundle = new Bundle();
-        bundle.putString("username", pref_user_phone_number);
-        bundle.putString("password", pref_user_password);
-        bundle.putString("pcode", pref_user_ipAddress);
+        bundle.putString("username", session.getPhoneNumber());
+        bundle.putString("password", session.getPassword());
+        bundle.putString("pcode", session.getIpAddress());
         bundle.putString("mcode", mac);
-        bundle.putString("token", pref_user_token);
+        bundle.putString("token", session.getToken());
 
         DevicePermissionCheckFragment checkFragment = DevicePermissionCheckFragment.newInstance(bundle, new DevicePermissionCheckFragment.VerifyDevicePermissionCallback() {
             @Override
             public void onSuccess(String token) {
                 if (!token.isEmpty()) {
-                    final String deviceMac = mac;
-                    // 使用SDK中的方法，存储选中的设备信息，包括设备mac和名称
-                    storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceMac);
-                    storeStringPref(context, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, name);
-                    Intent i = new Intent();
-                    i.putExtra("NAME", name);
-                    i.putExtra("MAC", mac);
-                    i.putExtra("DEVICE_TOKEN", token);
-                    // 返回结果成功
-                    setResult(Activity.RESULT_OK, i);
-                    GeneralMessageDialogFragment messageDialogFragment = GeneralMessageDialogFragment.newInstance(GeneralMessageDialogFragment.MESSAGE_TYPE_CHECK, getString(R.string.device_added_successfully),
-                            getString(R.string.device_added_successfully_content, name));
-                    messageDialogFragment.show(getSupportFragmentManager(), "Device added successfully");
+                    viewModel.onDeviceAuthorized(name, mac, token);
                 }
             }
 
             @Override
             public void onFailed() {
-
             }
         });
         checkFragment.show(getSupportFragmentManager(), "DevicePermissionCheckFragment");
-
     }
 
     @Override
@@ -264,7 +240,6 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
         isStopped = true;
     }
 
-    // 检查所有权限
     private boolean allPermissionsGranted() {
         for (String permission : REQUIRED_PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
@@ -273,5 +248,4 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
         }
         return true;
     }
-
 }
