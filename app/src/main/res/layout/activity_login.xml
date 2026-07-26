@@ -145,15 +145,20 @@
         android:textColor="@color/register"
         android:textSize="14sp"
         android:textStyle="normal" />
-<!--    <Button-->
-<!--        android:id="@+id/btn_debug"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="DEBUG"/>-->
-<!--    <Button-->
-<!--        android:id="@+id/btn_debug_1"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="DEBUG_goto_MAIN"/>-->
+
+    <TextView
+        android:id="@+id/developer_skip_login"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="@string/developer_skip_login"
+        android:textColor="@color/gray"
+        android:textSize="13sp"
+        android:visibility="gone" />
 
 </LinearLayout>

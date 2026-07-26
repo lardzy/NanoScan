@@ -17,6 +17,8 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.gttcgf.nanoscan.data.repository.UserSessionRepository;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +31,7 @@ public class UserProfileActivity extends AppCompatActivity {
     private List<UserProfileFunctionItem> functionItems = new ArrayList<>();
     private UserProfileFunctionAdapter adapter;
     private Context mContext;
+    private UserSessionRepository userSessionRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +39,7 @@ public class UserProfileActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_user_profile);
         mContext = getApplicationContext();
+        userSessionRepository = new UserSessionRepository(this);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -76,12 +80,11 @@ public class UserProfileActivity extends AppCompatActivity {
                         break;
                     case 2:
                         // 执行登出逻辑
-                        LoginActivity.userLoggedIn = false;
-                        SharedPreferences.Editor editor = sharedPreferences.edit();
-                        editor.putString(getString(R.string.pref_user_token), "");
-                        editor.putString(getString(R.string.pref_user_password), "");
-                        editor.apply();
-                        finish(); // 关闭当前活动，以防用户返回到这个界面
+                        userSessionRepository.markUserLoggedOut();
+                        Intent loginIntent = new Intent(UserProfileActivity.this, LoginActivity.class);
+                        loginIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(loginIntent);
+                        finish();
                         break;
                 }
             }

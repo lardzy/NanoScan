@@ -8,6 +8,7 @@
     <string name="pref_user_password">userPassword</string>
     <string name="pref_user_token">userToken</string>
     <string name="pref_user_ipAddress">userIp</string>
+    <string name="pref_dev_login_bypass">developerLoginBypass</string>
     <string name="pref_device_battery">battery</string>
     <string name="pref_device_temperature">temperature</string>
     <string name="pref_device_humidity">humidity</string>
@@ -36,6 +37,9 @@
     <string name="password">请输入密码</string>
     <string name="password_title">密码</string>
     <string name="forgot_password">忘记密码了？</string>
+    <string name="developer_skip_login">开发者模式：跳过登录</string>
+    <string name="developer_skip_login_title">启用开发者会话</string>
+    <string name="developer_skip_login_message">此入口仅用于本地开发调试，将跳过验证码、登录接口和首次引导。是否继续？</string>
     <string name="phone_number_register">立即注册</string>
     <string name="or">或</string>
     <string name="sms_verification_code">请输入图形验证码</string>
@@ -195,11 +199,15 @@
     <string name="reference_update_success_dialog_content">本地参比更新成功，下一次扫描生效。</string>
     
     <string name="user_profile_account_icon_content_description">用户头像</string>
-    <string name="user_profile_welcome_title">欢迎使用\n纺织品近红外光谱分析！</string>
-    <string name="user_profile_account">账户：%s</string>
+    <string name="user_profile_page_title">设置</string>
+    <string name="user_profile_page_subtitle">管理设备、应用信息与账户</string>
+    <string name="user_profile_back_content_description">返回</string>
+    <string name="user_profile_welcome_title">欢迎回来</string>
+    <string name="user_profile_product_name">纺织品近红外光谱分析</string>
+    <string name="user_profile_account">账号  %s</string>
     <string name="user_profile_item_logout">退出登录</string>
     <string name="user_profile_item_device_manage">设备管理</string>
-    <string name="user_profile_item_about">关于..</string>
+    <string name="user_profile_item_about">关于</string>
     <string name="imageview_default_description">背景</string>
     <string name="result_title">参考预测结果(共%s条)</string>
     <string name="scan_result_list">%1$s.%2$s:%3$s</string>

@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
 
+import com.gttcgf.nanoscan.BuildConfig;
 import com.gttcgf.nanoscan.LoginActivity;
 import com.gttcgf.nanoscan.R;
 import com.gttcgf.nanoscan.data.common.RepositoryCallback;
@@ -24,6 +25,8 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class UserSessionRepository {
+    private static final String DEVELOPER_ACCOUNT = "13800000000";
+
     private final Context appContext;
     private final SharedPreferences preferences;
 
@@ -55,9 +58,35 @@ public class UserSessionRepository {
         preferences.edit().putString(appContext.getString(R.string.pref_user_password), "").apply();
     }
 
+    public boolean enableDeveloperBypass() {
+        if (!BuildConfig.ENABLE_DEV_LOGIN_BYPASS) {
+            return false;
+        }
+        preferences.edit()
+                .putBoolean(appContext.getString(R.string.pref_dev_login_bypass), true)
+                .putString(appContext.getString(R.string.pref_user_phone_number), DEVELOPER_ACCOUNT)
+                .putString(appContext.getString(R.string.pref_user_password), "")
+                .putString(appContext.getString(R.string.pref_user_token), "")
+                .apply();
+        LoginActivity.userLoggedIn = true;
+        return true;
+    }
+
+    public boolean isDeveloperBypassEnabled() {
+        return BuildConfig.ENABLE_DEV_LOGIN_BYPASS
+                && preferences.getBoolean(appContext.getString(R.string.pref_dev_login_bypass), false);
+    }
+
+    public void disableDeveloperBypass() {
+        preferences.edit()
+                .remove(appContext.getString(R.string.pref_dev_login_bypass))
+                .apply();
+    }
+
     public void markUserLoggedOut() {
         LoginActivity.userLoggedIn = false;
         preferences.edit()
+                .remove(appContext.getString(R.string.pref_dev_login_bypass))
                 .putString(appContext.getString(R.string.pref_user_token), "")
                 .putString(appContext.getString(R.string.pref_user_password), "")
                 .apply();

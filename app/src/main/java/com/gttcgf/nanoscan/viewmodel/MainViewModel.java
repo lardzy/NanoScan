@@ -78,6 +78,11 @@ public class MainViewModel extends AndroidViewModel {
         }
         allDevices = deviceRepository.getDevices(session.getPhoneNumber());
         uiState.postValue(new MainUiState(true, false, allDevices));
+        if (userSessionRepository.isDeveloperBypassEnabled()) {
+            LoginActivity.userLoggedIn = true;
+            uiState.postValue(new MainUiState(false, true, allDevices));
+            return;
+        }
         String loginToken = session.getToken();
         if (LoginActivity.userLoggedIn && !loginToken.isEmpty()) {
             uiState.postValue(new MainUiState(false, true, allDevices));

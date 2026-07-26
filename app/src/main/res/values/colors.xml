@@ -22,5 +22,11 @@
     <color name="row_nano_scan_item_background">#f7fcfc</color>
     <color name="account_icon_background">#2196F3</color>
     <color name="circle_background">#ECF7FF</color>
+    <color name="user_profile_screen_background">#F5F7FB</color>
+    <color name="user_profile_text_primary">#1F2A3D</color>
+    <color name="user_profile_text_secondary">#6F7A8C</color>
+    <color name="user_profile_card_stroke">#E6ECF5</color>
+    <color name="user_profile_hero_start">#257EF4</color>
+    <color name="user_profile_hero_end">#4D96F8</color>
 
 </resources>

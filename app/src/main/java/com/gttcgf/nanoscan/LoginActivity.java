@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -26,6 +27,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.gttcgf.nanoscan.data.network.ApiClient;
 import com.gttcgf.nanoscan.data.network.ApiErrorParser;
+import com.gttcgf.nanoscan.data.repository.UserSessionRepository;
 import com.gttcgf.nanoscan.guidingSteps.IntroGuideActivity;
 import com.gttcgf.nanoscan.tools.CustomTextWatcher;
 import com.gttcgf.nanoscan.tools.InputDataVerificationUtils;
@@ -50,13 +52,14 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     // todo:登录标志位
     public static boolean userLoggedIn = false;
     private EditText phone_number, password;
-    private TextView forgot_password, register;
+    private TextView forgot_password, register, developerSkipLogin;
     private Button login_button;
     private boolean userHasEditedPassword, isFirstTimeUse;
     private String pref_user_phone_number, pref_user_password, pref_user_token, pref_user_ipAddress;
     private String captchaCode;
     private SharedPreferences sharedPreferences;
     private OkHttpClient client;
+    private UserSessionRepository userSessionRepository;
     private Context context;
     private boolean isStopped = false;
 
@@ -65,6 +68,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         client = ApiClient.getClient();
+        userSessionRepository = new UserSessionRepository(this);
         context = this;
         // 初始化组件
         initialComponent();
@@ -101,6 +105,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         password = findViewById(R.id.password); // 获取密码输入框
         forgot_password = findViewById(R.id.forgot_password); // 获取忘记密码按钮
         register = findViewById(R.id.register); // 获取注册按钮
+        developerSkipLogin = findViewById(R.id.developer_skip_login);
         login_button = findViewById(R.id.login_button);
 
         // 设置手机号输入框的输入限制
@@ -168,6 +173,10 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         register.setOnClickListener(this);
         // 点击登录按钮后
         login_button.setOnClickListener(this);
+        developerSkipLogin.setVisibility(BuildConfig.ENABLE_DEV_LOGIN_BYPASS ? View.VISIBLE : View.GONE);
+        if (BuildConfig.ENABLE_DEV_LOGIN_BYPASS) {
+            developerSkipLogin.setOnClickListener(this);
+        }
     }
 
     // 初始化用户数据
@@ -317,6 +326,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         forgot_password.setEnabled(enabled);
         login_button.setEnabled(enabled);
         register.setEnabled(enabled);
+        developerSkipLogin.setEnabled(enabled);
     }
 
     private void disableAllComponents() {
@@ -345,6 +355,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                                         @Override
                                         public void onSuccess() {
                                             Log.d(TAG, "登录界面-用户登录成功！");
+                                            userSessionRepository.disableDeveloperBypass();
                                             // 登录成功，保存账号密码token，跳转到主页面
                                             SharedPreferences sharedPreferences = context.getSharedPreferences("default", Context.MODE_PRIVATE);
                                             SharedPreferences.Editor edit = sharedPreferences.edit();
@@ -408,7 +419,32 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             startActivity(i);
         } else if (view.getId() == R.id.forgot_password) {
             Toast.makeText(LoginActivity.this, "功能开发中...", Toast.LENGTH_SHORT).show();
+        } else if (view.getId() == R.id.developer_skip_login) {
+            showDeveloperBypassConfirmation();
         }
+    }
+
+    private void showDeveloperBypassConfirmation() {
+        if (!BuildConfig.ENABLE_DEV_LOGIN_BYPASS) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.developer_skip_login_title)
+                .setMessage(R.string.developer_skip_login_message)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.confirm, (dialog, which) -> activateDeveloperBypass())
+                .show();
+    }
+
+    private void activateDeveloperBypass() {
+        if (!userSessionRepository.enableDeveloperBypass()) {
+            Toast.makeText(this, "当前构建不允许启用开发者会话", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     // 用于获取IPv4地址
