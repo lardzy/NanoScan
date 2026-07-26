@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,7 +20,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.gttcgf.nanoscan.data.repository.UserSessionRepository;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,6 +62,7 @@ public class UserProfileActivity extends AppCompatActivity {
     private void initialComponent() {
         tv_account = findViewById(R.id.tv_account);
         rv_functions = findViewById(R.id.rv_functions);
+        findViewById(R.id.profile_back).setOnClickListener(view -> finish());
 
         tv_account.setText(getString(R.string.user_profile_account, userAccount));
         rv_functions.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
@@ -90,6 +91,27 @@ public class UserProfileActivity extends AppCompatActivity {
             }
         });
         rv_functions.setAdapter(adapter);
+        playEntranceAnimation();
 
+    }
+
+    private void playEntranceAnimation() {
+        View accountCard = findViewById(R.id.cl_account);
+        accountCard.setAlpha(0f);
+        accountCard.setTranslationY(18f);
+        accountCard.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(320)
+                .start();
+
+        rv_functions.setAlpha(0f);
+        rv_functions.setTranslationY(24f);
+        rv_functions.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(100)
+                .setDuration(360)
+                .start();
     }
 }
