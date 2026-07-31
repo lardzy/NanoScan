@@ -3,6 +3,7 @@ package com.gttcgf.nanoscan.viewmodel;
 import android.app.Application;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -18,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SelectDeviceViewModel extends AndroidViewModel {
+    private static final String DEVELOPER_DEVICE_TOKEN_PREFIX = "dev-bypass-";
+
     public static class SelectDeviceAction {
         public enum Type {
             SHOW_TIMEOUT_DIALOG,
@@ -82,6 +85,28 @@ public class SelectDeviceViewModel extends AndroidViewModel {
 
     public UserSession getCurrentSession() {
         return userSessionRepository.getCurrentSession();
+    }
+
+    public boolean authorizeDeviceLocallyForDeveloper(@NonNull String deviceName, @NonNull String macAddress) {
+        String localToken = resolveDeveloperDeviceToken(
+                userSessionRepository.isDeveloperBypassEnabled(),
+                macAddress
+        );
+        if (localToken == null) {
+            return false;
+        }
+        onDeviceAuthorized(deviceName, macAddress, localToken);
+        return true;
+    }
+
+    @Nullable
+    static String resolveDeveloperDeviceToken(boolean developerBypassEnabled, @NonNull String macAddress) {
+        if (!developerBypassEnabled) {
+            return null;
+        }
+        String normalizedMac = macAddress.replace(":", "").replace("-", "");
+        return DEVELOPER_DEVICE_TOKEN_PREFIX
+                + (normalizedMac.isEmpty() ? "device" : normalizedMac);
     }
 
     public void onScanStarted() {

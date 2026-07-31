@@ -198,6 +198,11 @@ public class SelectDeviceViewActivity extends AppCompatActivity implements View.
     }
 
     public void confirmationDialog(String mac, final String name) {
+        if (viewModel.authorizeDeviceLocallyForDeveloper(name, mac)) {
+            Log.d(TAG, "开发者会话已跳过设备联网授权：" + mac);
+            return;
+        }
+
         UserSession session = viewModel.getCurrentSession();
         Bundle bundle = new Bundle();
         bundle.putString("username", session.getPhoneNumber());
